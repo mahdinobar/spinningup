@@ -33,12 +33,11 @@ def mlp(sizes, activation, output_activation=nn.Identity):
         (Use an nn.Sequential module.)
 
     """
-    #######################
-    #                     #
-    #   YOUR CODE HERE    #
-    #                     #
-    #######################
-    pass
+    layers = []
+    for j in range(len(sizes) - 1):
+        act = activation if j < len(sizes) - 2 else output_activation
+        layers += [nn.Linear(sizes[j], sizes[j + 1]), act()]
+    return nn.Sequential(*layers)
 
 class DiagonalGaussianDistribution:
 
@@ -52,12 +51,7 @@ class DiagonalGaussianDistribution:
             A PyTorch Tensor of samples from the diagonal Gaussian distribution with
             mean and log_std given by self.mu and self.log_std.
         """
-        #######################
-        #                     #
-        #   YOUR CODE HERE    #
-        #                     #
-        #######################
-        pass
+        return self.mu + torch.exp(self.log_std) * torch.randn_like(self.mu)
 
     #================================(Given, ignore)==========================================#
     def log_prob(self, value):
