@@ -5,6 +5,11 @@ from numpy import sin, cos, pi
 from gym import core, spaces
 from gym.utils import seeding
 
+from sympy import *
+from sympy.physics.mechanics import LagrangesMethod, dynamicsymbols
+import matplotlib.pyplot as plt
+from scipy.integrate import solve_ivp
+
 __copyright__ = "Copyright 2024, IfA https://control.ee.ethz.ch/"
 __credits__ = ["Mahdi Nobar"]
 __license__ = ""
@@ -75,19 +80,123 @@ class TworrEnv(core.Env):
 
     def __init__(self):
         self.viewer = None
-        high = np.array([1.0, 1.0, 1.0, 1.0, self.MAX_VEL_1, self.MAX_VEL_2])
-        low = -high
-        self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
-        self.action_space = spaces.Discrete(3)
+        # states=[xt, yt, th1, th2, dth1, dth2, th1_hat, th2_hat, dth1_hat, dth2_hat]
+        high_s = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        low_s = -high_s
+        self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
+        high_a = np.array([0.1, 0.1])
+        low_a = -high_a
+        self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
         self.state = None
         self.seed()
+
+    def two_link_forward_kinematics(q, l1=1.0, l2=1.0):
+        """Compute the forward kinematics.  Returns the base-coordinate Cartesian
+        position of End-effector for a given joint angle vector.  Optional
+        parameters l1 and l2 are the link lengths.  The base is assumed to be at the
+        origin.
+
+        :param q: two-element list or ndarray with [q1, q2] joint angles
+        :param l1: length of link 1
+        :param l2: length of link 2
+        :return: two-element ndarrays with [x,y] locations of End-Effector
+        """
+        x = l1 * np.cos(q[0]) + l2 * np.cos(q[0] + q[1])
+        y = l1 * np.sin(q[0]) + l2 * np.sin(q[0] + q[1])
+        return x, y
+
+    def two_link_inverse_kinematics(x, y, l1=1.0, l2=1.0):
+        """Compute two inverse kinematics solutions for a target end position.  The
+        target is a Cartesian position vector (two-element ndarray) in world
+        coordinates, and the result vectors are joint angles as ndarrays [q0, q1].
+        If the target is out of reach, returns the closest pose.
+
+        :param target: two-element list or ndarray with [x1, y] target position
+        :param l1: optional proximal link length
+        :param l2: optional distal link length
+        :return: tuple (solution1, solution2) of two-element ndarrays with q1, q2 angles
+        """
+        # find the position of the point in polar coordinates
+        r = np.sqrt(x ** 2 + y ** 2)
+        # phi is the angle of target point w.r.t. -Y axis, same origin as arm
+        phi = np.arctan2(y, x)
+        alpha = np.arccos((l1 ** 2 + l2 ** 2 - r ** 2) / (2 * l1 * l2))
+        beta = np.arccos((r ** 2 + l1 ** 2 - l2 ** 2) / (2 * l1 * r))
+        soln1 = np.array((phi - beta, np.pi - alpha))
+        soln2 = np.array((phi + beta, np.pi + alpha))
+        return soln1, soln2
+
+    def two_link_inverse_dynamics(th, dth, ddth, m1=1, m2=1, l1=1, l2=1):
+        """Compute two inverse dynamics solutions for a target end position.
+        :param th:
+        :param dth:
+        :param ddth:
+        :param m1:
+        :param m2:
+        :param l1:
+        :param l2:
+        :return: tau1, tau2
+        """
+        r1 = l1 / 2
+        r2 = l2 / 2
+        Iz1 = m1 * l1 ** 2 / 12
+        Iz2 = m2 * l2 ** 2 / 12
+        alpha = Iz1 + Iz2 + m1 * r1 ** 2 + m2 * (l1 ** 2 + l2 ** 2)
+        beta = m2 * l1 * r2
+        sigma = Iz2 + m2 * r2 ** 2
+        tau1 = (alpha + 2 * beta * np.cos(th[1])) * ddth[0] + (sigma + beta * np.cos(th[1])) * ddth[1] + (
+                    -beta * np.sin(th[1]) * dth[1]) * dth[1] + (-beta * np.sin(th[1]) * (dth[0] + dth[1]) * dth[1])
+        tau2 = (sigma + beta * np.cos(th[1])) * ddth[0] + sigma * ddth[1] + (beta * np.sin(th[1]) * dth[0] * dth[0])
+        return tau1, tau2
+
+    def two_link_forward_dynamics(tau1, tau2, s_init, m1=1, m2=1, l1=1, l2=1):
+        """Compute two inverse dynamics solutions for a target end position.
+        :param th:
+        :param dth:
+        :param ddth:
+        :param m1:
+        :param m2:
+        :param l1:
+        :param l2:
+        :return: th1, dth1, th2, dth2
+        """
+        # Define derivative function
+        def f(t, s):
+            r1 = l1 / 2
+            r2 = l2 / 2
+            Iz1 = m1 * l1 ** 2 / 12
+            Iz2 = m2 * l2 ** 2 / 12
+            alpha = Iz1 + Iz2 + m1 * r1 ** 2 + m2 * (l1 ** 2 + l2 ** 2)
+            beta = m2 * l1 * r2
+            sigma = Iz2 + m2 * r2 ** 2
+            d11 = alpha + 2 * beta * np.cos(s[2])
+            d21 = sigma + beta * np.cos(s[2])
+            d12 = d21
+            d22 = sigma
+            c = -beta * np.sin(s[2])
+            dsdt = [s[1], d12 * d22 / (d12 * d21 - d11 * d22) * (
+                        tau2 / d22 - tau1 / d12 - c / d22 * s[1] ** 2 + (c + c) / d12 * s[1] * s[3] + c / d12 * s[
+                    3] ** 2),
+                    s[3], d11 * d21 / (d11 * d22 - d12 * d21) * (
+                                tau2 / d21 - tau1 / d11 - c / d21 * s[1] ** 2 + (c + c) / d11 * s[1] * s[3] + c / d11 *
+                                s[3] ** 2)]
+            return dsdt
+        # Define time spans, initial values, and constants
+        tspan = np.linspace(0, 1, 2)
+        # Solve differential equation
+        sol = solve_ivp(lambda t, s: f(t, s),
+                        [tspan[0], tspan[-1]], s_init, t_eval=tspan, rtol=1e-5)
+        # Plot states
+        state_plotter(sol.t, sol.y, 1)
+        return sol.y
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
     def reset(self):
-        self.state = self.np_random.uniform(low=-0.1, high=0.1, size=(4,))
+        #  TODO check difference bw state and observation?
+        self.state = self.np_random.uniform(low=-0.1, high=0.1, size=(12,))
         return self._get_ob()
 
     def step(self, a):
@@ -98,37 +207,47 @@ class TworrEnv(core.Env):
         if self.torque_noise_max > 0:
             torque += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
 
-        # Now, augment the state with our force action so it can be passed to
-        # _dsdt
-        s_augmented = np.append(s, torque)
+        m1 = 1
+        m2 = 1
+        l1 = 1
+        l2 = 1
 
-        ns = rk4(self._dsdt, s_augmented, [0, self.dt])
-        # only care about final timestep of integration returned by integrator
-        ns = ns[-1]
-        ns = ns[:4]  # omit action
-        # ODEINT IS TOO SLOW!
-        # ns_continuous = integrate.odeint(self._dsdt, self.s_continuous, [0, self.dt])
-        # self.s_continuous = ns_continuous[-1] # We only care about the state
-        # at the ''final timestep'', self.dt
+        # choose a sample target position to test IK
+        xt = 0.5
+        yt = 0.6
+        q_hat_soln1, q_hat_soln2 = two_link_inverse_kinematics(xt, yt, l1, l2)
+        print("The following solutions should reach endpoint position %s: %s OR %s" % (
+        np.array((xt, yt)), q_hat_soln1, q_hat_soln2))
+        # TODO correct for observation:
+        dth = np.array((0.1, 0.1))  # TODO
+        ddth = np.array((0.1, 0.1))  # TODO
+        tau1_hat, tau2_hat = two_link_inverse_dynamics(q_hat_soln1, dth, ddth)
+        print("ID torques for first IK solution:", np.array((tau1_hat, tau2_hat)))
 
-        ns[0] = wrap(ns[0], -pi, pi)
-        ns[1] = wrap(ns[1], -pi, pi)
-        ns[2] = bound(ns[2], -self.MAX_VEL_1, self.MAX_VEL_1)
-        ns[3] = bound(ns[3], -self.MAX_VEL_2, self.MAX_VEL_2)
-        self.state = ns
-        terminal = self._terminal()
-        reward = -1. if not terminal else 0.
-        return (self._get_ob(), reward, terminal, {})
+        # s_init=[th1_init,dth1_init,th2_init,dth2_init]
+        s_init = [q_hat_soln1[0], dth[0], q_hat_soln1[1], dth[1]]
+        q_FD = self.two_link_forward_dynamics(tau1_hat+a[0], tau2_hat+a[1], s_init)
+
+        obs=np.array([xt,yt,q_FD[0,1],q_FD[2,1],q_FD[1,1],q_FD[3,1],q_hat_soln1[0],q_hat_soln1[1],dth[0],dth[1],tau1_hat,tau2_hat])
+        self.state=obs #TODO
+
+        terminal = self._terminal() #TODO
+        reward = -1. if not terminal else 0. #TODO
+
+        # given action it returns 4-tuple (observation, reward, done, info)
+        return (obs, reward, terminal, {})
+
 
     def _get_ob(self):
-        s = self.state
-        return np.array([cos(s[0]), sin(s[0]), cos(s[1]), sin(s[1]), s[2], s[3]])
+        #TODO
+        return 1
 
     def _terminal(self):
-        s = self.state
-        return bool(-cos(s[0]) - cos(s[1] + s[0]) > 1.)
+        #TODO
+        return 1
 
     def _dsdt(self, s_augmented, t):
+        # todo check purpose
         m1 = self.LINK_MASS_1
         m2 = self.LINK_MASS_2
         l1 = self.LINK_LENGTH_1
@@ -204,6 +323,7 @@ class TworrEnv(core.Env):
             self.viewer = None
 
 def wrap(x, m, M):
+    #  TODO remove?
     """
     :param x: a scalar
     :param m: minimum possible value in range
@@ -233,6 +353,7 @@ def bound(x, m, M=None):
 
 
 def rk4(derivs, y0, t, *args, **kwargs):
+    #  TODO remove?
     """
     Integrate 1D or ND system of ODEs using 4-th order Runge-Kutta.
     This is a toy implementation which may be useful if you find
