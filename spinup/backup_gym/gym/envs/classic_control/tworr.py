@@ -169,7 +169,7 @@ Robotic Manipulation" by Murry et al.
         # TODO correct for observation:
         dqd_t = np.array([(q_d[0]-s_tm1[6])/self.dt, (q_d[1]-s_tm1[7])/self.dt])
         ddqd_t = np.array([(dqd_t[0]-s_tm1[8])/self.dt, (dqd_t[1]-s_tm1[9])/self.dt])
-        tau1_hat, tau2_hat = two_link_inverse_dynamics(q_d, dqd_t, ddqd_t)
+        tau1_hat, tau2_hat = self.two_link_inverse_dynamics(q_d, dqd_t, ddqd_t)
         s_init = [s[2], s[4], s[3], s[5]]
         q_FD = self.two_link_forward_dynamics(tau1_hat+a[0], tau2_hat+a[1], s_init)
         # collect observations
