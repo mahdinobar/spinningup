@@ -99,7 +99,7 @@ Robotic Manipulation" by Murry et al.
         tau2 = (sigma + beta * np.cos(th[1])) * ddth[0] + sigma * ddth[1] + (beta * np.sin(th[1]) * dth[0] * dth[0])
         return tau1, tau2
 
-    def two_link_forward_dynamics(self, tau1, tau2, s_init, self.LINK_MASS_1=1, self.LINK_MASS_2=1, self.LINK_LENGTH_1=1, self.LINK_LENGTH_2=1):
+    def two_link_forward_dynamics(self, tau1, tau2, s_init):
         """Compute two inverse dynamics solutions for a target end position.
         :param s_init: [th1_init,dth1_init,th2_init,dth2_init]
         :param th:
