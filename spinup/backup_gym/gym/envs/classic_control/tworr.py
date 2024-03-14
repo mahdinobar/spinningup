@@ -147,18 +147,21 @@ Robotic Manipulation" by Murry et al.
         # The reset method should return a tuple of the initial observation and some auxiliary information.
         # states=(xd,yd,q1,q2,dq1,dq2,qd1,qd2,dqd1,dqd2,tau1_hat,tau2_hat)
         self.state = self.np_random.uniform(low=-0.1, high=0.1, size=(12,)) #TODO correct initialization
-        self.state_buffer= None
+        self.state_buffer=self.state #initialize episode state buffer
         self.t = 0
         return self._get_ob(), {}
 
     def step(self, a):
-        self.state_buffer=np.vstack((self.state_buffer,self.state))
-        s_t = self.state[-1,:] #states at t
-        s_tm1 = self.state[-2, :] #states at t-1
+        if self.t==0:
+            s_t = self.state_buffer[:]  # states at t
+            s_tm1 = s_t  # TODO check. states at t-1
+        else:
+            s_t = self.state_buffer[-1, :]  # states at t
+            s_tm1 = self.state_buffer[-2, :] #states at t-1
         # TOODO 
         # Add noise to the force action 
-        if self.self.torque_noise_max > 0:
-            torque += self.np_random.uniform(-self.self.torque_noise_max, self.self.torque_noise_max)
+        if self.torque_noise_max > 0:
+            torque += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
         # choose a sample target desired position to test IK
         xd = self.xd[self.t]
         yd = self.yd[self.t]
@@ -173,6 +176,7 @@ Robotic Manipulation" by Murry et al.
         obs=np.array([xd,yd,q_FD[0,1],q_FD[2,1],q_FD[1,1],q_FD[3,1],q_d[0],q_d[1],dqd_t[0],dqd_t[1],tau1_hat,tau2_hat])
         # update states
         self.state=obs
+        self.state_buffer=np.vstack((self.state_buffer,self.state))
         # update time index
         self.t += 1
         # check done episode
@@ -198,7 +202,7 @@ Robotic Manipulation" by Murry et al.
 
         if self.viewer is None:
             self.viewer = rendering.Viewer(500,500)
-            bound = self.self.LINK_LENGTH_1 + self.self.LINK_LENGTH_2 + 0.2  # 2.2 for default
+            bound = self.LINK_LENGTH_1 + self.LINK_LENGTH_2 + 0.2  # 2.2 for default
             self.viewer.set_bounds(-bound,bound,-bound,bound)
 
         if s is None: return None
@@ -207,7 +211,7 @@ Robotic Manipulation" by Murry et al.
         
         xys = np.array([[0,0], p1, p2])[:,::-1]
         thetas = [s[2], s[3]] # TODO check compatible with rendering
-        link_lengths = [self.self.LINK_LENGTH_1, self.self.LINK_LENGTH_2]
+        link_lengths = [self.LINK_LENGTH_1, self.LINK_LENGTH_2]
 
         self.viewer.draw_line((-2.2, 1), (2.2, 1))
         for ((x,y),th,llen) in zip(xys, thetas, link_lengths):
