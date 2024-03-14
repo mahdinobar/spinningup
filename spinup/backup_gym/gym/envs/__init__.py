@@ -95,7 +95,7 @@ register(
     id='Tworr-v0',
     entry_point='gym.envs.classic_control:TworrEnv',
     reward_threshold=-100.0,
-    max_episode_steps=500,
+    max_episode_steps=100,
 )
 
 # Box2d

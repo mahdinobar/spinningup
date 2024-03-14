@@ -1,10 +1,8 @@
 """Two-link RR Planar Manipulator Tracking Task"""
 import numpy as np
 from numpy import sin, cos, pi
-
 from gym import core, spaces
 from gym.utils import seeding
-
 from scipy.integrate import solve_ivp
 
 __copyright__ = "Copyright 2024, IfA https://control.ee.ethz.ch/"
@@ -14,66 +12,22 @@ __author__ = "Mahdi Nobar ETH Zurich <mnobar@ethz.ch>"
 class TworrEnv(core.Env):
     # TODO
     """
-    Acrobot is a 2-link pendulum with only the second joint actuated.
-    Initially, both links point downwards. The goal is to swing the
-    end-effector at a height at least the length of one link above the base.
-    Both links can swing freely and can pass by each other, i.e., they don't
-    collide when they have the same angle.
-    **STATE:**
-    The state consists of the sin() and cos() of the two rotational joint
-    angles and the joint angular velocities :
-    [cos(theta1) sin(theta1) cos(theta2) sin(theta2) thetaDot1 thetaDot2].
-    For the first link, an angle of 0 corresponds to the link pointing downwards.
-    The angle of the second link is relative to the angle of the first link.
-    An angle of 0 corresponds to having the same angle between the two links.
-    A state of [1, 0, 1, 0, ..., ...] means that both links point downwards.
-    **ACTIONS:**
-    The action is either applying +1, 0 or -1 torque on the joint between
-    the two pendulum links.
-    .. note::
-        The dynamics equations were missing some terms in the NIPS paper which
-        are present in the book. R. Sutton confirmed in personal correspondence
-        that the experimental results shown in the paper and the book were
-        generated with the equations shown in the book.
-        However, there is the option to run the domain with the paper equations
-        by setting book_or_nips = 'nips'
-    **REFERENCE:**
-    .. seealso::
-        R. Sutton: Generalization in Reinforcement Learning:
-        Successful Examples Using Sparse Coarse Coding (NIPS 1996)
-    .. seealso::
-        R. Sutton and A. G. Barto:
-        Reinforcement learning: An introduction.
-        Cambridge: MIT press, 1998.
-    .. warning::
-        This version of the domain uses the Runge-Kutta method for integrating
-        the system dynamics and is more realistic, but also considerably harder
-        than the original version which employs Euler integration,
-        see the AcrobotLegacy class.
+    Two-link planar arm with two revolut joints (based on simplified models at book "A Mathematical Introduction to
+Robotic Manipulation" by Murry et al.
     """
     metadata = {
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second' : 15
     }
-    dt = .2
+    dt = 0.01  # [s]
     LINK_LENGTH_1 = 1.  # [m]
     LINK_LENGTH_2 = 1.  # [m]
     LINK_MASS_1 = 1.  #: [kg] mass of link 1
     LINK_MASS_2 = 1.  #: [kg] mass of link 2
     LINK_COM_POS_1 = 0.5  #: [m] position of the center of mass of link 1
     LINK_COM_POS_2 = 0.5  #: [m] position of the center of mass of link 2
-    LINK_MOI = 1.  #: moments of inertia for both links
-    MAX_VEL_1 = 4 * pi
-    MAX_VEL_2 = 9 * pi
-    AVAIL_TORQUE = [-1., 0., +1]
-    torque_noise_max = 0.
+    torque_noise_max = 0. #TODO
     MAX_TIMESTEPS=100 #maximum timesteps per episode
-
-    #: use dynamics equations from the nips paper or the book
-    book_or_nips = "book"
-    action_arrow = None
-    domain_fig = None
-    actions_num = 3
 
     def __init__(self):
         self.viewer = None
@@ -87,7 +41,6 @@ class TworrEnv(core.Env):
         self.state = None
         self.state_buffer= None
         self.t = 0
-        self.dt = 0.01 #second
         self.seed()
         self.xd = np.linspace(1.2,1.3, MAX_TIMESTEPS, endpoint=True)
         self.yd = np.linspace(1, 1.8, MAX_TIMESTEPS, endpoint=True)
@@ -190,11 +143,12 @@ class TworrEnv(core.Env):
         return [seed]
 
     def reset(self):
-        #  TODO check difference bw state and observation states=(xd,yd,q1,q2,dq1,dq2,qd1,qd2,dqd1,dqd2,tau1_hat,tau2_hat)
-        self.state = self.np_random.uniform(low=-0.1, high=0.1, size=(12,))
+        # The reset method should return a tuple of the initial observation and some auxiliary information.
+        # states=(xd,yd,q1,q2,dq1,dq2,qd1,qd2,dqd1,dqd2,tau1_hat,tau2_hat)
+        self.state = self.np_random.uniform(low=-0.1, high=0.1, size=(12,)) #TODO correct initialization
         self.state_buffer= None
         self.t = 0
-        return self._get_ob()
+        return self._get_ob(), {}
 
     def step(self, a):
         self.state_buffer=np.vstack((self.state_buffer,self.state))
@@ -209,8 +163,8 @@ class TworrEnv(core.Env):
         yd = self.yd[self.t]
         q_d = self.two_link_inverse_kinematics(xd, yd)[0] #attention: only return and use first solution of IK
         # TODO correct for observation:
-        dqd_t = np.array([(q_d[0]-s_tm1[6])/self.dt, (q_d[1]-s_tm1[7])/self.dt])
-        ddqd_t = np.array([(dqd_t[0]-s_tm1[8])/self.dt, (dqd_t[1]-s_tm1[9])/self.dt])
+        dqd_t = np.array([(q_d[0]-s_tm1[6])/dt, (q_d[1]-s_tm1[7])/dt])
+        ddqd_t = np.array([(dqd_t[0]-s_tm1[8])/dt, (dqd_t[1]-s_tm1[9])/dt])
         tau1_hat, tau2_hat = two_link_inverse_dynamics(q_d, dqd_t, ddqd_t)
         s_init = [s[2], s[4], s[3], s[5]]
         q_FD = self.two_link_forward_dynamics(tau1_hat+a[0], tau2_hat+a[1], s_init)
@@ -227,50 +181,14 @@ class TworrEnv(core.Env):
         x_FK, y_FK = self.two_link_forward_kinematics(np.array([q_FD[0,1],q_FD[2,1]]))
         reward = 1. if  np.sqrt((x_FK-xd)**2+(y_FK-yd)**2)<0.001 else 0.
         # given action it returns 4-tuple (observation, reward, done, info)
-        return (obs, reward, terminal, {})
+        return (self._get_ob(), reward, terminal, {})
 
-    def _get_ob(self):
-        #TODO
-        return 1
+    def _get_ob(self): #TODO is state=observation a reasonable assumption?
+        s = self.state
+        return s
 
     def _terminal(self):
         return bool(self.t >= MAX_TIMESTEPS)
-
-    def _dsdt(self, s_augmented, t):
-        # todo check purpose
-        LINK_MASS_1 = self.LINK_MASS_1
-        LINK_MASS_2 = self.LINK_MASS_2
-        LINK_LENGTH_1 = self.LINK_LENGTH_1
-        lc1 = self.LINK_COM_POS_1
-        lc2 = self.LINK_COM_POS_2
-        I1 = self.LINK_MOI
-        I2 = self.LINK_MOI
-        g = 9.8
-        a = s_augmented[-1]
-        s = s_augmented[:-1]
-        theta1 = s[0]
-        theta2 = s[1]
-        dtheta1 = s[2]
-        dtheta2 = s[3]
-        d1 = LINK_MASS_1 * lc1 ** 2 + LINK_MASS_2 * \
-            (LINK_LENGTH_1 ** 2 + lc2 ** 2 + 2 * LINK_LENGTH_1 * lc2 * cos(theta2)) + I1 + I2
-        d2 = LINK_MASS_2 * (lc2 ** 2 + LINK_LENGTH_1 * lc2 * cos(theta2)) + I2
-        phi2 = LINK_MASS_2 * lc2 * g * cos(theta1 + theta2 - pi / 2.)
-        phi1 = - LINK_MASS_2 * LINK_LENGTH_1 * lc2 * dtheta2 ** 2 * sin(theta2) \
-               - 2 * LINK_MASS_2 * LINK_LENGTH_1 * lc2 * dtheta2 * dtheta1 * sin(theta2)  \
-            + (LINK_MASS_1 * lc1 + LINK_MASS_2 * LINK_LENGTH_1) * g * cos(theta1 - pi / 2) + phi2
-        if self.book_or_nips == "nips":
-            # the following line is consistent with the description in the
-            # paper
-            ddtheta2 = (a + d2 / d1 * phi1 - phi2) / \
-                (LINK_MASS_2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
-        else:
-            # the following line is consistent with the java implementation and the
-            # book
-            ddtheta2 = (a + d2 / d1 * phi1 - LINK_MASS_2 * LINK_LENGTH_1 * lc2 * dtheta1 ** 2 * sin(theta2) - phi2) \
-                / (LINK_MASS_2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
-        ddtheta1 = -(d2 * ddtheta2 + phi1) / d1
-        return (dtheta1, dtheta2, ddtheta1, ddtheta2, 0.)
 
     def render(self, mode='human'):
         from gym.envs.classic_control import rendering
@@ -283,15 +201,11 @@ class TworrEnv(core.Env):
             self.viewer.set_bounds(-bound,bound,-bound,bound)
 
         if s is None: return None
-
-        p1 = [-self.LINK_LENGTH_1 *
-              cos(s[0]), self.LINK_LENGTH_1 * sin(s[0])]
-
-        p2 = [p1[0] - self.LINK_LENGTH_2 * cos(s[0] + s[1]),
-              p1[1] + self.LINK_LENGTH_2 * sin(s[0] + s[1])]
-
+        p1 = [LINK_LENGTH_1 * np.cos(s[2]), LINK_LENGTH_1 * np.sin(s[2])] 
+        p2 = [p1[0] + LINK_LENGTH_2 * np.cos(s[2] + s[3]), p1[1] + LINK_LENGTH_2 * np.sin(s[2] + q[3])]
+        
         xys = np.array([[0,0], p1, p2])[:,::-1]
-        thetas = [s[0]- pi/2, s[0]+s[1]-pi/2]
+        thetas = [s[2], s[3]] # TODO check compatible with rendering
         link_lengths = [self.LINK_LENGTH_1, self.LINK_LENGTH_2]
 
         self.viewer.draw_line((-2.2, 1), (2.2, 1))
@@ -340,67 +254,3 @@ def bound(x, m, M=None):
         m = m[0]
     # bound x between min (m) and Max (M)
     return min(max(x, m), M)
-
-
-def rk4(derivs, y0, t, *args, **kwargs):
-    #  TODO remove?
-    """
-    Integrate 1D or ND system of ODEs using 4-th order Runge-Kutta.
-    This is a toy implementation which may be useful if you find
-    yourself stranded on a system w/o scipy.  Otherwise use
-    :func:`scipy.integrate`.
-    *y0*
-        initial state vector
-    *t*
-        sample times
-    *derivs*
-        returns the derivative of the system and has the
-        signature ``dy = derivs(yi, ti)``
-    *args*
-        additional arguments passed to the derivative function
-    *kwargs*
-        additional keyword arguments passed to the derivative function
-    Example 1 ::
-        ## 2D system
-        def derivs6(x,t):
-            d1 =  x[0] + 2*x[1]
-            d2 =  -3*x[0] + 4*x[1]
-            return (d1, d2)
-        dt = 0.0005
-        t = arange(0.0, 2.0, dt)
-        y0 = (1,2)
-        yout = rk4(derivs6, y0, t)
-    Example 2::
-        ## 1D system
-        alpha = 2
-        def derivs(x,t):
-            return -alpha*x + exp(-t)
-        y0 = 1
-        yout = rk4(derivs, y0, t)
-    If you have access to scipy, you should probably be using the
-    scipy.integrate tools rather than this function.
-    """
-
-    try:
-        Ny = len(y0)
-    except TypeError:
-        yout = np.zeros((len(t),), np.float_)
-    else:
-        yout = np.zeros((len(t), Ny), np.float_)
-
-    yout[0] = y0
-
-
-    for i in np.arange(len(t) - 1):
-
-        thist = t[i]
-        dt = t[i + 1] - thist
-        dt2 = dt / 2.0
-        y0 = yout[i]
-
-        k1 = np.asarray(derivs(y0, thist, *args, **kwargs))
-        k2 = np.asarray(derivs(y0 + dt2 * k1, thist + dt2, *args, **kwargs))
-        k3 = np.asarray(derivs(y0 + dt2 * k2, thist + dt2, *args, **kwargs))
-        k4 = np.asarray(derivs(y0 + dt * k3, thist + dt, *args, **kwargs))
-        yout[i + 1] = y0 + dt / 6.0 * (k1 + 2 * k2 + 2 * k3 + k4)
-    return yout
