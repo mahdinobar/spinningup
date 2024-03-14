@@ -5,14 +5,10 @@ from numpy import sin, cos, pi
 from gym import core, spaces
 from gym.utils import seeding
 
-from sympy import *
-from sympy.physics.mechanics import LagrangesMethod, dynamicsymbols
-import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
 
 __copyright__ = "Copyright 2024, IfA https://control.ee.ethz.ch/"
 __credits__ = ["Mahdi Nobar"]
-__license__ = ""
 __author__ = "Mahdi Nobar ETH Zurich <mnobar@ethz.ch>"
 
 class TworrEnv(core.Env):
@@ -71,6 +67,7 @@ class TworrEnv(core.Env):
     MAX_VEL_2 = 9 * pi
     AVAIL_TORQUE = [-1., 0., +1]
     torque_noise_max = 0.
+    MAX_TIMESTEPS=100 #maximum timesteps per episode
 
     #: use dynamics equations from the nips paper or the book
     book_or_nips = "book"
@@ -88,87 +85,85 @@ class TworrEnv(core.Env):
         low_a = -high_a
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
         self.state = None
+        self.state_buffer= None
+        self.t = 0
+        self.dt = 0.01 #second
         self.seed()
+        self.xd = np.linspace(1.2,1.3, MAX_TIMESTEPS, endpoint=True)
+        self.yd = np.linspace(1, 1.8, MAX_TIMESTEPS, endpoint=True)
 
-    def two_link_forward_kinematics(q, l1=1.0, l2=1.0):
+    def two_link_forward_kinematics(self,q):
         """Compute the forward kinematics.  Returns the base-coordinate Cartesian
         position of End-effector for a given joint angle vector.  Optional
-        parameters l1 and l2 are the link lengths.  The base is assumed to be at the
+        parameters LINK_LENGTH_1 and LINK_LENGTH_2 are the link lengths.  The base is assumed to be at the
         origin.
 
         :param q: two-element list or ndarray with [q1, q2] joint angles
-        :param l1: length of link 1
-        :param l2: length of link 2
+        :param LINK_LENGTH_1: length of link 1
+        :param LINK_LENGTH_2: length of link 2
         :return: two-element ndarrays with [x,y] locations of End-Effector
         """
-        x = l1 * np.cos(q[0]) + l2 * np.cos(q[0] + q[1])
-        y = l1 * np.sin(q[0]) + l2 * np.sin(q[0] + q[1])
+        x = LINK_LENGTH_1 * np.cos(q[0]) + LINK_LENGTH_2 * np.cos(q[0] + q[1])
+        y = LINK_LENGTH_1 * np.sin(q[0]) + LINK_LENGTH_2 * np.sin(q[0] + q[1])
         return x, y
 
-    def two_link_inverse_kinematics(x, y, l1=1.0, l2=1.0):
+    def two_link_inverse_kinematics(self,x, y):
         """Compute two inverse kinematics solutions for a target end position.  The
         target is a Cartesian position vector (two-element ndarray) in world
         coordinates, and the result vectors are joint angles as ndarrays [q0, q1].
         If the target is out of reach, returns the closest pose.
 
         :param target: two-element list or ndarray with [x1, y] target position
-        :param l1: optional proximal link length
-        :param l2: optional distal link length
+        :param LINK_LENGTH_1: optional proximal link length
+        :param LINK_LENGTH_2: optional distal link length
         :return: tuple (solution1, solution2) of two-element ndarrays with q1, q2 angles
         """
         # find the position of the point in polar coordinates
         r = np.sqrt(x ** 2 + y ** 2)
         # phi is the angle of target point w.r.t. -Y axis, same origin as arm
         phi = np.arctan2(y, x)
-        alpha = np.arccos((l1 ** 2 + l2 ** 2 - r ** 2) / (2 * l1 * l2))
-        beta = np.arccos((r ** 2 + l1 ** 2 - l2 ** 2) / (2 * l1 * r))
+        alpha = np.arccos((LINK_LENGTH_1 ** 2 + LINK_LENGTH_2 ** 2 - r ** 2) / (2 * LINK_LENGTH_1 * LINK_LENGTH_2))
+        beta = np.arccos((r ** 2 + LINK_LENGTH_1 ** 2 - LINK_LENGTH_2 ** 2) / (2 * LINK_LENGTH_1 * r))
         soln1 = np.array((phi - beta, np.pi - alpha))
         soln2 = np.array((phi + beta, np.pi + alpha))
         return soln1, soln2
 
-    def two_link_inverse_dynamics(th, dth, ddth, m1=1, m2=1, l1=1, l2=1):
+    def two_link_inverse_dynamics(self, th, dth, ddth):
         """Compute two inverse dynamics solutions for a target end position.
         :param th:
         :param dth:
         :param ddth:
-        :param m1:
-        :param m2:
-        :param l1:
-        :param l2:
         :return: tau1, tau2
         """
-        r1 = l1 / 2
-        r2 = l2 / 2
-        Iz1 = m1 * l1 ** 2 / 12
-        Iz2 = m2 * l2 ** 2 / 12
-        alpha = Iz1 + Iz2 + m1 * r1 ** 2 + m2 * (l1 ** 2 + l2 ** 2)
-        beta = m2 * l1 * r2
-        sigma = Iz2 + m2 * r2 ** 2
+        Iz1 = LINK_MASS_1 * LINK_LENGTH_1 ** 2 / 12
+        Iz2 = LINK_MASS_2 * LINK_LENGTH_2 ** 2 / 12
+        alpha = Iz1 + Iz2 + LINK_MASS_1 * LINK_COM_POS_1 ** 2 + LINK_MASS_2 * (LINK_LENGTH_1 ** 2 + LINK_LENGTH_2 ** 2)
+        beta = LINK_MASS_2 * LINK_LENGTH_1 * LINK_COM_POS_2
+        sigma = Iz2 + LINK_MASS_2 * LINK_COM_POS_2 ** 2
         tau1 = (alpha + 2 * beta * np.cos(th[1])) * ddth[0] + (sigma + beta * np.cos(th[1])) * ddth[1] + (
                     -beta * np.sin(th[1]) * dth[1]) * dth[1] + (-beta * np.sin(th[1]) * (dth[0] + dth[1]) * dth[1])
         tau2 = (sigma + beta * np.cos(th[1])) * ddth[0] + sigma * ddth[1] + (beta * np.sin(th[1]) * dth[0] * dth[0])
         return tau1, tau2
 
-    def two_link_forward_dynamics(tau1, tau2, s_init, m1=1, m2=1, l1=1, l2=1):
+    def two_link_forward_dynamics(self, tau1, tau2, s_init, LINK_MASS_1=1, LINK_MASS_2=1, LINK_LENGTH_1=1, LINK_LENGTH_2=1):
         """Compute two inverse dynamics solutions for a target end position.
+        :param s_init: [th1_init,dth1_init,th2_init,dth2_init]
         :param th:
         :param dth:
         :param ddth:
-        :param m1:
-        :param m2:
-        :param l1:
-        :param l2:
+        :param LINK_MASS_1:
+        :param LINK_MASS_2:
+        :param LINK_LENGTH_1:
+        :param LINK_LENGTH_2:
         :return: th1, dth1, th2, dth2
         """
         # Define derivative function
         def f(t, s):
-            r1 = l1 / 2
-            r2 = l2 / 2
-            Iz1 = m1 * l1 ** 2 / 12
-            Iz2 = m2 * l2 ** 2 / 12
-            alpha = Iz1 + Iz2 + m1 * r1 ** 2 + m2 * (l1 ** 2 + l2 ** 2)
-            beta = m2 * l1 * r2
-            sigma = Iz2 + m2 * r2 ** 2
+            Iz1 = LINK_MASS_1 * LINK_LENGTH_1 ** 2 / 12
+            Iz2 = LINK_MASS_2 * LINK_LENGTH_2 ** 2 / 12
+            alpha = Iz1 + Iz2 + LINK_MASS_1 * LINK_COM_POS_1 ** 2 + LINK_MASS_2 * (LINK_LENGTH_1 ** 2 + LINK_LENGTH_2 ** 2)
+            beta = LINK_MASS_2 * LINK_LENGTH_1 * LINK_COM_POS_2
+            sigma = Iz2 + LINK_MASS_2 * LINK_COM_POS_2 ** 2
             d11 = alpha + 2 * beta * np.cos(s[2])
             d21 = sigma + beta * np.cos(s[2])
             d12 = d21
@@ -195,62 +190,57 @@ class TworrEnv(core.Env):
         return [seed]
 
     def reset(self):
-        #  TODO check difference bw state and observation?
+        #  TODO check difference bw state and observation states=(xd,yd,q1,q2,dq1,dq2,qd1,qd2,dqd1,dqd2,tau1_hat,tau2_hat)
         self.state = self.np_random.uniform(low=-0.1, high=0.1, size=(12,))
+        self.state_buffer= None
+        self.t = 0
         return self._get_ob()
 
     def step(self, a):
-        s = self.state
-        torque = self.AVAIL_TORQUE[a]
-
-        # Add noise to the force action
+        self.state_buffer=np.vstack((self.state_buffer,self.state))
+        s_t = self.state[-1,:] #states at t
+        s_tm1 = self.state[-2, :] #states at t-1
+        # TOODO 
+        # Add noise to the force action 
         if self.torque_noise_max > 0:
             torque += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
-
-        m1 = 1
-        m2 = 1
-        l1 = 1
-        l2 = 1
-
-        # choose a sample target position to test IK
-        xt = 0.5
-        yt = 0.6
-        q_hat_soln1, q_hat_soln2 = two_link_inverse_kinematics(xt, yt, l1, l2)
-        print("The following solutions should reach endpoint position %s: %s OR %s" % (
-        np.array((xt, yt)), q_hat_soln1, q_hat_soln2))
+        # choose a sample target desired position to test IK
+        xd = self.xd[self.t]
+        yd = self.yd[self.t]
+        q_d = self.two_link_inverse_kinematics(xd, yd)[0] #attention: only return and use first solution of IK
         # TODO correct for observation:
-        dth = np.array((0.1, 0.1))  # TODO
-        ddth = np.array((0.1, 0.1))  # TODO
-        tau1_hat, tau2_hat = two_link_inverse_dynamics(q_hat_soln1, dth, ddth)
-        print("ID torques for first IK solution:", np.array((tau1_hat, tau2_hat)))
-
-        # s_init=[th1_init,dth1_init,th2_init,dth2_init]
-        s_init = [q_hat_soln1[0], dth[0], q_hat_soln1[1], dth[1]]
+        dqd_t = np.array([(q_d[0]-s_tm1[6])/self.dt, (q_d[1]-s_tm1[7])/self.dt])
+        ddqd_t = np.array([(dqd_t[0]-s_tm1[8])/self.dt, (dqd_t[1]-s_tm1[9])/self.dt])
+        tau1_hat, tau2_hat = two_link_inverse_dynamics(q_d, dqd_t, ddqd_t)
+        s_init = [s[2], s[4], s[3], s[5]]
         q_FD = self.two_link_forward_dynamics(tau1_hat+a[0], tau2_hat+a[1], s_init)
+        # collect observations
+        obs=np.array([xd,yd,q_FD[0,1],q_FD[2,1],q_FD[1,1],q_FD[3,1],q_d[0],q_d[1],dqd_t[0],dqd_t[1],tau1_hat,tau2_hat])
+        # update states
+        self.state=obs
+        # update time index
+        self.t += 1
+        # check done episode
+        terminal = self._terminal()
 
-        obs=np.array([xt,yt,q_FD[0,1],q_FD[2,1],q_FD[1,1],q_FD[3,1],q_hat_soln1[0],q_hat_soln1[1],dth[0],dth[1],tau1_hat,tau2_hat])
-        self.state=obs #TODO
-
-        terminal = self._terminal() #TODO
-        reward = -1. if not terminal else 0. #TODO
-
+        # calculate reward
+        x_FK, y_FK = self.two_link_forward_kinematics(np.array([q_FD[0,1],q_FD[2,1]]))
+        reward = 1. if  np.sqrt((x_FK-xd)**2+(y_FK-yd)**2)<0.001 else 0.
         # given action it returns 4-tuple (observation, reward, done, info)
         return (obs, reward, terminal, {})
-
 
     def _get_ob(self):
         #TODO
         return 1
 
     def _terminal(self):
-        #TODO
-        return 1
+        return bool(self.t >= MAX_TIMESTEPS)
 
     def _dsdt(self, s_augmented, t):
         # todo check purpose
-        m1 = self.LINK_MASS_1
-        m2 = self.LINK_MASS_2
-        l1 = self.LINK_LENGTH_1
+        LINK_MASS_1 = self.LINK_MASS_1
+        LINK_MASS_2 = self.LINK_MASS_2
+        LINK_LENGTH_1 = self.LINK_LENGTH_1
         lc1 = self.LINK_COM_POS_1
         lc2 = self.LINK_COM_POS_2
         I1 = self.LINK_MOI
@@ -262,23 +252,23 @@ class TworrEnv(core.Env):
         theta2 = s[1]
         dtheta1 = s[2]
         dtheta2 = s[3]
-        d1 = m1 * lc1 ** 2 + m2 * \
-            (l1 ** 2 + lc2 ** 2 + 2 * l1 * lc2 * cos(theta2)) + I1 + I2
-        d2 = m2 * (lc2 ** 2 + l1 * lc2 * cos(theta2)) + I2
-        phi2 = m2 * lc2 * g * cos(theta1 + theta2 - pi / 2.)
-        phi1 = - m2 * l1 * lc2 * dtheta2 ** 2 * sin(theta2) \
-               - 2 * m2 * l1 * lc2 * dtheta2 * dtheta1 * sin(theta2)  \
-            + (m1 * lc1 + m2 * l1) * g * cos(theta1 - pi / 2) + phi2
+        d1 = LINK_MASS_1 * lc1 ** 2 + LINK_MASS_2 * \
+            (LINK_LENGTH_1 ** 2 + lc2 ** 2 + 2 * LINK_LENGTH_1 * lc2 * cos(theta2)) + I1 + I2
+        d2 = LINK_MASS_2 * (lc2 ** 2 + LINK_LENGTH_1 * lc2 * cos(theta2)) + I2
+        phi2 = LINK_MASS_2 * lc2 * g * cos(theta1 + theta2 - pi / 2.)
+        phi1 = - LINK_MASS_2 * LINK_LENGTH_1 * lc2 * dtheta2 ** 2 * sin(theta2) \
+               - 2 * LINK_MASS_2 * LINK_LENGTH_1 * lc2 * dtheta2 * dtheta1 * sin(theta2)  \
+            + (LINK_MASS_1 * lc1 + LINK_MASS_2 * LINK_LENGTH_1) * g * cos(theta1 - pi / 2) + phi2
         if self.book_or_nips == "nips":
             # the following line is consistent with the description in the
             # paper
             ddtheta2 = (a + d2 / d1 * phi1 - phi2) / \
-                (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
+                (LINK_MASS_2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
         else:
             # the following line is consistent with the java implementation and the
             # book
-            ddtheta2 = (a + d2 / d1 * phi1 - m2 * l1 * lc2 * dtheta1 ** 2 * sin(theta2) - phi2) \
-                / (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
+            ddtheta2 = (a + d2 / d1 * phi1 - LINK_MASS_2 * LINK_LENGTH_1 * lc2 * dtheta1 ** 2 * sin(theta2) - phi2) \
+                / (LINK_MASS_2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
         ddtheta1 = -(d2 * ddtheta2 + phi1) / d1
         return (dtheta1, dtheta2, ddtheta1, ddtheta2, 0.)
 
