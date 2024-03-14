@@ -135,8 +135,6 @@ Robotic Manipulation" by Murry et al.
         # Solve differential equation
         sol = solve_ivp(lambda t, s: f(t, s),
                         [tspan[0], tspan[-1]], s_init, t_eval=tspan, rtol=1e-5)
-        # Plot states
-        state_plotter(sol.t, sol.y, 1)
         return sol.y
 
     def seed(self, seed=None):
@@ -170,7 +168,7 @@ Robotic Manipulation" by Murry et al.
         dqd_t = np.array([(q_d[0]-s_tm1[6])/self.dt, (q_d[1]-s_tm1[7])/self.dt])
         ddqd_t = np.array([(dqd_t[0]-s_tm1[8])/self.dt, (dqd_t[1]-s_tm1[9])/self.dt])
         tau1_hat, tau2_hat = self.two_link_inverse_dynamics(q_d, dqd_t, ddqd_t)
-        s_init = [s[2], s[4], s[3], s[5]]
+        s_init = [s_t[2], s_t[4], s_t[3], s_t[5]] #TODO check concept
         q_FD = self.two_link_forward_dynamics(tau1_hat+a[0], tau2_hat+a[1], s_init)
         # collect observations
         obs=np.array([xd,yd,q_FD[0,1],q_FD[2,1],q_FD[1,1],q_FD[3,1],q_d[0],q_d[1],dqd_t[0],dqd_t[1],tau1_hat,tau2_hat])
