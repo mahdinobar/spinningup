@@ -43,8 +43,8 @@ Robotic Manipulation" by Murry et al.
         high_s = np.array([self.xd_init+1, self.yd_init+1, 1.4, 1.4,   0.2,  0.2,  1.4,  1.4,  0.2,  0.2,  10,  10]) 
         low_s = np.array([self.xd_init-1, self.yd_init-1, -1.4, -1.4, -0.2, -0.2, -1.4, -1.4, -0.2, -0.2, -10, -10]) 
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
-        high_a = np.array([10, 10])
-        low_a  = np.array([-10, -10])
+        high_a = np.array([1, 1])
+        low_a  = np.array([-1, -1])
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
 
     def two_link_forward_kinematics(self,q):
