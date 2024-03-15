@@ -40,11 +40,11 @@ Robotic Manipulation" by Murry et al.
         self.xd = np.linspace(self.xd_init, self.xd_init+0.1, self.MAX_TIMESTEPS, endpoint=True)
         self.yd = np.linspace(self.yd_init, self.yd_init+0.8, self.MAX_TIMESTEPS, endpoint=True)
         # states=(xd,yd,    q1,q2,  dq1,dq2,    qd1,qd2,    dqd1,dqd2,  tau1_hat,tau2_hat)
-        high_s = np.array([self.xd_init+1, self.yd_init+1, 1.4, 1.4,   0.2,  0.2,  1.4,  1.4,  0.2,  0.2,  10,  10]) 
-        low_s = np.array([self.xd_init-1, self.yd_init-1, -1.4, -1.4, -0.2, -0.2, -1.4, -1.4, -0.2, -0.2, -10, -10]) 
+        high_s = np.array([self.xd_init+1, self.yd_init+1, 1.4, 1.4,   0.2,  0.2,  1.4,  1.4,  0.2,  0.2,  1,  1]) 
+        low_s = np.array([self.xd_init-1, self.yd_init-1, -1.4, -1.4, -0.2, -0.2, -1.4, -1.4, -0.2, -0.2, -1, -1]) 
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
-        high_a = np.array([1, 1])
-        low_a  = np.array([-1, -1])
+        high_a = np.array([0.1, 0.1])
+        low_a  = np.array([-0.1, -0.1])
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
 
     def two_link_forward_kinematics(self,q):
@@ -74,11 +74,16 @@ Robotic Manipulation" by Murry et al.
         :return: tuple (solution1, solution2) of two-element ndarrays with q1, q2 angles
         """
         # find the position of the point in polar coordinates
-        r = np.sqrt(x ** 2 + y ** 2)
+        r = np.min((np.sqrt(x ** 2 + y ** 2), self.LINK_LENGTH_1+self.LINK_LENGTH_2))
         # phi is the angle of target point w.r.t. -Y axis, same origin as arm
         phi = np.arctan2(y, x)
         alpha = np.arccos((self.LINK_LENGTH_1 ** 2 + self.LINK_LENGTH_2 ** 2 - r ** 2) / (2 * self.LINK_LENGTH_1 * self.LINK_LENGTH_2))
         beta = np.arccos((r ** 2 + self.LINK_LENGTH_1 ** 2 - self.LINK_LENGTH_2 ** 2) / (2 * self.LINK_LENGTH_1 * r))
+        if self.t ==68:
+            print("(self.LINK_LENGTH_1 ** 2 + self.LINK_LENGTH_2 ** 2 - r ** 2) / (2 * self.LINK_LENGTH_1 * self.LINK_LENGTH_2)=",(self.LINK_LENGTH_1 ** 2 + self.LINK_LENGTH_2 ** 2 - r ** 2) / (2 * self.LINK_LENGTH_1 * self.LINK_LENGTH_2))
+            print("alpha=",alpha)
+            print("(r ** 2 + self.LINK_LENGTH_1 ** 2 - self.LINK_LENGTH_2 ** 2) / (2 * self.LINK_LENGTH_1 * r)=",(r ** 2 + self.LINK_LENGTH_1 ** 2 - self.LINK_LENGTH_2 ** 2) / (2 * self.LINK_LENGTH_1 * r))
+            print("beta=",beta)
         soln1 = np.array((phi - beta, np.pi - alpha))
         soln2 = np.array((phi + beta, np.pi + alpha))
         return soln1, soln2
@@ -227,22 +232,24 @@ Robotic Manipulation" by Murry et al.
             self.viewer.set_bounds(-bound,bound,-bound,bound)
 
         if s is None: return None
-        p1 = [self.LINK_LENGTH_1 * np.cos(s[2]), self.LINK_LENGTH_1 * np.sin(s[2])] 
-        p2 = [p1[0] + self.LINK_LENGTH_2 * np.cos(s[2] + s[3]), p1[1] + self.LINK_LENGTH_2 * np.sin(s[2] + q[3])]
+        # x-y coordinates are vice versa for rendering
+        p1 = [self.LINK_LENGTH_1 * np.sin(s[2]), self.LINK_LENGTH_1 * np.cos(s[2])]
+        p2 = [p1[1] + self.LINK_LENGTH_2 * np.sin(s[2] + s[3]), p1[0] + self.LINK_LENGTH_2 * np.cos(s[2] + s[3])]
         
         xys = np.array([[0,0], p1, p2])[:,::-1]
         thetas = [s[2], s[3]] # TODO check compatible with rendering
         link_lengths = [self.LINK_LENGTH_1, self.LINK_LENGTH_2]
 
-        self.viewer.draw_line((-2.2, 1), (2.2, 1))
+        self.viewer.draw_line((-2.2, 0), (2.2, 0))
+        self.viewer.draw_line((0, -2.2), (0, 2.2))
         for ((x,y),th,llen) in zip(xys, thetas, link_lengths):
             l,r,t,b = 0, llen, .1, -.1
             jtransform = rendering.Transform(rotation=th, translation=(x,y))
             link = self.viewer.draw_polygon([(l,b), (l,t), (r,t), (r,b)])
             link.add_attr(jtransform)
-            link.set_color(0,.8, .8)
+            link.set_color(0,0, 1)
             circ = self.viewer.draw_circle(.1)
-            circ.set_color(.8, .8, 0)
+            circ.set_color(.7, .7, 0)
             circ.add_attr(jtransform)
 
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
