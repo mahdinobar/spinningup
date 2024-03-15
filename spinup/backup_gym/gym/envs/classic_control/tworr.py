@@ -30,21 +30,22 @@ Robotic Manipulation" by Murry et al.
         self.LINK_COM_POS_2 = 0.5  #: [m] position of the center of mass of link 2
         self.torque_noise_max = 0.  # TODO
         self.MAX_TIMESTEPS = 100  # maximum timesteps per episode
-        
         self.viewer = None
-        # states=[xt, yt, th1, th2, dth1, dth2, th1_hat, th2_hat, dth1_hat, dth2_hat]
-        high_s = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        # states=(xd,yd,q1,q2,dq1,dq2,qd1,qd2,dqd1,dqd2,tau1_hat,tau2_hat)
+        high_s = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]) #TODO
         low_s = -high_s
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
-        high_a = np.array([0.1, 0.1])
+        high_a = np.array([0.1, 0.1]) #TODO
         low_a = -high_a
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
         self.state = None
         self.state_buffer= None
         self.t = 0
         self.seed()
-        self.xd = np.linspace(1.2,1.3, self.MAX_TIMESTEPS, endpoint=True)
-        self.yd = np.linspace(1, 1.8, self.MAX_TIMESTEPS, endpoint=True)
+        self.xd_init=1.2
+        self.yd_init = 1.0
+        self.xd = np.linspace(self.xd_init, self.xd_init+0.1, self.MAX_TIMESTEPS, endpoint=True)
+        self.yd = np.linspace(self.yd_init, self.yd_init+0.8, self.MAX_TIMESTEPS, endpoint=True)
 
     def two_link_forward_kinematics(self,q):
         """Compute the forward kinematics.  Returns the base-coordinate Cartesian
@@ -145,9 +146,31 @@ Robotic Manipulation" by Murry et al.
         # The reset method should return a tuple of the initial observation and some auxiliary information.
         # states=(xd,yd,q1,q2,dq1,dq2,qd1,qd2,dqd1,dqd2,tau1_hat,tau2_hat)
         self.state = self.np_random.uniform(low=-0.1, high=0.1, size=(12,)) #TODO correct initialization
+
+        xd_init_noisy= self.xd_init + np.random.normal(loc=0.0, scale=0.001, size=None)
+        yd_init_noisy= self.yd_init + np.random.normal(loc=0.0, scale=0.001, size=None)
+        q_init_noisy= self.two_link_inverse_kinematics(xd, yd)[0] + [np.random.normal(loc=0.0, scale=0.01, size=None), np.random.normal(loc=0.0, scale=0.01, size=None)]
+        dq_init=[0,0]
+        qd_init_noisy=self.two_link_inverse_kinematics(xd_init_noisy, yd_init_noisy)[0]
+        dqd_init=[0,0]
+        ddqd_init = [0,0]
+        tau1_hat_init_noisy, tau2_hat_init_noisy = self.two_link_inverse_dynamics(qd_init_noisy, dqd_init, ddqd_init)
+        # reset to initial states
+        self.state = [xd_init_noisy,
+                      yd_init_noisy,
+                      q_init_noisy[0],
+                      q_init_noisy[1],
+                      dq_init[0],
+                      dq_init[1],
+                      qd_init_noisy[0],
+                      qd_init_noisy[1],
+                      dqd_init[0],
+                      dqd_init[1],
+                      tau1_hat_init_noisy,
+                      tau2_hat_init_noisy]
         self.state_buffer=self.state #initialize episode state buffer
         self.t = 0
-        return self._get_ob(), {}
+        return self._get_ob()
 
     def step(self, a):
         if self.t==0:
@@ -163,15 +186,15 @@ Robotic Manipulation" by Murry et al.
         # choose a sample target desired position to test IK
         xd = self.xd[self.t]
         yd = self.yd[self.t]
-        q_d = self.two_link_inverse_kinematics(xd, yd)[0] #attention: only return and use first solution of IK
+        qd = self.two_link_inverse_kinematics(xd, yd)[0] #attention: only return and use first solution of IK
         # TODO correct for observation:
-        dqd_t = np.array([(q_d[0]-s_tm1[6])/self.dt, (q_d[1]-s_tm1[7])/self.dt])
+        dqd_t = np.array([(qd[0]-s_tm1[6])/self.dt, (qd[1]-s_tm1[7])/self.dt])
         ddqd_t = np.array([(dqd_t[0]-s_tm1[8])/self.dt, (dqd_t[1]-s_tm1[9])/self.dt])
-        tau1_hat, tau2_hat = self.two_link_inverse_dynamics(q_d, dqd_t, ddqd_t)
+        tau1_hat, tau2_hat = self.two_link_inverse_dynamics(qd, dqd_t, ddqd_t)
         s_init = [s_t[2], s_t[4], s_t[3], s_t[5]] #TODO check concept
         q_FD = self.two_link_forward_dynamics(tau1_hat+a[0], tau2_hat+a[1], s_init)
         # collect observations
-        obs=np.array([xd,yd,q_FD[0,1],q_FD[2,1],q_FD[1,1],q_FD[3,1],q_d[0],q_d[1],dqd_t[0],dqd_t[1],tau1_hat,tau2_hat])
+        obs=np.array([xd,yd,q_FD[0,1],q_FD[2,1],q_FD[1,1],q_FD[3,1],qd[0],qd[1],dqd_t[0],dqd_t[1],tau1_hat,tau2_hat]) #TODO 
         # update states
         self.state=obs
         self.state_buffer=np.vstack((self.state_buffer,self.state))
