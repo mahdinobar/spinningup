@@ -31,24 +31,6 @@ Robotic Manipulation" by Murry et al.
         self.torque_noise_max = 0.  # TODO
         self.MAX_TIMESTEPS = 100  # maximum timesteps per episode
         self.viewer = None
-
-        xd_init_noisy= self.xd_init + np.random.normal(loc=0.0, scale=0.002, size=None)
-        yd_init_noisy= self.yd_init + np.random.normal(loc=0.0, scale=0.002, size=None)
-        q_init_noisy= self.two_link_inverse_kinematics(xd_init_noisy, yd_init_noisy)[0] + [np.random.normal(loc=0.0, scale=0.01, size=None), np.random.normal(loc=0.0, scale=0.01, size=None)]
-        dq_init=[0,0]
-        qd_init_noisy=self.two_link_inverse_kinematics(xd_init_noisy, yd_init_noisy)[0]
-        dqd_init=[0,0]
-        ddqd_init = [0,0]
-        tau1_hat_init_noisy, tau2_hat_init_noisy = self.two_link_inverse_dynamics(qd_init_noisy, dqd_init, ddqd_init)
-
-
-        # states=(xd,yd,    q1,q2,  dq1,dq2,    qd1,qd2,    dqd1,dqd2,  tau1_hat,tau2_hat)
-        high_s = np.array([self.xd_init+1, self.yd_init+1, 1.4, 1.4,   0.2,  0.2,  1.4,  1.4,  0.2,  0.2,  10,  10]) 
-        low_s = np.array([self.xd_init-1, self.yd_init-1, -1.4, -1.4, -0.2, -0.2, -1.4, -1.4, -0.2, -0.2, -10, -10]) 
-        self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
-        high_a = np.array([10, 10])
-        low_a  = np.array([-10, -10])
-        self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
         self.state = None
         self.state_buffer= None
         self.t = 0
@@ -57,6 +39,13 @@ Robotic Manipulation" by Murry et al.
         self.yd_init = 1.0
         self.xd = np.linspace(self.xd_init, self.xd_init+0.1, self.MAX_TIMESTEPS, endpoint=True)
         self.yd = np.linspace(self.yd_init, self.yd_init+0.8, self.MAX_TIMESTEPS, endpoint=True)
+        # states=(xd,yd,    q1,q2,  dq1,dq2,    qd1,qd2,    dqd1,dqd2,  tau1_hat,tau2_hat)
+        high_s = np.array([self.xd_init+1, self.yd_init+1, 1.4, 1.4,   0.2,  0.2,  1.4,  1.4,  0.2,  0.2,  10,  10]) 
+        low_s = np.array([self.xd_init-1, self.yd_init-1, -1.4, -1.4, -0.2, -0.2, -1.4, -1.4, -0.2, -0.2, -10, -10]) 
+        self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
+        high_a = np.array([10, 10])
+        low_a  = np.array([-10, -10])
+        self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
 
     def two_link_forward_kinematics(self,q):
         """Compute the forward kinematics.  Returns the base-coordinate Cartesian
