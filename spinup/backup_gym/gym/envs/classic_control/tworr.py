@@ -177,7 +177,7 @@ Robotic Manipulation" by Murry et al.
         self.t = 0
         return self._get_ob()
 
-    def step(self, a):
+    def step(self,a):
         if self.t==0:
             s_t = self.state_buffer[:]  # states at t
             s_tm1 = s_t  # TODO check. states at t-1
