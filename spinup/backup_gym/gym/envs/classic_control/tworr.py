@@ -172,7 +172,7 @@ Robotic Manipulation" by Murry et al.
             return pinvA
         return pseudoInverseMat(J,ld), J
 
-    def two_link_inverse_kinematics_joint_speeds(dxdt, dydt, q1, q2):
+    def two_link_inverse_kinematics_joint_speeds(self, dxdt, dydt, q1, q2):
         """
         given joint positions and end effector cartesian speed, using kinematics, returns joint speeds
         """
@@ -184,7 +184,7 @@ Robotic Manipulation" by Murry et al.
         dq2dt = (dydt + gama * dq1dt) / beta
         return np.array([dq1dt, dq2dt])
 
-    def q_command(r_ee, v_ee, Jpinv, rd, vd, e, dt):
+    def q_command(self, r_ee, v_ee, Jpinv, rd, vd, e, dt):
         """
         PID Traj Tracking Feedback Controller
         Inputs:
