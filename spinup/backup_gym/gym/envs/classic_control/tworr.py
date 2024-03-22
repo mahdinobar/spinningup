@@ -231,16 +231,22 @@ Robotic Manipulation" by Murry et al.
 
         self.t = 0
 
-        rd_t = np.array([xd[self.t + 1], yd[self.t + 1]])  # attention: index desired starts from t=-1
-        vd = np.array([vxd, vyd])
+        rd_t = np.array([self.xd[self.t + 1], self.yd[self.t + 1]])  # attention: index desired starts from t=-1
+        vd = np.array([self.vxd, self.vyd])
         # at time t=0
         q_t=self.q[-1,:]
         dq_t = self.dq[-1, :]
+        self.q = np.vstack((self.q, q_t))
+        self.dq = np.vstack((self.dq, dq_t))
+
         r_hat_t = self.two_link_forward_kinematics(q_t)
-        Jpinv_t, J_t = two_link_jacobian(q_t, ld=0.01)
+        Jpinv_t, J_t = self.two_link_jacobian(q_t, ld=0.01)
         v_hat_t = (r_hat_t - self.r_hat[-1, :]) / self.dt
         self.r_hat=np.vstack((self.r_hat,r_hat_t))
-        dqc_t, e=self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd, e=e, dt=dt)
+        ree0 = rd_t
+        e0 = rd_t - ree0
+        self.e = np.vstack((self.e, e0.reshape(1, 2)))
+        dqc_t, e=self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd, e=self.e, dt=self.dt)
         qc_t = dqc_t*self.dt+self.q[-2,:] #TODO is this observer(taking q(t-1) for integration) sufficient?
         ddqc_t =  (dqc_t-self.dq[-2,:])/self.dt
 
@@ -249,9 +255,6 @@ Robotic Manipulation" by Murry et al.
         self.ddqc = np.vstack((self.ddqc, ddqc_t))
 
         tau1_hat, tau2_hat = self.two_link_inverse_dynamics(q_t, dqc_t, ddqc_t)
-
-        self.q = np.vstack((q, q_t))
-        self.dq = np.vstack((dq, dq_t))
 
         self.state = [r_hat_t[0]-rd_t[0],
                       r_hat_t[1]-rd_t[1],
@@ -297,16 +300,16 @@ Robotic Manipulation" by Murry et al.
     def step(self,a):
         # update time index
         self.t += 1 #Attention doublecheck
-        rd_t = np.array([xd[self.t + 1], yd[self.t + 1]])  # attention: index desired starts from t=-1
-        vd = np.array([vxd, vyd])
+        rd_t = np.array([self.xd[self.t + 1], self.yd[self.t + 1]])  # attention: index desired starts from t=-1
+        vd = np.array([self.vxd, self.vyd])
         q_t = self.q[-1, :]
         dq_t = self.dq[-1, :]
         r_hat_t = self.two_link_forward_kinematics(q_t)
         Jpinv_t, J_t = self.two_link_jacobian(q_t, ld=0.01)
-        v_hat_t = (r_hat_t - r_hat[-1, :]) / self.dt
+        v_hat_t = (r_hat_t - self.r_hat[-1, :]) / self.dt
         self.r_hat = np.vstack((self.r_hat, r_hat_t))
-        dqc_t, e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd, e=e, dt=dt)
-        qc_t = dqc_t * dt + self.q[-2, :]  # TODO is this observer(taking q(t-1) for integration) sufficient?
+        dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd, e=self.e, dt=self.dt)
+        qc_t = dqc_t * self.dt + self.q[-2, :]  # TODO is this observer(taking q(t-1) for integration) sufficient?
         ddqc_t = (dqc_t - self.dq[-2, :]) / self.dt
 
         self.qc = np.vstack((self.qc, qc_t))
@@ -342,7 +345,7 @@ Robotic Manipulation" by Murry et al.
 
         # calculate reward
         x_FK, y_FK = self.two_link_forward_kinematics(np.array([q_FD[0], q_FD[2]]))
-        reward = 1. if np.sqrt((x_FK - xd) ** 2 + (y_FK - yd) ** 2) < 0.01 else 0.
+        reward = 1. if np.sqrt((x_FK - rd_t[0]) ** 2 + (y_FK - rd_t[1]) ** 2) < 0.01 else 0. # TODO double check concept indexing timestep
         # given action it returns 4-tuple (observation, reward, done, info)
         return (self._get_ob(), reward, terminal, {})
 
@@ -394,7 +397,7 @@ Robotic Manipulation" by Murry et al.
         return s
 
     def _terminal(self):
-        return bool(self.t >= self.MAX_TIMESTEPS)
+        return bool(self.t >= self.MAX_TIMESTEPS-1)
 
     def render(self, mode='human'):
         from gym.envs.classic_control import rendering
