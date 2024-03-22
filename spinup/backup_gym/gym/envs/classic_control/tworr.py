@@ -317,11 +317,11 @@ Robotic Manipulation" by Murry et al.
 
         # s_init=[th1_init,dth1_init,th2_init,dth2_init]
         s_init = np.array([q_t[0], dq_t[0], q_t[1], dq_t[1]])
-        t = time.time()
+        # t = time.time()
         # TODO HERE WHY TAKES LONG??
         q_FD = self.two_link_forward_dynamics(tau1_hat+a[0], tau2_hat+a[1],
                                          s_init)  # attention: forward dynamics robot has correct m2 value
-        print("FD elapsed time=", time.time() - t)
+        # print("FD elapsed time=", time.time() - t)
         self.q = np.vstack((self.q, np.array([q_FD[0], q_FD[2]])))
         self.dq = np.vstack((self.dq, np.array([q_FD[1], q_FD[3]])))
 
