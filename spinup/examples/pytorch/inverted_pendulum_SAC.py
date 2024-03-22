@@ -9,10 +9,10 @@ from spinup.utils.test_policy import load_policy_and_env, run_policy
 from spinup.utils import plot
 import os
 
-TRAIN=False
-DEBUG=True
-env_fn = lambda: gym.make('Tworr-v1')
-exp_name = "Tworrv0_0"
+TRAIN=True
+DEBUG=False
+env_fn = lambda: gym.make('Tworr-v0')
+exp_name = "Tworrv0_1"
 if __name__ == '__main__':
     if TRAIN:
         # train
