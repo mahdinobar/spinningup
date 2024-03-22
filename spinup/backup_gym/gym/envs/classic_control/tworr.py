@@ -41,8 +41,8 @@ Robotic Manipulation" by Murry et al.
         self.MAX_TIMESTEPS = 100 # maximum timesteps per episode
         self.vxd = -0.01  # m/s
         self.vyd = 0.05  # m/s
-        deltax = vxd * dt * MAX_TIMESTEPS
-        deltay = vyd * dt * MAX_TIMESTEPS
+        deltax = self.vxd * self.dt * self.MAX_TIMESTEPS
+        deltay = self.vyd * self.dt * self.MAX_TIMESTEPS
         self.xd = np.linspace(self.xd_init, self.xd_init + deltax, MAX_TIMESTEPS + 1, endpoint=True)
         self.yd = np.linspace(self.yd_init, self.yd_init + deltay, MAX_TIMESTEPS + 1, endpoint=True)
 
