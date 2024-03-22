@@ -146,7 +146,7 @@ Robotic Manipulation" by Murry et al.
                                 s[3] ** 2)]
             return dsdt
         # Define time spans, initial values, and constants
-        tspan = np.linspace(0, 1, 2)
+        tspan = np.linspace(0, 1, 100)
         # Solve differential equation
         sol = solve_ivp(lambda t, s: f(t, s),
                         [tspan[0], tspan[-1]], s_init, t_eval=tspan, rtol=1e-5)
