@@ -27,5 +27,5 @@ if __name__ == '__main__':
         # VideoRecorder(env_fn,'/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/video.mp4', enabled=True)
         # visualize output
         _, get_action = load_policy_and_env('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/'+exp_name)
-        run_policy(env_fn, get_action,num_episodes=3)
+        run_policy(env_fn, get_action,num_episodes=3) 
 
