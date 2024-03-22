@@ -11,7 +11,7 @@ import os
 
 TRAIN=False
 DEBUG=True
-env_fn = lambda: gym.make('Tworr-v0')
+env_fn = lambda: gym.make('Tworr-v1')
 exp_name = "Tworrv0_0"
 if __name__ == '__main__':
     if TRAIN:
