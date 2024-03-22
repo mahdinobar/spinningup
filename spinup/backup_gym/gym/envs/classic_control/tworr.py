@@ -47,8 +47,8 @@ Robotic Manipulation" by Murry et al.
         self.yd = np.linspace(self.yd_init, self.yd_init + deltay, MAX_TIMESTEPS + 1, endpoint=True)
 
         # TODO CHECK
-        high_s = np.array([self.xd_init+1, self.yd_init+1, 1.4, 1.4,   0.2,  0.2,  1.4,  1.4,  0.2,  0.2,  1,  1])
-        low_s = np.array([self.xd_init-1, self.yd_init-1, -1.4, -1.4, -0.2, -0.2, -1.4, -1.4, -0.2, -0.2, -1, -1])
+        high_s = np.array([0.2,  0.2,  1.5,  1.5,  0.5,  0.5,  1,  1])
+        low_s = np.array([-0.2, -0.2, -1.5, -1.5, -0.5, -0.5, -1, -1])
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         high_a = np.array([0.1, 0.1])
         low_a  = np.array([-0.1, -0.1])
