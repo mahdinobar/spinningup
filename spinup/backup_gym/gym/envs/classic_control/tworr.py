@@ -69,7 +69,7 @@ Robotic Manipulation" by Murry et al.
         """
         x = self.LINK_LENGTH_1 * np.cos(q[0]) + self.LINK_LENGTH_2 * np.cos(q[0] + q[1])
         y = self.LINK_LENGTH_1 * np.sin(q[0]) + self.LINK_LENGTH_2 * np.sin(q[0] + q[1])
-        return x, y
+        return [x, y]
 
     def two_link_inverse_kinematics(self,x, y):
         """Compute two inverse kinematics solutions for a target end position.  The
@@ -151,6 +151,7 @@ Robotic Manipulation" by Murry et al.
         sol = solve_ivp(lambda t, s: f(t, s),
                         [tspan[0], tspan[-1]], s_init, t_eval=tspan, rtol=1e-5)
         return sol.y[:,1]
+
     def two_link_jacobian(self, q, ld=0.1):
         J=np.array([[-self.LINK_LENGTH_1*np.sin(q[0])-self.LINK_LENGTH_2*np.sin(q[0]+q[1]), -self.LINK_LENGTH_2*np.sin(q[0]+q[1])],
                     [self.LINK_LENGTH_1*np.cos(q[0])+self.LINK_LENGTH_2*np.cos(q[0]+q[1]), +self.LINK_LENGTH_2*np.cos(q[0]+q[1])]])
@@ -169,7 +170,19 @@ Robotic Manipulation" by Murry et al.
                 # Compute the right pseudoinverse.
                 pinvA = np.linalg.lstsq((np.matmul(A, A.T) + ld * ld * np.eye(m, m)).T, A)[0].T
             return pinvA
-        return pseudoInverseMat(J,ld)
+        return pseudoInverseMat(J,ld), J
+
+    def two_link_inverse_kinematics_joint_speeds(dxdt, dydt, q1, q2):
+        """
+        given joint positions and end effector cartesian speed, using kinematics, returns joint speeds
+        """
+        alpha = self.LINK_LENGTH_1 * np.sin(q1) + self.LINK_LENGTH_2 * np.sin(q1 + q2)
+        beta = self.LINK_LENGTH_2 * np.cos(q1 + q2)
+        gama = -self.LINK_LENGTH_1 * np.cos(q1) - self.LINK_LENGTH_2 * np.cos(q1 + q2)
+        dq1dt = (1 / alpha) * (-dxdt - self.LINK_LENGTH_2 * dydt / beta * np.sin(q1 + q2)) / (
+                    1 + self.LINK_LENGTH_2 * gama * np.sin(q1 + q2) / (alpha * beta))
+        dq2dt = (dydt + gama * dq1dt) / beta
+        return np.array([dq1dt, dq2dt])
 
     def q_command(r_ee, v_ee, Jpinv, rd, vd, e, dt):
         """
@@ -203,11 +216,10 @@ Robotic Manipulation" by Murry et al.
         rd_minus1 = np.array([xd[0], yd[0]])
         v_minus1 = np.array([vxd, vyd])
         ree_minus1 = rd_minus1
-        q_hat_soln1, q_hat_soln2 = two_link_inverse_kinematics(rd_minus1[0], rd_minus1[1], l1, l2)
+        q_hat_soln1, q_hat_soln2 = self.two_link_inverse_kinematics(rd_minus1[0], rd_minus1[1])
         q_minus1 = q_hat_soln1
         e_minus1 = rd_minus1 - ree_minus1
-        dq_t_minus1 = two_link_inverse_kinematics_joint_speeds(v_minus1[0], v_minus1[1], q_minus1[0], q_minus1[1],
-                                                               l1=1.0, l2=1.0)
+        dq_t_minus1 = self.two_link_inverse_kinematics_joint_speeds(v_minus1[0], v_minus1[1], q_minus1[0], q_minus1[1])
         # starting from t=-1
         self.e = e_minus1.reshape(1, 2)
         self.q = q_minus1.reshape(1, 2)
@@ -224,7 +236,7 @@ Robotic Manipulation" by Murry et al.
         # at time t=0
         q_t=self.q[-1,:]
         dq_t = self.dq[-1, :]
-        r_hat_t = self.two_link_forward_kinematics(q_t, l1, l2)
+        r_hat_t = self.two_link_forward_kinematics(q_t)
         Jpinv_t, J_t = two_link_jacobian(q_t, ld=0.01)
         v_hat_t = (r_hat_t - self.r_hat[-1, :]) / self.dt
         self.r_hat=np.vstack((self.r_hat,r_hat_t))
@@ -289,7 +301,7 @@ Robotic Manipulation" by Murry et al.
         vd = np.array([vxd, vyd])
         q_t = self.q[-1, :]
         dq_t = self.dq[-1, :]
-        r_hat_t = self.two_link_forward_kinematics(q_t, l1, l2)
+        r_hat_t = self.two_link_forward_kinematics(q_t)
         Jpinv_t, J_t = self.two_link_jacobian(q_t, ld=0.01)
         v_hat_t = (r_hat_t - r_hat[-1, :]) / self.dt
         self.r_hat = np.vstack((self.r_hat, r_hat_t))
