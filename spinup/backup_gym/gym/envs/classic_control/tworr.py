@@ -43,8 +43,8 @@ Robotic Manipulation" by Murry et al.
         self.vyd = 0.05  # m/s
         deltax = self.vxd * self.dt * self.MAX_TIMESTEPS
         deltay = self.vyd * self.dt * self.MAX_TIMESTEPS
-        self.xd = np.linspace(self.xd_init, self.xd_init + deltax, MAX_TIMESTEPS + 1, endpoint=True)
-        self.yd = np.linspace(self.yd_init, self.yd_init + deltay, MAX_TIMESTEPS + 1, endpoint=True)
+        self.xd = np.linspace(self.xd_init, self.xd_init + deltax, self.MAX_TIMESTEPS + 1, endpoint=True)
+        self.yd = np.linspace(self.yd_init, self.yd_init + deltay, self.MAX_TIMESTEPS + 1, endpoint=True)
 
         # TODO CHECK
         high_s = np.array([0.2,  0.2,  1.5,  1.5,  0.5,  0.5,  1,  1])
@@ -213,8 +213,8 @@ Robotic Manipulation" by Murry et al.
 
     def reset(self):
         # initialize at t=-1
-        rd_minus1 = np.array([xd[0], yd[0]])
-        v_minus1 = np.array([vxd, vyd])
+        rd_minus1 = np.array([self.xd[0], self.yd[0]])
+        v_minus1 = np.array([self.vxd, self.vyd])
         ree_minus1 = rd_minus1
         q_hat_soln1, q_hat_soln2 = self.two_link_inverse_kinematics(rd_minus1[0], rd_minus1[1])
         q_minus1 = q_hat_soln1
