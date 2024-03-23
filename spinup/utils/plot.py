@@ -163,10 +163,10 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
     plt.show()
 
 
-def main():
+def main(logdir_manual):
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('logdir', nargs='*')
+    parser.add_argument('logdir', nargs='*', default=logdir_manual)
     parser.add_argument('--legend', '-l', nargs='*')
     parser.add_argument('--xaxis', '-x', default='TotalEnvInteracts')
     parser.add_argument('--value', '-y', default='Performance', nargs='*')
@@ -177,7 +177,6 @@ def main():
     parser.add_argument('--est', default='mean')
     args = parser.parse_args()
     """
-
     Args: 
         logdir (strings): As many log directories (or prefixes to log 
             directories, which the plotter will autocomplete internally) as 
@@ -230,4 +229,6 @@ def main():
                estimator=args.est)
 
 if __name__ == "__main__":
-    main()
+    # exp_name = "Tworrv0_2"
+    logdir_manual = '/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/'
+    main(logdir_manual)
