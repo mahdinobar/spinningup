@@ -163,10 +163,10 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
     plt.show()
 
 
-def main(logdir_manual):
+def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('logdir', nargs='*', default=logdir_manual)
+    parser.add_argument('logdir', nargs='*')
     parser.add_argument('--legend', '-l', nargs='*')
     parser.add_argument('--xaxis', '-x', default='TotalEnvInteracts')
     parser.add_argument('--value', '-y', default='Performance', nargs='*')
@@ -229,6 +229,6 @@ def main(logdir_manual):
                estimator=args.est)
 
 if __name__ == "__main__":
-    # exp_name = "Tworrv0_2"
-    logdir_manual = '/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/'
-    main(logdir_manual)
+    # exp_name = "Tworrv0_1"
+    # logdir_manual = '/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Tworrv0_1'+exp_name
+    main()
