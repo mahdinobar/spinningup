@@ -50,8 +50,8 @@ Robotic Manipulation" by Murry et al.
         high_s = np.array([0.2,  0.2,  1.5,  1.5,  0.5,  0.5,  18,  5])
         low_s = np.array([-0.2, -0.2, -1.5, -1.5, -0.5, -0.5, -18, -5])
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
-        high_a = np.array([2, 2])
-        low_a  = np.array([-2, -2])
+        high_a = np.array([10, 10])
+        low_a  = np.array([-10, -10])
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
 
 
