@@ -50,8 +50,8 @@ Robotic Manipulation" by Murry et al.
         high_s = np.array([0.2,  0.2,  1.5,  1.5,  0.5,  0.5,  18,  5])
         low_s = np.array([-0.2, -0.2, -1.5, -1.5, -0.5, -0.5, -18, -5])
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
-        high_a = np.array([10, 10])
-        low_a  = np.array([-10, -10])
+        high_a = np.array([1, 1])
+        low_a  = np.array([-1, -1])
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
 
 
@@ -318,7 +318,8 @@ Robotic Manipulation" by Murry et al.
         # check done episode
         terminal = self._terminal()
         # calculate reward
-        reward = 1. if np.sqrt(obs[0] ** 2 + obs[1] ** 2) < 0.01 else 0. # TODO double check concept indexing timestep
+        # reward = 1. if np.sqrt(obs[0] ** 2 + obs[1] ** 2) < 0.01 else 0. 
+        reward = 1. if np.sqrt(obs[0] ** 2 + obs[1] ** 2) < 0.001 else -np.sqrt(obs[0] ** 2 + obs[1] ** 2) 
         # given action it returns 4-tuple (observation, reward, done, info)
         return (self._get_ob(), reward, terminal, {})
 
