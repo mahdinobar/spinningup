@@ -319,7 +319,7 @@ Robotic Manipulation" by Murry et al.
         terminal = self._terminal()
         # calculate reward
         # reward = 1. if np.sqrt(obs[0] ** 2 + obs[1] ** 2) < 0.01 else 0. 
-        reward = 100. if np.sqrt(obs[0] ** 2 + obs[1] ** 2) < 0.001 else - (obs[0] ** 2 + obs[1] ** 2)
+        reward = 100. if np.sqrt(obs[0] ** 2 + obs[1] ** 2) < 0.001 else - 10000*(obs[0] ** 2 + obs[1] ** 2)
         # given action it returns 4-tuple (observation, reward, done, info)
         return (self._get_ob(), reward, terminal, {})
 
