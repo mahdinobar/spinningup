@@ -331,8 +331,8 @@ Robotic Manipulation" by Murry et al.
         error_p_t = sum(abs(obs[0:2]))
         v_hat_after = (self.two_link_forward_kinematics(np.array([q_FD[1], q_FD[3]])) - self.r_hat[-1, :]) / self.dt
         error_v_t = sum(abs(v_hat_after-vd))
-        reward_p_t=self.f_logistic(self,error_p_t,self.lp)
-        reward_p_t = self.f_logistic(self,error_v_t, self.lv)
+        reward_p_t=self.f_logistic(error_p_t,self.lp)
+        reward_p_t = self.f_logistic(error_v_t, self.lv)
         reward_t=self.reward_eta*reward_p_t+(1-self.reward_eta)*reward_v_t
         # given action it returns 4-tuple (observation, reward, done, info)
         return (self._get_ob(), reward_t, terminal, {})
