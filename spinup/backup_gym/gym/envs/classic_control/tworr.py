@@ -22,8 +22,8 @@ Robotic Manipulation" by Murry et al.
     }
 
     def __init__(self):
-        self.lp=3
-        self.lv=3
+        self.lp=100
+        self.lv=100
         self.reward_eta=0.75
 
         self.LINK_LENGTH_1 = 1.  # [m]
