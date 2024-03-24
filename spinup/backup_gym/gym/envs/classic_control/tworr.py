@@ -21,6 +21,10 @@ Robotic Manipulation" by Murry et al.
     }
 
     def __init__(self):
+        self.lp=3
+        self.lv=3
+        self.reward_eta=0.75
+
         self.LINK_LENGTH_1 = 1.  # [m]
         self.LINK_LENGTH_2 = 1.  # [m]
         self.LINK_MASS_1 = 1.  #: [kg] mass of link 1
@@ -207,6 +211,9 @@ Robotic Manipulation" by Murry et al.
         qc = np.dot(Jpinv, v_command)
         return qc, e
 
+    def f_logistic(self,x,l):
+        return 2/(math.e^(x*l)+math.e^(-x*l))
+
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
@@ -319,9 +326,16 @@ Robotic Manipulation" by Murry et al.
         terminal = self._terminal()
         # calculate reward
         # reward = 1. if np.sqrt(obs[0] ** 2 + obs[1] ** 2) < 0.01 else 0. 
-        reward = 100. if np.sqrt(obs[0] ** 2 + obs[1] ** 2) < 0.001 else - 10000*(obs[0] ** 2 + obs[1] ** 2)
+        reward_t = 100. if np.sqrt(obs[0] ** 2 + obs[1] ** 2) < 0.001 else - 10000*(obs[0] ** 2 + obs[1] ** 2)
+        # define inspired by Pavlichenko et al SAC tracking paper https://doi.org/10.48550/arXiv.2203.07051
+        error_p_t = sum(abs(obs[0:2]))
+        v_hat_after = (self.two_link_forward_kinematics(np.array([q_FD[1], q_FD[3]])) - self.r_hat[-1, :]) / self.dt
+        error_v_t = sum(abs(v_hat_after-vd))
+        reward_p_t=self.f_logistic(self,error_p_t,self.lp)
+        reward_p_t = self.f_logistic(self,error_v_t, self.lv)
+        reward_t=self.reward_eta*reward_p_t+(1-self.reward_eta)*reward_v_t
         # given action it returns 4-tuple (observation, reward, done, info)
-        return (self._get_ob(), reward, terminal, {})
+        return (self._get_ob(), reward_t, terminal, {})
 
     def _get_ob(self): #TODO is state=observation a reasonable assumption?
         s = self.state
