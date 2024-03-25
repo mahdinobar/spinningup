@@ -160,6 +160,8 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
     for value in values:
         plt.figure()
         plot_data(data, xaxis=xaxis, value=value, condition=condition, smooth=smooth, estimator=estimator)
+    plt.hlines(85.705, 0, 10e4, 'k', linestyles="dashed", label='PID only')
+    plt.savefig(all_logdirs[-1])
     plt.show()
 
 
