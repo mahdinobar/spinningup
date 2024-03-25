@@ -22,15 +22,21 @@ Robotic Manipulation" by Murry et al.
     }
 
     def __init__(self):
+        # TODO: reward params
         self.lp=100
         self.lv=100
         self.reward_eta=0.75
+        
+        # TODO: User defined linear position gain
+        self.K_p = 10
+        self.K_i = 5
+        self.K_d = 5
 
         self.LINK_LENGTH_1 = 1.  # [m]
         self.LINK_LENGTH_2 = 1.  # [m]
         self.LINK_MASS_1 = 1.  #: [kg] mass of link 1
         self.LINK_MASS_2 = 1.  #: [kg] imperfect mass of link 2
-        self.LINK_MASS_2_TRUE = 1.05  #: [kg] TRUE mass of link 2
+        self.LINK_MASS_2_TRUE = 1.1  #: [kg] TRUE mass of link 2
         self.LINK_COM_POS_1 = 0.5  #r1: [m] distance of the center of mass of link 1 wrt joint
         self.LINK_COM_POS_2 = 0.5  #r2: [m] distance of the center of mass of link 2 wrt joint
         self.torque_noise_max = 0.  # TODO
@@ -199,16 +205,12 @@ Robotic Manipulation" by Murry et al.
             Jpinv : current pseudo inverse jacobian matrix
         Output: joint-space velocity command of the robot.
         """
-        # TODO: User defined linear position gain
-        K_p = 40
-        K_i = 10
-        K_d = 10
         # TODO: User defined pseudo-inverse damping coefficient
         # ld = 0.1
         # Jpinv=two_link_jacobian(q_hat_soln1, ld)
         e_t = (rd - r_ee)
         e = np.vstack((e, e_t.reshape(1, 2)))
-        v_command = vd + K_p * e_t + K_i * np.sum(e[1:, :], 0) * dt + K_d * (vd - v_ee)
+        v_command = vd + self.K_p * e_t + self.K_i * np.sum(e[1:, :], 0) * dt + self.K_d * (vd - v_ee)
         qc = np.dot(Jpinv, v_command)
         return qc, e
 
@@ -299,8 +301,9 @@ Robotic Manipulation" by Murry et al.
         # s_init=[th1_init,dth1_init,th2_init,dth2_init]
         s_init = np.array([q_t[0], dq_t[0], q_t[1], dq_t[1]])
         # t = time.time()
-        tau1 = tau1_hat + a[0]
-        tau2 = tau2_hat + a[1]
+        # inject SAC action
+        tau1 = tau1_hat #+ a[0]
+        tau2 = tau2_hat #+ a[1]
         # TODO HERE WHY TAKES LONG??
         q_FD = self.two_link_forward_dynamics(tau1, tau2,
                                          s_init)  # attention: forward dynamics robot has correct m2 value
