@@ -346,7 +346,7 @@ Robotic Manipulation" by Murry et al.
         return s
 
     def _terminal(self):
-        return bool(self.t >= self.MAX_TIMESTEPS)
+        return bool(self.t >= self.MAX_TIMESTEPS-1)
 
     def render(self, mode='human'):
         from gym.envs.classic_control import rendering
