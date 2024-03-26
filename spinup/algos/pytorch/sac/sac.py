@@ -302,7 +302,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         # Ignore the "done" signal if it comes from hitting the time
         # horizon (that is, when it's an artificial terminal signal
         # that isn't based on the agent's state: at gym: The keyword argument "max_episode_steps" will ensure that GridWorld environments that are instantiated via gymnasium.make will be wrapped in a TimeLimit wrapper (see the wrapper documentation for more information). A done signal will then be produced if the agent has reached the target or 300 steps have been executed in the current episode. To distinguish truncation and termination, you can check info["TimeLimit.truncated"])
-        d = False if ep_len==max_ep_len else d
+        # d = False if ep_len==max_ep_len else d
 
         # Store experience to replay buffer
         replay_buffer.store(o, a, r, o2, d)
