@@ -23,8 +23,8 @@ Robotic Manipulation" by Murry et al.
 
     def __init__(self):
         # TODO: reward params
-        self.lp=100
-        self.lv=100
+        self.lp=200
+        self.lv=200
         self.reward_eta=0.75
         
         # TODO: User defined linear position gain
