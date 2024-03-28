@@ -130,10 +130,10 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True):
         if d or (ep_len == max_ep_len):
             # plotting
             # np.save(
-            #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/no_SAC_0_8/no_SAC_plot_data_buffer.npy",
+            #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/no_SAC_0_12/no_SAC_plot_data_buffer.npy",
             #     env.plot_data_buffer)
             no_SAC_plot_data_buffer=np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/no_SAC_0_8/no_SAC_plot_data_buffer.npy")
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/no_SAC_0_12/no_SAC_plot_data_buffer.npy")
             plt.figure(1)
             plt.rcParams["font.family"] = "Times New Roman"
             plt.plot(env.plot_data_buffer[:,2], env.plot_data_buffer[:,3], 'r--', label='rd: desired traj')
@@ -144,7 +144,7 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True):
             plt.xlabel("x")
             plt.ylabel("y")
             plt.legend()
-            plt.savefig("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Tworrv0_11/position.png")
+            plt.savefig("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Tworrv0_12/position.png")
             plt.show()
 
             plt.figure(2)
