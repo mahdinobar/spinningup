@@ -6,7 +6,8 @@ import tensorflow as tf
 import torch
 from spinup import EpochLogger
 from spinup.utils.logx import restore_tf_graph
-
+import matplotlib.pyplot as plt
+import numpy as np
 
 def load_policy_and_env(fpath, itr='last', deterministic=False):
     """
@@ -127,6 +128,40 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True):
         ep_len += 1
 
         if d or (ep_len == max_ep_len):
+            # plotting
+            # np.save(
+            #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/no_SAC_0_8/no_SAC_plot_data_buffer.npy",
+            #     env.plot_data_buffer)
+            no_SAC_plot_data_buffer=np.load(
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/no_SAC_0_8/no_SAC_plot_data_buffer.npy")
+            plt.figure(1)
+            plt.rcParams["font.family"] = "Times New Roman"
+            plt.plot(env.plot_data_buffer[:,2], env.plot_data_buffer[:,3], 'r--', label='rd: desired traj')
+            plt.plot(env.plot_data_buffer[:, 0], env.plot_data_buffer[:, 1], 'b', label='r_hat: FK estimated traj with Hybrid controller')
+            plt.plot(no_SAC_plot_data_buffer[:, 0], no_SAC_plot_data_buffer[:, 1], 'k', label='no_SAC_r_hat: FK estimated traj with PID only controller')
+            # plt.rcParams["font.family"] = "sans-serif"
+            # plt.rcParams["font.serif"] = "Times New Roman"
+            plt.xlabel("x")
+            plt.ylabel("y")
+            plt.legend()
+            plt.savefig("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Tworrv0_11/position.png")
+            plt.show()
+
+            plt.figure(2)
+            plt.rcParams["font.family"] = "Times New Roman"
+            plt.plot(env.plot_data_buffer[:,6], env.plot_data_buffer[:,7], 'r--', label='vd: desired traj', marker=".", markersize=30)
+            plt.plot(env.plot_data_buffer[:, 4], env.plot_data_buffer[:, 5], 'b', label='v_hat: FK estimated traj')
+            plt.plot(no_SAC_plot_data_buffer[:, 4], no_SAC_plot_data_buffer[:, 5], 'k', label='no_SAC_v_hat: FK estimated traj with PID only controller')
+
+            # plt.rcParams["font.family"] = "sans-serif"
+            # plt.rcParams["font.serif"] = "Times New Roman"
+            plt.xlabel("vx")
+            plt.ylabel("vy")
+            plt.legend()
+            plt.savefig("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Tworrv0_11/velocity.png")
+            plt.show()
+
+
             logger.store(EpRet=ep_ret, EpLen=ep_len)
             print('Episode %d \t EpRet %.3f \t EpLen %d'%(n, ep_ret, ep_len))
             o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
@@ -140,9 +175,9 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('fpath', type=str)
+    parser.add_argument('fpath', type=str, default="/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Tworrv0_10")
     parser.add_argument('--len', '-l', type=int, default=0)
-    parser.add_argument('--episodes', '-n', type=int, default=100)
+    parser.add_argument('--episodes', '-n', type=int, default=10)
     parser.add_argument('--norender', '-nr', action='store_true')
     parser.add_argument('--itr', '-i', type=int, default=-1)
     parser.add_argument('--deterministic', '-d', action='store_true')

@@ -242,7 +242,7 @@ Robotic Manipulation" by Murry et al.
         self.t = 0
         
         rd_t = np.array([self.xd[self.t + 1], self.yd[self.t + 1]])  # attention: index desired starts from t=-1
-        vd = np.array([self.vxd, self.vyd])
+        vd_t = np.array([self.vxd, self.vyd])
         # at time t=0
         q_t=self.q[-1,:]
         dq_t = self.dq[-1, :]
@@ -256,7 +256,7 @@ Robotic Manipulation" by Murry et al.
         ree0 = rd_t
         e0 = rd_t - ree0
         self.e = np.vstack((self.e, e0.reshape(1, 2)))
-        dqc_t, e=self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd, e=self.e, dt=self.dt)
+        dqc_t, e=self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e, dt=self.dt)
         qc_t = dqc_t*self.dt+self.q[-2,:] #TODO is this observer(taking q(t-1) for integration) sufficient?
         ddqc_t =  (dqc_t-self.dq[-2,:])/self.dt
 
@@ -275,20 +275,29 @@ Robotic Manipulation" by Murry et al.
                       tau1_hat,
                       tau2_hat]
         self.state_buffer = self.state
+        plot_data_t = [r_hat_t[0],
+                          r_hat_t[1],
+                          rd_t[0],
+                          rd_t[1],
+                          v_hat_t[0],
+                          v_hat_t[1],
+                          vd_t[0],
+                          vd_t[1]]
+        self.plot_data_buffer = plot_data_t
         return self._get_ob()
 
     def step(self,a):
         # update time index
         self.t += 1 #Attention doublecheck
         rd_t = np.array([self.xd[self.t + 1], self.yd[self.t + 1]])  # attention: index desired starts from t=-1
-        vd = np.array([self.vxd, self.vyd])
+        vd_t = np.array([self.vxd, self.vyd])
         q_t = self.q[-1, :]
         dq_t = self.dq[-1, :]
         r_hat_t = self.two_link_forward_kinematics(q_t)
         Jpinv_t, J_t = self.two_link_jacobian(q_t, ld=0.01)
         v_hat_t = (r_hat_t - self.r_hat[-1, :]) / self.dt
         self.r_hat = np.vstack((self.r_hat, r_hat_t))
-        dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd, e=self.e, dt=self.dt)
+        dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e, dt=self.dt)
         qc_t = dqc_t * self.dt + self.q[-2, :]  # TODO is this observer(taking q(t-1) for integration) sufficient?
         ddqc_t = (dqc_t - self.dq[-2, :]) / self.dt
 
@@ -326,6 +335,15 @@ Robotic Manipulation" by Murry et al.
         # update states
         self.state = obs
         self.state_buffer = np.vstack((self.state_buffer, self.state))
+        plot_data_t = [r_hat_t[0],
+                          r_hat_t[1],
+                          rd_t[0],
+                          rd_t[1],
+                          v_hat_t[0],
+                          v_hat_t[1],
+                          vd_t[0],
+                          vd_t[1]]
+        self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
         # check done episode
         terminal = self._terminal()
         # calculate reward
@@ -334,7 +352,7 @@ Robotic Manipulation" by Murry et al.
         # define inspired by Pavlichenko et al SAC tracking paper https://doi.org/10.48550/arXiv.2203.07051
         error_p_t = sum(abs(obs[0:2]))
         v_hat_after = (self.two_link_forward_kinematics(np.array([q_FD[0], q_FD[2]])) - self.r_hat[-1, :]) / self.dt
-        error_v_t = sum(abs(v_hat_after-vd))
+        error_v_t = sum(abs(v_hat_after-vd_t))
         reward_p_t=self.f_logistic(error_p_t,self.lp)
         reward_v_t = self.f_logistic(error_v_t, self.lv)
         reward_t=self.reward_eta*reward_p_t+(1-self.reward_eta)*reward_v_t

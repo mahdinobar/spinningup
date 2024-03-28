@@ -34,7 +34,8 @@ First, let's look at a simple example of how an EpochLogger keeps track of a dia
 |         MinTest |               0 |
 -------------------------------------
 
-The ``store`` method is used to save all values of ``Test`` to the ``epoch_logger``'s internal state. Then, when ``log_tabular`` is called, it computes the average, standard deviation, min, and max of ``Test`` over all of the values in the internal state. The internal state is wiped clean after the call to ``log_tabular`` (to prevent leakage into the statistics at the next epoch). Finally, ``dump_tabular`` is called to write the diagnostics to file and to stdout.
+The ``store`` method is used to
+save all values of ``Test`` to the ``epoch_logger``'s internal state. Then, when ``log_tabular`` is called, it computes the average, standard deviation, min, and max of ``Test`` over all of the values in the internal state. The internal state is wiped clean after the call to ``log_tabular`` (to prevent leakage into the statistics at the next epoch). Finally, ``dump_tabular`` is called to write the diagnostics to file and to stdout.
 
 Next, let's look at a full training procedure with the logger embedded, to highlight configuration and model saving as well as diagnostic logging:
 
