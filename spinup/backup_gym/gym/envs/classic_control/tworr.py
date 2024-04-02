@@ -54,8 +54,8 @@ Robotic Manipulation" by Murry et al.
         self.vyd = 0.05  # m/s
         deltax = self.vxd * self.dt * self.MAX_TIMESTEPS
         deltay = self.vyd * self.dt * self.MAX_TIMESTEPS
-        self.xd = np.linspace(self.xd_init, self.xd_init + deltax, self.MAX_TIMESTEPS + 1, endpoint=True)
-        self.yd = np.linspace(self.yd_init, self.yd_init + deltay, self.MAX_TIMESTEPS + 1, endpoint=True)
+        self.xd = np.linspace(self.xd_init, self.xd_init + deltax, self.MAX_TIMESTEPS, endpoint=True)
+        self.yd = np.linspace(self.yd_init, self.yd_init + deltay, self.MAX_TIMESTEPS, endpoint=True)
 
         # TODO CHECK
         high_s = np.array([0.2,  0.2,  1.5,  1.5,  0.5,  0.5,  18,  5])
@@ -222,49 +222,56 @@ Robotic Manipulation" by Murry et al.
         return [seed]
 
     def reset(self):
-        # initialize at t=-1
-        rd_minus1 = np.array([self.xd[0], self.yd[0]])
-        v_minus1 = np.array([self.vxd, self.vyd])
-        ree_minus1 = rd_minus1
-        q_hat_soln1, q_hat_soln2 = self.two_link_inverse_kinematics(rd_minus1[0], rd_minus1[1])
-        q_minus1 = q_hat_soln1
-        e_minus1 = rd_minus1 - ree_minus1
-        dq_t_minus1 = self.two_link_inverse_kinematics_joint_speeds(v_minus1[0], v_minus1[1], q_minus1[0], q_minus1[1])
-        # starting from t=-1
-        self.e = e_minus1.reshape(1, 2)
-        self.q = q_minus1.reshape(1, 2)
-        self.dq = dq_t_minus1.reshape(1, 2)
-        self.qc = np.zeros(2).reshape(1, 2)  # attention on presumptions on qc
-        self.dqc = np.zeros(2).reshape(1, 2)
-        self.ddqc = np.zeros(2).reshape(1, 2)
-        self.r_hat = rd_minus1.reshape(1, 2)  # attention: trivial assumption(?)
+        # # initialize at t=-1
+        # rd_minus1 = np.array([self.xd[0], self.yd[0]])
+        # v_minus1 = np.array([self.vxd, self.vyd])
+        # ree_minus1 = rd_minus1
+        # q_hat_soln1, q_hat_soln2 = self.two_link_inverse_kinematics(ree_minus1[0], ree_minus1[1])
+        # q_minus1 = q_hat_soln1
+        # e_minus1 = rd_minus1 - ree_minus1
+        # dq_t_minus1 = self.two_link_inverse_kinematics_joint_speeds(v_minus1[0], v_minus1[1], q_minus1[0], q_minus1[1])
+        # # starting from t=-1
+        # self.e = e_minus1.reshape(1, 2)
+        # self.q = q_minus1.reshape(1, 2)
+        # self.dq = dq_t_minus1.reshape(1, 2)
+        # self.qc = np.zeros(2).reshape(1, 2)  # attention on presumptions on qc
+        # self.dqc = np.zeros(2).reshape(1, 2)
+        # self.ddqc = np.zeros(2).reshape(1, 2)
+        # self.r_hat = rd_minus1.reshape(1, 2)  # attention: trivial assumption(?)
 
-        self.t = 0
-        
-        rd_t = np.array([self.xd[self.t + 1], self.yd[self.t + 1]])  # attention: index desired starts from t=-1
-        vd_t = np.array([self.vxd, self.vyd])
         # at time t=0
-        q_t=self.q[-1,:]
-        dq_t = self.dq[-1, :]
-        self.q = np.vstack((self.q, q_t))
-        self.dq = np.vstack((self.dq, dq_t))
-
-        r_hat_t = self.two_link_forward_kinematics(q_t)
+        self.t = 0
+        rd_t = np.array([self.xd[self.t], self.yd[self.t]])
+        r_hat_t = rd_t + np.array([np.random.normal(loc=0.0, scale=0.1*np.abs(self.vxd)*self.dt, size=1),np.random.normal(loc=0.0, scale=0.1*np.abs(self.vyd)*self.dt, size=1)]).reshape(1,2)
+        r_hat_t = r_hat_t.squeeze()
+        vd_t = np.array([self.vxd, self.vyd])
+        v_hat_t = vd_t + np.array([np.random.normal(loc=0.0, scale=0.01*np.abs(self.vxd), size=1),np.random.normal(loc=0.0, scale=0.01*np.abs(self.vyd), size=1)]).reshape(1,2)
+        v_hat_t = v_hat_t.squeeze()
+        q_hat_soln1, q_hat_soln2 = self.two_link_inverse_kinematics(r_hat_t[0], r_hat_t[1])
+        q_t = q_hat_soln1
+        dq_t = self.two_link_inverse_kinematics_joint_speeds(v_hat_t[0], v_hat_t[1], q_t[0], q_t[1])
+        self.q = q_t.reshape(1, 2)
+        self.dq = dq_t.reshape(1, 2)
         Jpinv_t, J_t = self.two_link_jacobian(q_t, ld=0.01)
-        v_hat_t = (r_hat_t - self.r_hat[-1, :]) / self.dt
-        self.r_hat=np.vstack((self.r_hat,r_hat_t))
-        ree0 = rd_t
-        e0 = rd_t - ree0
-        self.e = np.vstack((self.e, e0.reshape(1, 2)))
+        self.r_hat = r_hat_t.reshape(1, 2)
+        e0 = rd_t - r_hat_t
+        self.e = e0.reshape(1, 2)
         dqc_t, e=self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e, dt=self.dt)
-        qc_t = dqc_t*self.dt+self.q[-2,:] #TODO is this observer(taking q(t-1) for integration) sufficient?
-        ddqc_t =  (dqc_t-self.dq[-2,:])/self.dt
-
-        self.qc = np.vstack((self.qc, qc_t))
-        self.dqc = np.vstack((self.dqc, dqc_t))
-        self.ddqc = np.vstack((self.ddqc, ddqc_t))
-
+        qc_t = dqc_t*self.dt+self.q[-1,:] #TODO check initialization of q and dq
+        ddqc_t =  (dqc_t-self.dq[-1,:])/self.dt
+        self.qc = qc_t.reshape(1, 2)
+        self.dqc = dqc_t.reshape(1, 2)
+        self.ddqc = ddqc_t.reshape(1, 2)
         tau1_hat, tau2_hat = self.two_link_inverse_dynamics(q_t, dqc_t, ddqc_t)
+
+        # s_init=[th1_init,dth1_init,th2_init,dth2_init]
+        s_init = np.array([q_t[0], dq_t[0], q_t[1], dq_t[1]])
+        tau1 = tau1_hat #+ a[0]
+        tau2 = tau2_hat #+ a[1]
+        q_FD = self.two_link_forward_dynamics(tau1, tau2,
+                                         s_init)
+        self.q = np.vstack((self.q, np.array([q_FD[0], q_FD[2]])))
+        self.dq = np.vstack((self.dq, np.array([q_FD[1], q_FD[3]])))
 
         self.state = [r_hat_t[0]-rd_t[0],
                       r_hat_t[1]-rd_t[1],
@@ -289,7 +296,7 @@ Robotic Manipulation" by Murry et al.
     def step(self,a):
         # update time index
         self.t += 1 #Attention doublecheck
-        rd_t = np.array([self.xd[self.t + 1], self.yd[self.t + 1]])  # attention: index desired starts from t=-1
+        rd_t = np.array([self.xd[self.t], self.yd[self.t]])  # attention: index desired starts from t=-1
         vd_t = np.array([self.vxd, self.vyd])
         q_t = self.q[-1, :]
         dq_t = self.dq[-1, :]
@@ -311,8 +318,8 @@ Robotic Manipulation" by Murry et al.
         s_init = np.array([q_t[0], dq_t[0], q_t[1], dq_t[1]])
         # t = time.time()
         # inject SAC action
-        tau1 = tau1_hat + a[0]
-        tau2 = tau2_hat + a[1]
+        tau1 = tau1_hat #+ a[0]
+        tau2 = tau2_hat #+ a[1]
         # TODO HERE WHY TAKES LONG??
         q_FD = self.two_link_forward_dynamics(tau1, tau2,
                                          s_init)  # attention: forward dynamics robot has correct m2 value
@@ -351,7 +358,7 @@ Robotic Manipulation" by Murry et al.
         # reward_t = 100. if np.sqrt(obs[0] ** 2 + obs[1] ** 2) < 0.001 else - 10000*(obs[0] ** 2 + obs[1] ** 2)
         # define inspired by Pavlichenko et al SAC tracking paper https://doi.org/10.48550/arXiv.2203.07051
         error_p_t = sum(abs(obs[0:2]))
-        v_hat_after = (self.two_link_forward_kinematics(np.array([q_FD[0], q_FD[2]])) - self.r_hat[-1, :]) / self.dt
+        v_hat_after = np.array(self.two_link_forward_kinematics(np.array([q_FD[0], q_FD[2]]))) - np.array(r_hat_t) / self.dt
         error_v_t = sum(abs(v_hat_after-vd_t))
         reward_p_t=self.f_logistic(error_p_t,self.lp)
         reward_v_t = self.f_logistic(error_v_t, self.lv)
