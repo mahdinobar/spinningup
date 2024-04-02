@@ -318,8 +318,8 @@ Robotic Manipulation" by Murry et al.
         s_init = np.array([q_t[0], dq_t[0], q_t[1], dq_t[1]])
         # t = time.time()
         # inject SAC action
-        tau1 = tau1_hat #+ a[0]
-        tau2 = tau2_hat #+ a[1]
+        tau1 = tau1_hat + a[0]
+        tau2 = tau2_hat + a[1]
         # TODO HERE WHY TAKES LONG??
         q_FD = self.two_link_forward_dynamics(tau1, tau2,
                                          s_init)  # attention: forward dynamics robot has correct m2 value
