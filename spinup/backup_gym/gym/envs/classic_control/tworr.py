@@ -26,7 +26,6 @@ Robotic Manipulation" by Murry et al.
         self.lp=100
         self.lv=100
         self.reward_eta=0.75
-        
         # TODO: User defined linear position gain
         self.K_p = 10
         self.K_i = 5
@@ -58,8 +57,8 @@ Robotic Manipulation" by Murry et al.
         self.yd = np.linspace(self.yd_init, self.yd_init + deltay, self.MAX_TIMESTEPS, endpoint=True)
 
         # TODO CHECK
-        high_s = np.array([0.2,  0.2,  1.5,  1.5,  0.5,  0.5,  18,  5])
-        low_s = np.array([-0.2, -0.2, -1.5, -1.5, -0.5, -0.5, -18, -5])
+        high_s = np.array([0.2,  0.2,  1.5,  1.5,  0.5,  0.5,  18,  5, 0.5, 0.5])
+        low_s = np.array([-0.2, -0.2, -1.5, -1.5, -0.5, -0.5, -18, -5, -0.5, -0.5])
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         high_a = np.array([1, 1])
         low_a  = np.array([-1, -1])
@@ -280,7 +279,9 @@ Robotic Manipulation" by Murry et al.
                       dq_t[0],
                       dq_t[1],
                       tau1_hat,
-                      tau2_hat]
+                      tau2_hat,
+                      dqc_t[0],
+                      dqc_t[1]]
         self.state_buffer = self.state
         plot_data_t = [r_hat_t[0],
                           r_hat_t[1],
@@ -338,7 +339,9 @@ Robotic Manipulation" by Murry et al.
                         q_FD[1],
                         q_FD[3],
                         tau1,
-                        tau2])
+                        tau2,
+                        dqc_t[0],
+                        dqc_t[1]])
         # update states
         self.state = obs
         self.state_buffer = np.vstack((self.state_buffer, self.state))

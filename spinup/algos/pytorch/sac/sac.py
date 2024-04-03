@@ -31,8 +31,11 @@ class ReplayBuffer:
         self.ptr = (self.ptr+1) % self.max_size
         self.size = min(self.size+1, self.max_size)
 
-    def sample_batch(self, batch_size=32):
-        idxs = np.random.randint(0, self.size, size=batch_size)
+    def sample_batch(self, batch_size=32, sample_mode=2, sequence_length=1):
+        if sample_mode==1:
+            idxs = np.random.randint(0, self.size, size=batch_size)
+        elif sample_mode == 2:
+            idxs= np.random.randint(sequence_length-1, self.size, size=1)-np.arange(0, sequence_length, 1)
         batch = dict(obs=self.obs_buf[idxs],
                      obs2=self.obs2_buf[idxs],
                      act=self.act_buf[idxs],
@@ -193,7 +196,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             q_pi_targ = torch.min(q1_pi_targ, q2_pi_targ)
             backup = r + gamma * (1 - d) * (q_pi_targ - alpha * logp_a2)
 
-        # MSE loss against Bellman backup
+        # MSE loss against Bellman backup (mean-squared Bellman error (MSBE))
         loss_q1 = ((q1 - backup)**2).mean()
         loss_q2 = ((q2 - backup)**2).mean()
         loss_q = loss_q1 + loss_q2
@@ -318,9 +321,17 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
         # Update handling (gradient descent on Q and pi networks and eventually polyak update the target q networks)
         if t >= update_after and (t+1) % update_every == 0:
-            for j in range(update_every):
-                batch = replay_buffer.sample_batch(batch_size)
-                update(data=batch)
+            sample_mode = 1
+            if sample_mode==1:
+                for j in range(update_every):
+                    batch = replay_buffer.sample_batch(batch_size, sample_mode)
+                    update(data=batch)
+            elif sample_mode == 2:
+                sequence_length=100
+                for j in range(update_every):
+                    batch = replay_buffer.sample_batch(batch_size, sample_mode, sequence_length)
+                    update(data=batch)
+
 
         # End of epoch handling
         if (t+1) % steps_per_epoch == 0:
