@@ -10,7 +10,7 @@ import os
 
 TRAIN=False
 env_fn = lambda: gym.make('Tworr-v0')
-exp_name = "Tworrv0_14" #"no_SAC_0_9"
+exp_name = "Tworrv0_20" #"no_SAC_0_9"
 if __name__ == '__main__':
     if TRAIN:
         # train
