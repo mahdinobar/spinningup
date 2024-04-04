@@ -295,7 +295,8 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         if t > start_steps:
             a = get_action(o)
         else:
-            a = env.action_space.sample()
+            # a = env.action_space.sample()
+            a = np.array([0, 0])
 
         # Step the env
         o2, r, d, _ = env.step(a)
