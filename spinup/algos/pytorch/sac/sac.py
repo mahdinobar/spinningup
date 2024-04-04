@@ -49,7 +49,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         steps_per_epoch=4000, epochs=100, replay_size=int(1e6), gamma=0.99, 
         polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=10000, 
         update_after=1000, update_every=50, num_test_episodes=10, max_ep_len=1000, 
-        logger_kwargs=dict(), save_freq=1):
+        logger_kwargs=dict(), save_freq=1, initial_actions="random"):
     """
     Soft Actor-Critic (SAC)
 
@@ -295,8 +295,10 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         if t > start_steps:
             a = get_action(o)
         else:
-            # a = env.action_space.sample()
-            a = np.array([0, 0])
+            if initial_actions=="random":
+                a = env.action_space.sample()
+            elif initial_actions=="zero":
+                a = np.array([0, 0])
 
         # Step the env
         o2, r, d, _ = env.step(a)

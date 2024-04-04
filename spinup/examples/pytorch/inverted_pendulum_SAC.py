@@ -20,7 +20,7 @@ if __name__ == '__main__':
         logger_kwargs = dict(output_dir=output_dir, exp_name=exp_name)
         sac(env_fn, ac_kwargs={}, seed=0, steps_per_epoch=100, epochs=300, replay_size=100000, gamma=0.99, polyak=0.995,
             lr=0.005, alpha=0.2, batch_size=100, start_steps=100, update_after=99, update_every=100, num_test_episodes=5,
-            max_ep_len=100, logger_kwargs=logger_kwargs, save_freq=1)
+            max_ep_len=100, logger_kwargs=logger_kwargs, save_freq=1, initial_actions="zero")
     else:
         # env_fn = gym.make('Tworr-v0')
         # from gym.wrappers.monitoring.video_recorder import VideoRecorder
