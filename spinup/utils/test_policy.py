@@ -144,7 +144,7 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True):
             plt.xlabel("x")
             plt.ylabel("y")
             plt.legend()
-            plt.savefig("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Tworrv0_16/position.pdf",format="pdf", bbox_inches='tight')
+            plt.savefig("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Tworrv0_25/position.pdf",format="pdf", bbox_inches='tight')
             plt.show()
 
             plt.figure(2)
@@ -158,7 +158,7 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True):
             plt.xlabel("vx")
             plt.ylabel("vy")
             plt.legend()
-            plt.savefig("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Tworrv0_16/velocity.pdf",format="pdf", bbox_inches='tight')
+            plt.savefig("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Tworrv0_25/velocity.pdf",format="pdf", bbox_inches='tight')
             plt.show()
 
 
