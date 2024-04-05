@@ -57,8 +57,8 @@ Robotic Manipulation" by Murry et al.
         self.yd = np.linspace(self.yd_init, self.yd_init + deltay, self.MAX_TIMESTEPS, endpoint=True)
 
         # TODO CHECK
-        high_s = np.array([0.2,  0.2,  1.5,  1.5,  0.5,  0.5,  18,  5, 0.5, 0.5])
-        low_s = np.array([-0.2, -0.2, -1.5, -1.5, -0.5, -0.5, -18, -5, -0.5, -0.5])
+        high_s = np.array([0.2,  0.2,  1.5,  1.5,  2,  2,  18,  5, 2, 2])
+        low_s = np.array([-0.2, -0.2, -1.5, -1.5, -2, -2, -18, -5, -2, -2])
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         high_a = np.array([1, 1])
         low_a  = np.array([-1, -1])
@@ -221,22 +221,8 @@ Robotic Manipulation" by Murry et al.
         return [seed]
 
     def reset(self):
-        # # initialize at t=-1
-        # rd_minus1 = np.array([self.xd[0], self.yd[0]])
-        # v_minus1 = np.array([self.vxd, self.vyd])
-        # ree_minus1 = rd_minus1
-        # q_hat_soln1, q_hat_soln2 = self.two_link_inverse_kinematics(ree_minus1[0], ree_minus1[1])
-        # q_minus1 = q_hat_soln1
-        # e_minus1 = rd_minus1 - ree_minus1
-        # dq_t_minus1 = self.two_link_inverse_kinematics_joint_speeds(v_minus1[0], v_minus1[1], q_minus1[0], q_minus1[1])
-        # # starting from t=-1
-        # self.e = e_minus1.reshape(1, 2)
-        # self.q = q_minus1.reshape(1, 2)
-        # self.dq = dq_t_minus1.reshape(1, 2)
-        # self.qc = np.zeros(2).reshape(1, 2)  # attention on presumptions on qc
-        # self.dqc = np.zeros(2).reshape(1, 2)
-        # self.ddqc = np.zeros(2).reshape(1, 2)
-        # self.r_hat = rd_minus1.reshape(1, 2)  # attention: trivial assumption(?)
+        # # randomize true model parameter in every episode
+        # self.LINK_MASS_2_TRUE = 1.1 + np.random.normal(loc=0.0, scale=0.01, size=1)
 
         # at time t=0
         self.t = 0
