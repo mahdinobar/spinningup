@@ -157,7 +157,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
     obs_dim = env.observation_space.shape
     act_dim = env.action_space.shape[0]
 
-    # Action limit for clamping: critically, assumes all dimensions share the same bound!
+    # Action limit for clamping: critically, assumes all dimensions share the same bound! (Attention: correct here if bounds of action dimensions are different)
     act_limit = env.action_space.high[0]
 
     # Create actor-critic module and target networks

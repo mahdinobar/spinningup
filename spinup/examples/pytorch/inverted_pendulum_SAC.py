@@ -8,9 +8,9 @@ from spinup.utils.test_policy import load_policy_and_env, run_policy
 from spinup.utils.test_policy import load_policy_and_env, run_policy
 import os
 
-TRAIN=False
+TRAIN=True
 env_fn = lambda: gym.make('Tworr-v0')
-exp_name = "Tworrv0_25" #"no_SAC_0_9"
+exp_name = "Tworrv0_27" #"no_SAC_0_9"
 if __name__ == '__main__':
     if TRAIN:
         # train
@@ -26,5 +26,6 @@ if __name__ == '__main__':
         # from gym.wrappers.monitoring.video_recorder import VideoRecorder
         # VideoRecorder(env_fn,'/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/video.mp4', enabled=True)
         # visualize output
-        env, get_action = load_policy_and_env('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/'+exp_name)
-        run_policy(env, get_action,num_episodes=1)
+        output_dir='/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/'+exp_name
+        env, get_action = load_policy_and_env(output_dir)
+        run_policy(env, get_action,num_episodes=1, output_dir=output_dir)
