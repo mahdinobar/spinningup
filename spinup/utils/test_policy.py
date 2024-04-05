@@ -108,7 +108,7 @@ def load_pytorch_policy(fpath, itr, deterministic=False):
     return get_action
 
 
-def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True):
+def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True, output_dir=""):
 
     assert env is not None, \
         "Environment not found!\n\n It looks like the environment wasn't saved, " + \
@@ -144,7 +144,7 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True):
             plt.xlabel("x")
             plt.ylabel("y")
             plt.legend()
-            plt.savefig("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Tworrv0_25/position.pdf",format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir+"/position.pdf",format="pdf", bbox_inches='tight')
             plt.show()
 
             plt.figure(2)
@@ -158,7 +158,7 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True):
             plt.xlabel("vx")
             plt.ylabel("vy")
             plt.legend()
-            plt.savefig("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Tworrv0_25/velocity.pdf",format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir+"/velocity.pdf",format="pdf", bbox_inches='tight')
             plt.show()
 
 

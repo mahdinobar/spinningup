@@ -25,7 +25,10 @@ Robotic Manipulation" by Murry et al.
         # TODO: reward params
         self.lp=100
         self.lv=100
-        self.reward_eta=0.75
+        self.ljerk=100
+        self.reward_eta_p=0.7
+        self.reward_eta_v=0.15
+        self.reward_eta_jerk=0.15
         # TODO: User defined linear position gain
         self.K_p = 10
         self.K_i = 5
@@ -43,7 +46,9 @@ Robotic Manipulation" by Murry et al.
         self.state = None
         self.state_buffer= None
         self.t = 0
-        self.seed()
+        seed=1
+        np.random.seed(seed)
+        self.seed(seed=seed)
 
         self.xd_init = 1.5
         self.yd_init = 0.4
@@ -56,11 +61,11 @@ Robotic Manipulation" by Murry et al.
         self.xd = np.linspace(self.xd_init, self.xd_init + deltax, self.MAX_TIMESTEPS, endpoint=True)
         self.yd = np.linspace(self.yd_init, self.yd_init + deltay, self.MAX_TIMESTEPS, endpoint=True)
 
-        # TODO CHECK
+        # TODO Attention: just the dimension of the observation space is enforced. The data here is not used. If you need to enforce them then modify the code.
         high_s = np.array([0.2,  0.2,  1.5,  1.5,  2,  2,  18,  5, 2, 2])
         low_s = np.array([-0.2, -0.2, -1.5, -1.5, -2, -2, -18, -5, -2, -2])
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
-        high_a = np.array([1, 1])
+        high_a = np.array([1, 1]) #TODO Attention: limits should be the same otherwise modify sac code
         low_a  = np.array([-1, -1])
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
 
@@ -223,7 +228,6 @@ Robotic Manipulation" by Murry et al.
     def reset(self):
         # # randomize true model parameter in every episode
         # self.LINK_MASS_2_TRUE = 1.1 + np.random.normal(loc=0.0, scale=0.01, size=1)
-
         # at time t=0
         self.t = 0
         rd_t = np.array([self.xd[self.t], self.yd[self.t]])
@@ -247,12 +251,12 @@ Robotic Manipulation" by Murry et al.
         self.qc = qc_t.reshape(1, 2)
         self.dqc = dqc_t.reshape(1, 2)
         self.ddqc = ddqc_t.reshape(1, 2)
-        tau1_hat, tau2_hat = self.two_link_inverse_dynamics(q_t, dqc_t, ddqc_t)
+        tau1_hat, tau2_hat = self.two_link_inverse_dynamics(qc_t, dqc_t, ddqc_t)
 
         # s_init=[th1_init,dth1_init,th2_init,dth2_init]
         s_init = np.array([q_t[0], dq_t[0], q_t[1], dq_t[1]])
-        tau1 = tau1_hat #+ a[0]
-        tau2 = tau2_hat #+ a[1]
+        tau1 = tau1_hat #todo check concept here
+        tau2 = tau2_hat
         q_FD = self.two_link_forward_dynamics(tau1, tau2,
                                          s_init)
         self.q = np.vstack((self.q, np.array([q_FD[0], q_FD[2]])))
@@ -299,7 +303,7 @@ Robotic Manipulation" by Murry et al.
         self.dqc = np.vstack((self.dqc, dqc_t))
         self.ddqc = np.vstack((self.ddqc, ddqc_t))
 
-        tau1_hat, tau2_hat = self.two_link_inverse_dynamics(q_t, dqc_t, ddqc_t)
+        tau1_hat, tau2_hat = self.two_link_inverse_dynamics(qc_t, dqc_t, ddqc_t)
 
         # s_init=[th1_init,dth1_init,th2_init,dth2_init]
         s_init = np.array([q_t[0], dq_t[0], q_t[1], dq_t[1]])
@@ -349,9 +353,11 @@ Robotic Manipulation" by Murry et al.
         error_p_t = sum(abs(obs[0:2]))
         v_hat_after = np.array(self.two_link_forward_kinematics(np.array([q_FD[0], q_FD[2]]))) - np.array(r_hat_t) / self.dt
         error_v_t = sum(abs(v_hat_after-vd_t))
+        jerk_level_t = np.abs(self.state_buffer[-1,6]-self.state_buffer[-2,6])+np.abs(self.state_buffer[-1,7]-self.state_buffer[-2,7])
+        reward_jerk_t = self.f_logistic(jerk_level_t,self.ljerk)
         reward_p_t=self.f_logistic(error_p_t,self.lp)
         reward_v_t = self.f_logistic(error_v_t, self.lv)
-        reward_t=self.reward_eta*reward_p_t+(1-self.reward_eta)*reward_v_t
+        reward_t=self.reward_eta_p*reward_p_t+self.reward_eta_v*reward_v_t+self.reward_eta_jerk*reward_jerk_t
         # given action it returns 4-tuple (observation, reward, done, info)
         return (self._get_ob(), reward_t, terminal, {})
 
