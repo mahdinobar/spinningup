@@ -246,7 +246,9 @@ Robotic Manipulation" by Murry et al.
         e0 = rd_t - r_hat_t
         self.e = e0.reshape(1, 2)
         dqc_t, e=self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e, dt=self.dt)
-        qc_t = dqc_t*self.dt+self.q[-1,:] #TODO check initialization of q and dq
+        # Attention: for simple observer ASSUME q(-1)=q(0) and dq(-1)=dq(0)
+
+        qc_t = dqc_t*self.dt+self.q[-1,:]
         ddqc_t =  (dqc_t-self.dq[-1,:])/self.dt
         self.qc = qc_t.reshape(1, 2)
         self.dqc = dqc_t.reshape(1, 2)
@@ -264,10 +266,10 @@ Robotic Manipulation" by Murry et al.
 
         self.state = [r_hat_t[0]-rd_t[0],
                       r_hat_t[1]-rd_t[1],
-                      q_t[0],
-                      q_t[1],
-                      dq_t[0],
-                      dq_t[1],
+                      q_FD[0],
+                      q_FD[2],
+                      q_FD[1],
+                      q_FD[2],
                       tau1_hat,
                       tau2_hat,
                       dqc_t[0],
