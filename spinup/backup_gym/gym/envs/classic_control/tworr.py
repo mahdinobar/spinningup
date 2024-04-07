@@ -70,7 +70,6 @@ Robotic Manipulation" by Murry et al.
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
 
 
-
     def two_link_forward_kinematics(self,q):
         """Compute the forward kinematics.  Returns the base-coordinate Cartesian
         position of End-effector for a given joint angle vector.  Optional
