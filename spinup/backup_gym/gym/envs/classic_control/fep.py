@@ -6,6 +6,7 @@ from gym.utils import seeding
 from scipy.integrate import solve_ivp
 import math
 import pybullet as pb
+import pybullet_data
 
 __copyright__ = "Copyright 2024, IfA https://control.ee.ethz.ch/"
 __credits__ = ["Mahdi Nobar"]
@@ -76,22 +77,22 @@ Robotic Manipulation" by Murry et al.
         # Load URDFs
         self.create_world()
 
-    def create_world(selfself):
+    def create_world(self):
         """ Setup camera and load URDFs"""
         # # Set gravity
         pb.setGravity(0, 0, -9.81, physicsClientId=self.physics_client)
         # Load robot, target object and plane urdf
         pb.setAdditionalSearchPath(pybullet_data.getDataPath())
-        self.arm = p.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep/panda.urdf",
+        self.arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep/panda.urdf",
                               useFixedBase=True)
-        self.target_object = p.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
+        self.target_object = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
                                         useFixedBase=True)
-        self.conveyor_object = p.loadURDF(
+        self.conveyor_object = pb.loadURDF(
             "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
             useFixedBase=True)
-        self.plane = p.loadURDF('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/plane.urdf')
+        self.plane = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",useFixedBase=True)
 
-    def pseudoInverseMat(A, ld):
+    def pseudoInverseMat(self, A, ld):
         # Input: Any m-by-n matrix, and a damping factor.
         # Output: An n-by-m pseudo-inverse of the input according to the Moore-Penrose formula
 
@@ -117,11 +118,8 @@ Robotic Manipulation" by Murry et al.
             Jpinv : current pseudo inverse jacobian matrix
         Output: joint-space velocity command of the robot.
         """
-        # TODO: User defined pseudo-inverse damping coefficient
-        # ld = 0.1
-        # Jpinv=two_link_jacobian(q_hat_soln1, ld)
         e_t = (rd - r_ee)
-        e = np.vstack((e, e_t.reshape(1, 2)))
+        e = np.vstack((e, e_t.reshape(1, 3)))
         v_command = vd + self.K_p * e_t + self.K_i * np.sum(e[1:, :], 0) * dt + self.K_d * (vd - v_ee)
         qc = np.dot(Jpinv, v_command)
         return qc, e
@@ -141,9 +139,9 @@ Robotic Manipulation" by Murry et al.
         rd_t = np.array([self.xd[self.t], self.yd[self.t], self.zd[self.t]])
         # Reset robot at the origin and move the target object to the goal position and orientation
         pb.resetBasePositionAndOrientation(
-            self.arm, [0, 0, 0], p.getQuaternionFromEuler([np.pi, np.pi, np.pi]))
+            self.arm, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]))
         pb.resetBasePositionAndOrientation(
-            self.target_object, self.goal_pos, p.getQuaternionFromEuler(self.target_object_orient))
+            self.target_object, rd_t, pb.getQuaternionFromEuler(np.array([-np.pi, 0, 0])+np.array([np.pi/2 , 0, 0]))) #orient just for rendering
         # set conveyer pose and orient
         pb.resetBasePositionAndOrientation(
             self.conveyor_object,
@@ -158,16 +156,16 @@ Robotic Manipulation" by Murry et al.
         # Get end effector coordinates
         r_hat_t = np.array(pb.getLinkState(self.arm, 9, computeForwardKinematics=True)[0])
         info = pb.getJointStates(self.arm, range(7))
-        q_t, dq_t, tau_t = [], [], [], []
+        q_t, dq_t, tau_t = [], [], []
         for joint_info in info:
             q_t.append(joint_info[0])
             dq_t.append(joint_info[1])
             tau_t.append(joint_info[3])
-        q_t = np.array(q_t)
-        dq_t = np.array(dq_t)
-        tau_t = np.array(tau_t)  # CHECK!!!!!!!!!!!!!!!!!!!!¨ if tau_t is not 0 what is it and why?
-        dqc_t = np.zeros(1, 6)  # check
-        self.q = q_t[:6].reshape(1, 6)
+        q_t = np.array(q_t)[:6]
+        dq_t = np.array(dq_t)[:6]
+        tau_t = np.array(tau_t)[:6]  # CHECK!!!!!!!!!!!!!!!!!!!!¨ if tau_t is not 0 what is it and why?
+        dqc_t = np.zeros(6)  # TODO check
+        self.q = q_t.reshape(1, 6)
 
         e0 = rd_t - r_hat_t
         self.e = e0.reshape(1, 3)
@@ -204,25 +202,26 @@ Robotic Manipulation" by Murry et al.
     def step(self, a):
         # update time index
         self.t += 1  # Attention doublecheck
-        rd_t = np.array([self.xd[self.t], self.yd[self.t]])  # attention: index desired starts from t=-1
-        vd_t = np.array([self.vxd, self.vyd])
-        [linearJacobian, angularJacobian] = pb.calculateJacobian(self.arm, 7, list(result[2]), list(self.q[-1, :]),
+        rd_t = np.array([self.xd[self.t], self.yd[self.t], self.zd[self.t]])  # attention: index desired starts from t=-1
+        vd_t = np.array([self.vxd, self.vyd, self.vzd])
+        LinkState=pb.getLinkState(self.arm, 9, computeForwardKinematics=True, computeLinkVelocity=True)
+        r_hat_t = np.array(LinkState[0])
+        v_hat_t = np.array(LinkState[6])
+        # TODO check objVelocities in jacobian input
+        [linearJacobian, angularJacobian] = pb.calculateJacobian(self.arm, 7, list(LinkState[2]), list(np.append(self.q[-1, :],[0,0,0])),
                                                                  list(np.zeros(9)), list(np.zeros(9)))
-        J_t = np.asarray(linearJacobian)
-        Jpinv_t = pseudoInverseMat(J_current, ld)
-        r_hat_t = np.array(pb.getLinkState(self.arm, 9, computeForwardKinematics=True)[0])
-        v_hat_t = np.array(pb.getLinkState(self.arm, 9, computeForwardKinematics=True)[6])
+        J_t = np.asarray(linearJacobian)[:,:6]
+        Jpinv_t = self.pseudoInverseMat(J_t,ld=0.01)  # TODO: check pseudo-inverse damping coefficient
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=self.dt)
-        self.dqc = np.vstack((self.qc, qc_t))
         # TODO check
         # command joint speeds (only 6 joints)
         joint_velocities = list(dqc_t)
         pb.setJointMotorControlArray(
             self.arm,
-            [0, 1, 2, 3, 4, 5, 6],
+            [0, 1, 2, 3, 4, 5],
             controlMode=pb.VELOCITY_CONTROL,
-            targetVelocity=joint_velocities,
+            targetVelocities=joint_velocities,
             forces=[87, 87, 87, 87, 12, 12]
         )
         # default timestep is 1/240 second
@@ -230,14 +229,14 @@ Robotic Manipulation" by Murry et al.
         pb.stepSimulation(physicsClientId=self.physics_client)
         # get measured values at time tp1 denotes t+1 for q and ddq as well as applied torque at time t
         info = pb.getJointStates(self.arm, range(7))
-        q_tp1, dq_tp1, tau_t = [], [], [], []
+        q_tp1, dq_tp1, tau_t = [], [], []
         for joint_info in info:
             q_tp1.append(joint_info[0])
             dq_tp1.append(joint_info[1])
-            tau.append(joint_info[3])
-        q_tp1 = np.array(q_tp1)
-        dq_tp1 = np.array(dq_tp1)
-        tau_t = np.array(tau_t)
+            tau_t.append(joint_info[3])
+        q_tp1 = np.array(q_tp1)[:6]
+        dq_tp1 = np.array(dq_tp1)[:6]
+        tau_t = np.array(tau_t)[:6]
         self.q = np.vstack((self.q, q_tp1)) #Attention
         # collect observations(after you apply action)
         # TODO double check concept
@@ -275,8 +274,10 @@ Robotic Manipulation" by Murry et al.
         terminal = self._terminal()
         # calculate reward
         # define inspired by Pavlichenko et al SAC tracking paper https://doi.org/10.48550/arXiv.2203.07051
-        r_hat_tp1 = np.array(pb.getLinkState(self.arm, 9, computeForwardKinematics=True)[0])
-        v_hat_tp1 = np.array(pb.getLinkState(self.arm, 9, computeForwardKinematics=True)[6])
+        # todo make more efficient by calling getLinkState only once
+        LinkState_tp1=pb.getLinkState(self.arm, 9, computeForwardKinematics=True, computeLinkVelocity=True)
+        r_hat_tp1 = np.array(LinkState[0])
+        v_hat_tp1 = np.array(LinkState[6])
         error_p_t = sum(abs(r_hat_tp1 - vd_t))
         error_v_t = sum(abs(v_hat_tp1 - vd_t))
         reward_p_t = self.f_logistic(error_p_t, self.lp)
