@@ -8,7 +8,7 @@ from spinup.utils.test_policy import load_policy_and_env, run_policy
 from spinup.utils.test_policy import load_policy_and_env, run_policy
 import os
 
-TRAIN=False
+TRAIN=True
 env_fn = lambda: gym.make('Fep-v0')
 exp_name = "Fepv0_0" #"Tworrv0_27" #"no_SAC_0_9"
 if __name__ == '__main__':
