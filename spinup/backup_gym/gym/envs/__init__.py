@@ -98,6 +98,13 @@ register(
     max_episode_steps=100,
 )
 
+register(
+    id='Fep-v0',
+    entry_point='gym.envs.classic_control:FepEnv',
+    reward_threshold=-100.0,
+    max_episode_steps=100,
+)
+
 # Box2d
 # ----------------------------------------
 
