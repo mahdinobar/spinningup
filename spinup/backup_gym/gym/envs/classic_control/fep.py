@@ -88,7 +88,8 @@ Robotic Manipulation" by Murry et al.
         low_s = -high_s
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
-        high_a = np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
+        #Attention: limits of SAC actions
+        high_a = 0.2*np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
                            2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
@@ -254,7 +255,7 @@ Robotic Manipulation" by Murry et al.
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
         # inject SAC action
-        dqc_t = dqc_t  # + a
+        dqc_t = dqc_t + a
         # TODO check
         # command joint speeds (only 6 joints)
         joint_velocities = list(dqc_t)
@@ -356,8 +357,8 @@ Robotic Manipulation" by Murry et al.
 
     def render(self, mode='human'):
         """ Render Pybullet simulation """
-        render_video=False
-        if render_video==True:
+        render_video = True  # for fast debuging
+        if render_video == True:
             pb.disconnect(physics_client)
             # render settings
             renderer = pb.ER_TINY_RENDERER  # p.ER_BULLET_HARDWARE_OPENGL
@@ -430,17 +431,17 @@ Robotic Manipulation" by Murry et al.
         fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
         axs1[0].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 4], 'r--', label='EE desired traj')
         axs1[0].plot(self.plot_data_buffer[:, 0], self.plot_data_buffer[:, 1], 'k',
-                 label='EE position - PID only controller')
+                     label='EE position - PID only controller')
         axs1[0].set_xlabel("x")
         axs1[0].set_ylabel("y")
         axs1[1].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
         axs1[1].plot(self.plot_data_buffer[:, 0], self.plot_data_buffer[:, 2], 'k',
-                 label='EE position - PID only controller')
+                     label='EE position - PID only controller')
         axs1[1].set_xlabel("x")
         axs1[1].set_ylabel("z")
         axs1[2].plot(self.plot_data_buffer[:, 4], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
         axs1[2].plot(self.plot_data_buffer[:, 1], self.plot_data_buffer[:, 2], 'k',
-                 label='EE position - PID only controller')
+                     label='EE position - PID only controller')
         axs1[2].set_xlabel("y")
         axs1[2].set_ylabel("z")
         plt.legend()
@@ -448,23 +449,25 @@ Robotic Manipulation" by Murry et al.
         plt.show()
 
         fig2, axs2 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
-        axs2[0].plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 10], 'r--', label='EE desired traj', marker=".",
-                 markersize=30)
+        axs2[0].plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 10], 'r--', label='EE desired traj',
+                     marker=".",
+                     markersize=30)
         axs2[0].plot(self.plot_data_buffer[:, 6], self.plot_data_buffer[:, 7], 'k',
-                 label='EE position - PID only controller')
+                     label='EE position - PID only controller')
         axs2[0].set_xlabel("vx")
         axs2[0].set_ylabel("vy")
-        axs2[1].plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 11], 'r--', label='EE desired traj', marker=".",
-                 markersize=30)
+        axs2[1].plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 11], 'r--', label='EE desired traj',
+                     marker=".",
+                     markersize=30)
         axs2[1].plot(self.plot_data_buffer[:, 6], self.plot_data_buffer[:, 8], 'k',
-                 label='EE position - PID only controller')
+                     label='EE position - PID only controller')
         axs2[1].set_xlabel("vx")
         axs2[1].set_ylabel("vz")
         axs2[2].plot(self.plot_data_buffer[:, 10], self.plot_data_buffer[:, 11], 'r--', label='EE desired velocity',
-                 marker=".",
-                 markersize=30)
+                     marker=".",
+                     markersize=30)
         axs2[2].plot(self.plot_data_buffer[:, 7], self.plot_data_buffer[:, 8], 'k',
-                 label='EE velocity - PID only controller')
+                     label='EE velocity - PID only controller')
         axs2[2].set_xlabel("vy")
         axs2[2].set_ylabel("vz")
         plt.legend()
