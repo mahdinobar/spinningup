@@ -356,123 +356,117 @@ Robotic Manipulation" by Murry et al.
 
     def render(self, mode='human'):
         """ Render Pybullet simulation """
-        pb.disconnect(physics_client)
-        # render settings
-        renderer = pb.ER_TINY_RENDERER  # p.ER_BULLET_HARDWARE_OPENGL
-        _width = 224
-        _height = 224
-        _cam_dist = 1.3
-        _cam_yaw = 15
-        _cam_pitch = -40
-        _cam_roll = 0
-        camera_target_pos = [0.2, 0, 0.1]
-        _screen_width = 3840  # 1920
-        _screen_height = 2160  # 1080
-        physics_client_rendering = pb.connect(pb.GUI,
-                                              options='--mp4fps=5 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d' % (
-                                                  _screen_width, _screen_height))
-        pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
-                             self.output_dir_rendering + "/simulation.mp4")  # added by Pierre
-        arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep/panda.urdf",
-                          useFixedBase=True)
-        target_object = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
-                                    useFixedBase=True)
-        conveyor_object = pb.loadURDF(
-            "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
-            useFixedBase=True)
-        plane = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
-                            useFixedBase=True)
-        # Initialise debug camera angle
-        pb.resetDebugVisualizerCamera(
-            cameraDistance=_cam_dist,
-            cameraYaw=_cam_yaw,
-            cameraPitch=_cam_pitch,
-            cameraTargetPosition=camera_target_pos,
-            physicsClientId=physics_client_rendering)
-        self.t = 0
-        rd_t = np.array([self.xd[self.t], self.yd[self.t], self.zd[self.t]])
-        vd_t = np.array([self.vxd, self.vyd, self.vzd])
-        # Reset robot at the origin and move the target object to the goal position and orientation
-        pb.resetBasePositionAndOrientation(
-            arm, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]))
-        pb.resetBasePositionAndOrientation(
-            target_object, rd_t, pb.getQuaternionFromEuler(
-                np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])))  # orient just for rendering
-        # set conveyer pose and orient
-        pb.resetBasePositionAndOrientation(
-            conveyor_object,
-            np.array([self.xd_init, self.yd_init, self.zd_init]) + np.array([-0.002, -0.18, -0.15]),
-            pb.getQuaternionFromEuler([0, 0, np.pi / 2 - 0.244978663]))
-        # Reset joint at initial angles
-        for i in range(6):
-            pb.resetJointState(arm, i, self.q_init[i])
-        # In Pybullet, gripper halves are controlled separately+we also deactivated the 7th joint too
-        for j in range(6, 9):
-            pb.resetJointState(arm, j, 0)
-        time.sleep(1)
+        render_video=False
+        if render_video==True:
+            pb.disconnect(physics_client)
+            # render settings
+            renderer = pb.ER_TINY_RENDERER  # p.ER_BULLET_HARDWARE_OPENGL
+            _width = 224
+            _height = 224
+            _cam_dist = 1.3
+            _cam_yaw = 15
+            _cam_pitch = -40
+            _cam_roll = 0
+            camera_target_pos = [0.2, 0, 0.1]
+            _screen_width = 3840  # 1920
+            _screen_height = 2160  # 1080
+            physics_client_rendering = pb.connect(pb.GUI,
+                                                  options='--mp4fps=5 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d' % (
+                                                      _screen_width, _screen_height))
+            pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
+                                 self.output_dir_rendering + "/simulation.mp4")  # added by Pierre
+            arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep/panda.urdf",
+                              useFixedBase=True)
+            target_object = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
+                                        useFixedBase=True)
+            conveyor_object = pb.loadURDF(
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
+                useFixedBase=True)
+            plane = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
+                                useFixedBase=True)
+            # Initialise debug camera angle
+            pb.resetDebugVisualizerCamera(
+                cameraDistance=_cam_dist,
+                cameraYaw=_cam_yaw,
+                cameraPitch=_cam_pitch,
+                cameraTargetPosition=camera_target_pos,
+                physicsClientId=physics_client_rendering)
+            self.t = 0
+            rd_t = np.array([self.xd[self.t], self.yd[self.t], self.zd[self.t]])
+            vd_t = np.array([self.vxd, self.vyd, self.vzd])
+            # Reset robot at the origin and move the target object to the goal position and orientation
+            pb.resetBasePositionAndOrientation(
+                arm, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]))
+            pb.resetBasePositionAndOrientation(
+                target_object, rd_t, pb.getQuaternionFromEuler(
+                    np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])))  # orient just for rendering
+            # set conveyer pose and orient
+            pb.resetBasePositionAndOrientation(
+                conveyor_object,
+                np.array([self.xd_init, self.yd_init, self.zd_init]) + np.array([-0.002, -0.18, -0.15]),
+                pb.getQuaternionFromEuler([0, 0, np.pi / 2 - 0.244978663]))
+            # Reset joint at initial angles
+            for i in range(6):
+                pb.resetJointState(arm, i, self.q_init[i])
+            # In Pybullet, gripper halves are controlled separately+we also deactivated the 7th joint too
+            for j in range(6, 9):
+                pb.resetJointState(arm, j, 0)
+            time.sleep(1)
 
-        for t in range(1, self.MAX_TIMESTEPS):
-            dqc_t = self.plot_data_buffer[t, 12:]
-            joint_velocities = list(dqc_t)
-            pb.setJointMotorControlArray(
-                arm,
-                [0, 1, 2, 3, 4, 5],
-                controlMode=pb.VELOCITY_CONTROL,
-                targetVelocities=joint_velocities,
-                forces=[87, 87, 87, 87, 12, 12]
-            )
-            # default timestep is 1/240 second
-            pb.stepSimulation(physicsClientId=physics_client)
-            time.sleep(0.01)
+            for t in range(1, self.MAX_TIMESTEPS):
+                dqc_t = self.plot_data_buffer[t, 12:]
+                joint_velocities = list(dqc_t)
+                pb.setJointMotorControlArray(
+                    arm,
+                    [0, 1, 2, 3, 4, 5],
+                    controlMode=pb.VELOCITY_CONTROL,
+                    targetVelocities=joint_velocities,
+                    forces=[87, 87, 87, 87, 12, 12]
+                )
+                # default timestep is 1/240 second
+                pb.stepSimulation(physicsClientId=physics_client)
+                time.sleep(0.01)
 
-        plt.figure(1)
-        plt.rcParams["font.family"] = "Times New Roman"
-        plt.subplot(3, 1, 1)
-        plt.plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 4], 'r--', label='EE desired traj')
-        plt.plot(self.plot_data_buffer[:, 0], self.plot_data_buffer[:, 1], 'k',
+        fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
+        axs1[0].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 4], 'r--', label='EE desired traj')
+        axs1[0].plot(self.plot_data_buffer[:, 0], self.plot_data_buffer[:, 1], 'k',
                  label='EE position - PID only controller')
-        plt.xlabel("x")
-        plt.ylabel("y")
-        plt.subplot(3, 1, 2)
-        plt.plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
-        plt.plot(self.plot_data_buffer[:, 0], self.plot_data_buffer[:, 2], 'k',
+        axs1[0].set_xlabel("x")
+        axs1[0].set_ylabel("y")
+        axs1[1].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
+        axs1[1].plot(self.plot_data_buffer[:, 0], self.plot_data_buffer[:, 2], 'k',
                  label='EE position - PID only controller')
-        plt.xlabel("x")
-        plt.ylabel("z")
-        plt.subplot(3, 1, 3)
-        plt.plot(self.plot_data_buffer[:, 4], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
-        plt.plot(self.plot_data_buffer[:, 1], self.plot_data_buffer[:, 2], 'k',
+        axs1[1].set_xlabel("x")
+        axs1[1].set_ylabel("z")
+        axs1[2].plot(self.plot_data_buffer[:, 4], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
+        axs1[2].plot(self.plot_data_buffer[:, 1], self.plot_data_buffer[:, 2], 'k',
                  label='EE position - PID only controller')
-        plt.xlabel("y")
-        plt.ylabel("z")
+        axs1[2].set_xlabel("y")
+        axs1[2].set_ylabel("z")
         plt.legend()
         plt.savefig(self.output_dir_rendering + "/position.pdf", format="pdf", bbox_inches='tight')
         plt.show()
 
-        plt.figure(2)
-        plt.rcParams["font.family"] = "Times New Roman"
-        plt.subplot(3, 1, 1)
-        plt.plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 10], 'r--', label='EE desired traj', marker=".",
+        fig2, axs2 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
+        axs2[0].plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 10], 'r--', label='EE desired traj', marker=".",
                  markersize=30)
-        plt.plot(self.plot_data_buffer[:, 6], self.plot_data_buffer[:, 7], 'k',
+        axs2[0].plot(self.plot_data_buffer[:, 6], self.plot_data_buffer[:, 7], 'k',
                  label='EE position - PID only controller')
-        plt.xlabel("vx")
-        plt.ylabel("vy")
-        plt.subplot(3, 1, 2)
-        plt.plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 11], 'r--', label='EE desired traj', marker=".",
+        axs2[0].set_xlabel("vx")
+        axs2[0].set_ylabel("vy")
+        axs2[1].plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 11], 'r--', label='EE desired traj', marker=".",
                  markersize=30)
-        plt.plot(self.plot_data_buffer[:, 6], self.plot_data_buffer[:, 8], 'k',
+        axs2[1].plot(self.plot_data_buffer[:, 6], self.plot_data_buffer[:, 8], 'k',
                  label='EE position - PID only controller')
-        plt.xlabel("vx")
-        plt.ylabel("vz")
-        plt.subplot(3, 1, 3)
-        plt.plot(self.plot_data_buffer[:, 10], self.plot_data_buffer[:, 11], 'r--', label='EE desired velocity',
+        axs2[1].set_xlabel("vx")
+        axs2[1].set_ylabel("vz")
+        axs2[2].plot(self.plot_data_buffer[:, 10], self.plot_data_buffer[:, 11], 'r--', label='EE desired velocity',
                  marker=".",
                  markersize=30)
-        plt.plot(self.plot_data_buffer[:, 7], self.plot_data_buffer[:, 8], 'k',
+        axs2[2].plot(self.plot_data_buffer[:, 7], self.plot_data_buffer[:, 8], 'k',
                  label='EE velocity - PID only controller')
-        plt.xlabel("vy")
-        plt.ylabel("vz")
+        axs2[2].set_xlabel("vy")
+        axs2[2].set_ylabel("vz")
         plt.legend()
         plt.savefig(self.output_dir_rendering + "/velocity.pdf", format="pdf", bbox_inches='tight')
         plt.show()
