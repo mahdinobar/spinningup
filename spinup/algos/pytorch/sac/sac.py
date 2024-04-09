@@ -279,7 +279,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
                 ep_ret += r
                 ep_len += 1
             logger.store(TestEpRet=ep_ret, TestEpLen=ep_len) #here we log AverageTestEpRet to progress.txt
-            env.reset()
+            env.reset() #need reset here to properly use Pybullet engine
 
     # Prepare for interaction with environment
     total_steps = steps_per_epoch * epochs

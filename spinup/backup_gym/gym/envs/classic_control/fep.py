@@ -12,7 +12,7 @@ import time
 
 __copyright__ = "Copyright 2024, IfA https://control.ee.ethz.ch/"
 __credits__ = ["Mahdi Nobar"]
-__author__ = "Mahdi Nobar ETH Zurich <mnobar@ethz.ch>"
+__author__ = "Mahdi Nobar from ETH Zurich <mnobar@ethz.ch>"
 
 physics_client = pb.connect(pb.DIRECT)
 # Connect to physics client
@@ -51,8 +51,8 @@ Robotic Manipulation" by Murry et al.
         self.reward_eta_p = 0.7
         self.reward_eta_v = 0.3
         # TODO: User defined linear position gain
-        self.K_p = 0.1
-        self.K_i = 0.1
+        self.K_p = 2
+        self.K_i = 0.5
         self.K_d = 0.1
         self.torque_noise_max = 0.  # TODO
         self.viewer = None
