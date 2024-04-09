@@ -278,7 +278,8 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
                 o, r, d, _ = test_env.step(get_action(o, True))
                 ep_ret += r
                 ep_len += 1
-            logger.store(TestEpRet=ep_ret, TestEpLen=ep_len)
+            logger.store(TestEpRet=ep_ret, TestEpLen=ep_len) #here we log AverageTestEpRet to progress.txt
+            env.reset()
 
     # Prepare for interaction with environment
     total_steps = steps_per_epoch * epochs

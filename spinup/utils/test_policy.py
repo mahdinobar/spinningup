@@ -114,52 +114,50 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True, 
         "Environment not found!\n\n It looks like the environment wasn't saved, " + \
         "and we can't run the agent in it. :( \n\n Check out the readthedocs " + \
         "page on Experiment Outputs for how to handle this situation."
-
     logger = EpochLogger()
     o, r, d, ep_ret, ep_len, n = env.reset(), 0, False, 0, 0, 0
     while n < num_episodes:
-        if render:
-            env.render()
-            time.sleep(1e-3)
-
         a = get_action(o)
         o, r, d, _ = env.step(a)
         ep_ret += r
         ep_len += 1
 
         if d or (ep_len == max_ep_len):
-            # plotting
-            # np.save(
-            #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/no_SAC_0_12/no_SAC_plot_data_buffer.npy",
-            #     env.plot_data_buffer)
-            no_SAC_plot_data_buffer=np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/no_SAC_0_12/no_SAC_plot_data_buffer.npy")
-            plt.figure(1)
-            plt.rcParams["font.family"] = "Times New Roman"
-            plt.plot(env.plot_data_buffer[:,2], env.plot_data_buffer[:,3], 'r--', label='rd: desired traj')
-            plt.plot(env.plot_data_buffer[:, 0], env.plot_data_buffer[:, 1], 'b', label='r_hat: FK estimated traj with Hybrid controller')
-            plt.plot(no_SAC_plot_data_buffer[:, 0], no_SAC_plot_data_buffer[:, 1], 'k', label='no_SAC_r_hat: FK estimated traj with PID only controller')
-            # plt.rcParams["font.family"] = "sans-serif"
-            # plt.rcParams["font.serif"] = "Times New Roman"
-            plt.xlabel("x")
-            plt.ylabel("y")
-            plt.legend()
-            plt.savefig(output_dir+"/position.pdf",format="pdf", bbox_inches='tight')
-            plt.show()
+            if render:
+                env.render()
+                # time.sleep(1e-3)
+            if "Tworr" in output_dir:
+                # plotting for planar (modify for others)
+                # np.save(
+                #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/no_SAC_0_12/no_SAC_plot_data_buffer.npy",
+                #     env.plot_data_buffer)
+                no_SAC_plot_data_buffer=np.load(
+                    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/no_SAC_0_12/no_SAC_plot_data_buffer.npy")
+                plt.figure(1)
+                plt.rcParams["font.family"] = "Times New Roman"
+                plt.plot(env.plot_data_buffer[:,2], env.plot_data_buffer[:,3], 'r--', label='rd: desired traj')
+                plt.plot(env.plot_data_buffer[:, 0], env.plot_data_buffer[:, 1], 'b', label='r_hat: FK estimated traj with Hybrid controller')
+                plt.plot(no_SAC_plot_data_buffer[:, 0], no_SAC_plot_data_buffer[:, 1], 'k', label='no_SAC_r_hat: FK estimated traj with PID only controller')
+                # plt.rcParams["font.family"] = "sans-serif"
+                # plt.rcParams["font.serif"] = "Times New Roman"
+                plt.xlabel("x")
+                plt.ylabel("y")
+                plt.legend()
+                plt.savefig(output_dir+"/position.pdf",format="pdf", bbox_inches='tight')
+                plt.show()
+                plt.figure(2)
+                plt.rcParams["font.family"] = "Times New Roman"
+                plt.plot(env.plot_data_buffer[:,6], env.plot_data_buffer[:,7], 'r--', label='vd: desired traj', marker=".", markersize=30)
+                plt.plot(env.plot_data_buffer[:, 4], env.plot_data_buffer[:, 5], 'b', label='v_hat: FK estimated traj')
+                plt.plot(no_SAC_plot_data_buffer[:, 4], no_SAC_plot_data_buffer[:, 5], 'k', label='no_SAC_v_hat: FK estimated traj with PID only controller')
 
-            plt.figure(2)
-            plt.rcParams["font.family"] = "Times New Roman"
-            plt.plot(env.plot_data_buffer[:,6], env.plot_data_buffer[:,7], 'r--', label='vd: desired traj', marker=".", markersize=30)
-            plt.plot(env.plot_data_buffer[:, 4], env.plot_data_buffer[:, 5], 'b', label='v_hat: FK estimated traj')
-            plt.plot(no_SAC_plot_data_buffer[:, 4], no_SAC_plot_data_buffer[:, 5], 'k', label='no_SAC_v_hat: FK estimated traj with PID only controller')
-
-            # plt.rcParams["font.family"] = "sans-serif"
-            # plt.rcParams["font.serif"] = "Times New Roman"
-            plt.xlabel("vx")
-            plt.ylabel("vy")
-            plt.legend()
-            plt.savefig(output_dir+"/velocity.pdf",format="pdf", bbox_inches='tight')
-            plt.show()
+                # plt.rcParams["font.family"] = "sans-serif"
+                # plt.rcParams["font.serif"] = "Times New Roman"
+                plt.xlabel("vx")
+                plt.ylabel("vy")
+                plt.legend()
+                plt.savefig(output_dir+"/velocity.pdf",format="pdf", bbox_inches='tight')
+                plt.show()
 
 
             logger.store(EpRet=ep_ret, EpLen=ep_len)

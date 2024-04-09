@@ -244,6 +244,6 @@
     <mimic joint="panda_finger_joint1"/>
   </joint>
   <material name="panda_white">
-    <color rgba="1. 1. 1. 1."/>
+    <color rgba="0.9 0.9 .9 1."/>
   </material>
 </robot>
