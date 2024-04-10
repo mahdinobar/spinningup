@@ -88,9 +88,9 @@ Robotic Manipulation" by Murry et al.
         low_s = -high_s
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
-        #Attention: limits of SAC actions
-        high_a = 0.1*np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
-                           2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
+        # Attention: limits of SAC actions
+        high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
+                                  2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
         self.output_dir_rendering = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/"
@@ -108,7 +108,7 @@ Robotic Manipulation" by Murry et al.
             pinvA = np.linalg.lstsq((A.T * A + ld * ld * np.eye(n, n)), A.T)[0]
         elif (m <= n):
             # Compute the right pseudoinverse.
-            pinvA = np.linalg.lstsq((np.matmul(A, A.T) + ld * ld * np.eye(m, m)).T, A)[0].T
+            pinvA = np.linalg.lstsq((np.matmul(A, A.T) + ld * ld * np.eye(m, m)).T, A, rcond=None)[0].T
         return pinvA
 
     def q_command(self, r_ee, v_ee, Jpinv, rd, vd, e, dt):
@@ -374,6 +374,14 @@ Robotic Manipulation" by Murry et al.
             physics_client_rendering = pb.connect(pb.GUI,
                                                   options='--mp4fps=5 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d' % (
                                                       _screen_width, _screen_height))
+            dt = 1 / 10  # sec
+            pb.setTimeStep(timeStep=dt, physicsClientId=physics_client_rendering)
+            # physics_client = p.connect(p.GUI,options="--mp4fps=3 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d" % (screen_width, screen_height))
+            # # Set gravity
+            pb.setGravity(0, 0, -9.81, physicsClientId=physics_client_rendering)
+            # Load URDFs
+            # Load robot, target object and plane urdf
+            pb.setAdditionalSearchPath(pybullet_data.getDataPath())
             pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
                                  self.output_dir_rendering + "/simulation.mp4")  # added by Pierre
             arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep/panda.urdf",
@@ -392,8 +400,8 @@ Robotic Manipulation" by Murry et al.
                 cameraPitch=_cam_pitch,
                 cameraTargetPosition=camera_target_pos,
                 physicsClientId=physics_client_rendering)
-            self.t = 0
-            rd_t = np.array([self.xd[self.t], self.yd[self.t], self.zd[self.t]])
+            t = 0
+            rd_t = np.array([self.xd[t], self.yd[t], self.zd[t]])
             vd_t = np.array([self.vxd, self.vyd, self.vzd])
             # Reset robot at the origin and move the target object to the goal position and orientation
             pb.resetBasePositionAndOrientation(
@@ -415,6 +423,10 @@ Robotic Manipulation" by Murry et al.
             time.sleep(1)
 
             for t in range(1, self.MAX_TIMESTEPS):
+                rd_t = np.array([self.xd[t], self.yd[t], self.zd[t]])
+                pb.resetBasePositionAndOrientation(
+                    target_object, rd_t, pb.getQuaternionFromEuler(
+                        np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])))
                 dqc_t = self.plot_data_buffer[t, 12:]
                 joint_velocities = list(dqc_t)
                 pb.setJointMotorControlArray(
@@ -472,6 +484,26 @@ Robotic Manipulation" by Murry et al.
         axs2[2].set_ylabel("vz")
         plt.legend()
         plt.savefig(self.output_dir_rendering + "/velocity.pdf", format="pdf", bbox_inches='tight')
+        plt.show()
+
+        fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(8, 12))
+        axs3[0].plot(abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3])*1000, 'b', label='x error')
+        axs3[0].set_xlabel("t")
+        axs3[0].set_ylabel("|x-xd| [mm]")
+        plt.legend()
+        axs3[1].plot(abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4])*1000, 'b', label='y error')
+        axs3[1].set_xlabel("t")
+        axs3[1].set_ylabel("|y-yd| [mm]")
+        plt.legend()
+        axs3[2].plot(abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5])*1000, 'b', label='z error')
+        axs3[2].set_xlabel("t")
+        axs3[2].set_ylabel("|z-zd| [mm]")
+        plt.legend()
+        axs3[3].plot(np.linalg.norm((self.plot_data_buffer[:, 0:3]-self.plot_data_buffer[:, 3:6]),ord=2, axis=1)*1000, 'b', label='Euclidean error')
+        axs3[3].set_xlabel("t")
+        axs3[3].set_ylabel("||r-rd||_2 [mm]")
+        plt.legend()
+        plt.savefig(self.output_dir_rendering + "/position_errors.pdf", format="pdf", bbox_inches='tight')
         plt.show()
 
     def close(self):
