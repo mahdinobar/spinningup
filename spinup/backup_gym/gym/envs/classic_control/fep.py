@@ -48,8 +48,10 @@ Robotic Manipulation" by Murry et al.
         # TODO: reward params
         self.lp = 100
         self.lv = 100
+        self.lddqc = 100
         self.reward_eta_p = 0.7
-        self.reward_eta_v = 0.3
+        self.reward_eta_v = 0.15
+        self.reward_eta_ddqc = 0.15
         # TODO: User defined linear position gain
         self.K_p = 2
         self.K_i = 0.5
@@ -89,7 +91,7 @@ Robotic Manipulation" by Murry et al.
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
         # Attention: limits of SAC actions
-        high_a = 0.1 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
+        high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
                                   2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
@@ -128,7 +130,8 @@ Robotic Manipulation" by Murry et al.
         return dqc, e
 
     def f_logistic(self, x, l):
-        return 2 / (math.e ** (x * l) + math.e ** (-x * l))
+        H = 2
+        return H / (math.e ** (x * l) + math.e ** (-x * l))
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -324,7 +327,9 @@ Robotic Manipulation" by Murry et al.
         error_v_t = sum(abs(v_hat_tp1 - vd_t))
         reward_p_t = self.f_logistic(error_p_t, self.lp)
         reward_v_t = self.f_logistic(error_v_t, self.lv)
-        reward_t = self.reward_eta_p * reward_p_t + self.reward_eta_v * reward_v_t
+        ddqc_t = sum(abs((dqc_t - self.dq[-1, :]) / dt))
+        reward_ddqc_t = self.f_logistic(ddqc_t, self.lddqc)
+        reward_t = self.reward_eta_p * reward_p_t + self.reward_eta_v * reward_v_t + self.reward_eta_ddqc * reward_ddqc_t
         plot_data_t = [r_hat_t[0],
                        r_hat_t[1],
                        r_hat_t[2],
@@ -487,23 +492,53 @@ Robotic Manipulation" by Murry et al.
         plt.show()
 
         fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(8, 12))
-        axs3[0].plot(abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3])*1000, 'b', label='x error')
+        axs3[0].plot(abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, 'b', label='x error')
         axs3[0].set_xlabel("t")
         axs3[0].set_ylabel("|x-xd| [mm]")
         plt.legend()
-        axs3[1].plot(abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4])*1000, 'b', label='y error')
+        axs3[1].plot(abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, 'b', label='y error')
         axs3[1].set_xlabel("t")
         axs3[1].set_ylabel("|y-yd| [mm]")
         plt.legend()
-        axs3[2].plot(abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5])*1000, 'b', label='z error')
+        axs3[2].plot(abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, 'b', label='z error')
         axs3[2].set_xlabel("t")
         axs3[2].set_ylabel("|z-zd| [mm]")
         plt.legend()
-        axs3[3].plot(np.linalg.norm((self.plot_data_buffer[:, 0:3]-self.plot_data_buffer[:, 3:6]),ord=2, axis=1)*1000, 'b', label='Euclidean error')
+        axs3[3].plot(
+            np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2, axis=1) * 1000, 'b',
+            label='Euclidean error')
         axs3[3].set_xlabel("t")
         axs3[3].set_ylabel("||r-rd||_2 [mm]")
         plt.legend()
         plt.savefig(self.output_dir_rendering + "/position_errors.pdf", format="pdf", bbox_inches='tight')
+        plt.show()
+
+        fig4, axs4 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(12, 10))
+        axs4[0, 0].plot(self.plot_data_buffer[:, 12], 'b', label='commanded SAC joint speeed 0')
+        axs4[0, 0].set_xlabel("t")
+        axs4[0, 0].set_ylabel("dqc_0")
+        plt.legend()
+        axs4[1, 0].plot(self.plot_data_buffer[:, 13], 'b', label='commanded SAC joint speeed 1')
+        axs4[1, 0].set_xlabel("t")
+        axs4[1, 0].set_ylabel("dqc_1")
+        plt.legend()
+        axs4[2, 0].plot(self.plot_data_buffer[:, 14], 'b', label='commanded SAC joint speeed 2')
+        axs4[2, 0].set_xlabel("t")
+        axs4[2, 0].set_ylabel("dqc_2")
+        plt.legend()
+        axs4[0, 1].plot(self.plot_data_buffer[:, 15], 'b', label='commanded SAC joint speeed 3')
+        axs4[0, 1].set_xlabel("t")
+        axs4[0, 1].set_ylabel("dqc_3")
+        plt.legend()
+        axs4[1, 1].plot(self.plot_data_buffer[:, 16], 'b', label='commanded SAC joint speeed 4')
+        axs4[1, 1].set_xlabel("t")
+        axs4[1, 1].set_ylabel("dqc_4")
+        plt.legend()
+        axs4[2, 1].plot(self.plot_data_buffer[:, 17], 'b', label='commanded SAC joint speeed 5')
+        axs4[2, 1].set_xlabel("t")
+        axs4[2, 1].set_ylabel("dqc_5")
+        plt.legend()
+        plt.savefig(self.output_dir_rendering + "/dqc.pdf", format="pdf", bbox_inches='tight')
         plt.show()
 
     def close(self):
