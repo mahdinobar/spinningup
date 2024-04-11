@@ -91,8 +91,9 @@ Robotic Manipulation" by Murry et al.
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
         # Attention: limits of SAC actions
-        high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
-                                  2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
+        # high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
+        #                           2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
+        high_a = 0.05 * np.array([2.1750])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
         self.output_dir_rendering = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/"
@@ -261,7 +262,7 @@ Robotic Manipulation" by Murry et al.
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
         # inject SAC action
-        dqc_t = dqc_t + a
+        dqc_t[0] = dqc_t[0] + a
         # TODO check
         # command joint speeds (only 6 joints)
         joint_velocities = list(dqc_t)
@@ -286,6 +287,21 @@ Robotic Manipulation" by Murry et al.
         tau_t = np.array(tau_t)[:6]
         self.q = np.vstack((self.q, q_tp1))  # Attention
         self.dq = np.vstack((self.dq, dq_tp1))  # Attention
+        # check done episode
+        terminal = self._terminal()
+        # calculate reward
+        # define inspired by Pavlichenko et al SAC tracking paper https://doi.org/10.48550/arXiv.2203.07051
+        # todo make more efficient by calling getLinkState only once
+        LinkState_tp1 = pb.getLinkState(arm, 9, computeForwardKinematics=True, computeLinkVelocity=True)
+        r_hat_tp1 = np.array(LinkState[0])
+        v_hat_tp1 = np.array(LinkState[6])
+        error_p_t = sum(abs(r_hat_tp1 - vd_t))
+        error_v_t = sum(abs(v_hat_tp1 - vd_t))
+        error_ddqc_t = (abs(dqc_t[0] - self.state[12]))
+        reward_p_t = self.f_logistic(error_p_t, self.lp)
+        reward_v_t = self.f_logistic(error_v_t, self.lv)
+        reward_ddqc_t = self.f_logistic(error_ddqc_t, self.lddqc)
+        reward_t = self.reward_eta_p * reward_p_t + self.reward_eta_v * reward_v_t + self.reward_eta_ddqc * reward_ddqc_t
         # collect observations(after you apply action)
         # TODO double check concept
         obs = [r_hat_t[0] - rd_t[0],
@@ -317,22 +333,7 @@ Robotic Manipulation" by Murry et al.
                dqc_t[5]]
         # update states
         self.state = obs
-        self.state_buffer = np.vstack((self.state_buffer, self.state))
-        # check done episode
-        terminal = self._terminal()
-        # calculate reward
-        # define inspired by Pavlichenko et al SAC tracking paper https://doi.org/10.48550/arXiv.2203.07051
-        # todo make more efficient by calling getLinkState only once
-        LinkState_tp1 = pb.getLinkState(arm, 9, computeForwardKinematics=True, computeLinkVelocity=True)
-        r_hat_tp1 = np.array(LinkState[0])
-        v_hat_tp1 = np.array(LinkState[6])
-        error_p_t = sum(abs(r_hat_tp1 - vd_t))
-        error_v_t = sum(abs(v_hat_tp1 - vd_t))
-        error_ddqc_t = sum(abs(dqc_t - self.dq[-2, :]))
-        reward_p_t = self.f_logistic(error_p_t, self.lp)
-        reward_v_t = self.f_logistic(error_v_t, self.lv)
-        reward_ddqc_t = self.f_logistic(error_ddqc_t, self.lddqc)
-        reward_t = self.reward_eta_p * reward_p_t + self.reward_eta_v * reward_v_t + self.reward_eta_ddqc * reward_ddqc_t
+        self.state_buffer = np.vstack((self.state_buffer, self.state))        
         plot_data_t = [r_hat_t[0],
                        r_hat_t[1],
                        r_hat_t[2],
