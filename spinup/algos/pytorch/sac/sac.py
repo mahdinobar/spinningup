@@ -336,7 +336,6 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
                     batch = replay_buffer.sample_batch(batch_size, sample_mode, sequence_length)
                     update(data=batch)
 
-
         # End of epoch handling
         if (t+1) % steps_per_epoch == 0:
             epoch = (t+1) // steps_per_epoch

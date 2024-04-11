@@ -82,23 +82,18 @@ Robotic Manipulation" by Murry et al.
         self.zd = np.linspace(self.zd_init, self.zd_init + deltaz, self.MAX_TIMESTEPS, endpoint=True)
         # TODO Attention: just the dimension of the observation space is enforced. The data here is not used. If you need to enforce them then modify the code.
         # Attention just 6 DOF is simulated (7th DOF is disabled)
-        # high_s = np.array([0.2, 0.2, 0.2,
-        #                    1.5, 1.5, 1.5, 1.5, 1.5, 1.5,
-        #                    2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
-        #                    87, 87, 87, 87, 12, 12,
-        #                    2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])
         high_s = np.array([0.2, 0.2, 0.2,
-                           1.5, 
-                           2.1750, 
-                           87, 
-                           2.1750])
+                           1.5, 1.5, 1.5, 1.5, 1.5, 1.5,
+                           2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
+                           87, 87, 87, 87, 12, 12,
+                           2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])
         low_s = -high_s
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
         # Attention: limits of SAC actions
         # high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
         #                           2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
-        high_a = 0.9 * np.array([2.1750])  # TODO Attention: limits should be the same otherwise modify sac code
+        high_a = 0.05 * np.array([2.1750, 2.1750])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
         self.output_dir_rendering = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/"
@@ -195,9 +190,29 @@ Robotic Manipulation" by Murry et al.
                       r_hat_t[1] - rd_t[1],
                       r_hat_t[2] - rd_t[2],
                       q_t[0],
+                      q_t[1],
+                      q_t[2],
+                      q_t[3],
+                      q_t[4],
+                      q_t[5],
                       dq_t[0],
+                      dq_t[1],
+                      dq_t[2],
+                      dq_t[3],
+                      dq_t[4],
+                      dq_t[5],
                       tau_t[0],
-                      dqc_t[0]]
+                      tau_t[1],
+                      tau_t[2],
+                      tau_t[3],
+                      tau_t[4],
+                      tau_t[5],
+                      dqc_t[0],
+                      dqc_t[1],
+                      dqc_t[2],
+                      dqc_t[3],
+                      dqc_t[4],
+                      dqc_t[5]]
         self.state_buffer = self.state
         plot_data_t = [r_hat_t[0],
                        r_hat_t[1],
@@ -247,7 +262,8 @@ Robotic Manipulation" by Murry et al.
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
         # inject SAC action
-        dqc_t[0] = dqc_t[0] + a
+        dqc_t[0] = dqc_t[0] + a[0]
+        dqc_t[1] = dqc_t[1] + a[1]
         # TODO check
         # command joint speeds (only 6 joints)
         joint_velocities = list(dqc_t)
@@ -282,47 +298,40 @@ Robotic Manipulation" by Murry et al.
         v_hat_tp1 = np.array(LinkState[6])
         error_p_t = sum(abs(r_hat_tp1 - vd_t))
         error_v_t = sum(abs(v_hat_tp1 - vd_t))
-        error_ddqc_t = 0#(abs(dqc_t[0] - self.state[12]))
+        error_ddqc_t = (abs(dqc_t[0] - self.state[12]))
         reward_p_t = self.f_logistic(error_p_t, self.lp)
         reward_v_t = 0*self.f_logistic(error_v_t, self.lv)
         reward_ddqc_t = 0*self.f_logistic(error_ddqc_t, self.lddqc)
         reward_t = self.reward_eta_p * reward_p_t + self.reward_eta_v * reward_v_t + self.reward_eta_ddqc * reward_ddqc_t
         # collect observations(after you apply action)
         # TODO double check concept
-        # obs = [r_hat_t[0] - rd_t[0],
-        #        r_hat_t[1] - rd_t[1],
-        #        r_hat_t[2] - rd_t[2],
-        #        q_tp1[0],
-        #        q_tp1[1],
-        #        q_tp1[2],
-        #        q_tp1[3],
-        #        q_tp1[4],
-        #        q_tp1[5],
-        #        dq_tp1[0],
-        #        dq_tp1[1],
-        #        dq_tp1[2],
-        #        dq_tp1[3],
-        #        dq_tp1[4],
-        #        dq_tp1[5],
-        #        tau_t[0],
-        #        tau_t[1],
-        #        tau_t[2],
-        #        tau_t[3],
-        #        tau_t[4],
-        #        tau_t[5],
-        #        dqc_t[0],
-        #        dqc_t[1],
-        #        dqc_t[2],
-        #        dqc_t[3],
-        #        dqc_t[4],
-        #        dqc_t[5]]
         obs = [r_hat_t[0] - rd_t[0],
                r_hat_t[1] - rd_t[1],
                r_hat_t[2] - rd_t[2],
                q_tp1[0],
+               q_tp1[1],
+               q_tp1[2],
+               q_tp1[3],
+               q_tp1[4],
+               q_tp1[5],
                dq_tp1[0],
+               dq_tp1[1],
+               dq_tp1[2],
+               dq_tp1[3],
+               dq_tp1[4],
+               dq_tp1[5],
                tau_t[0],
-               dqc_t[0]]
+               tau_t[1],
+               tau_t[2],
+               tau_t[3],
+               tau_t[4],
+               tau_t[5],
+               dqc_t[0],
+               dqc_t[1],
+               dqc_t[2],
+               dqc_t[3],
+               dqc_t[4],
+               dqc_t[5]]
         # update states
         self.state = obs
         self.state_buffer = np.vstack((self.state_buffer, self.state))        
