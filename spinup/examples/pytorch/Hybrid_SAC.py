@@ -7,9 +7,9 @@ import spinup.algos.pytorch.sac.core as core
 from spinup.utils.test_policy import load_policy_and_env, run_policy
 import os
 
-TRAIN=True
+TRAIN=False
 env_fn = lambda: gym.make('Fep-v0')
-exp_name = "Fepv0_3_lddqc100" #"no_SAC_fepv0_3" return is 9.81 "no_SAC_fepv0_1"  "Tworrv0_27" #"no_SAC_0_9"
+exp_name = "Fepv0_3_etaddqc03_lddqc1000" #"no_SAC_fepv0_3" return is 9.81 "no_SAC_fepv0_1"  "Tworrv0_27" #"no_SAC_0_9"
 if __name__ == '__main__':
     if TRAIN:
         # train
