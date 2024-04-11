@@ -49,9 +49,9 @@ Robotic Manipulation" by Murry et al.
         self.lp = 1
         self.lv = 10
         self.lddqc = 1
-        self.reward_eta_p = 0.5
+        self.reward_eta_p = 0.3
         self.reward_eta_v = 0.2
-        self.reward_eta_ddqc = 0.3
+        self.reward_eta_ddqc = 0.7
         # TODO: User defined linear position gain
         self.K_p = 2
         self.K_i = 0.5
