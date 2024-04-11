@@ -46,12 +46,12 @@ Robotic Manipulation" by Murry et al.
         np.random.seed(seed)
         self.seed(seed=seed)
         # TODO: reward params
-        self.lp = 100
-        self.lv = 100
-        self.lddqc = 100
-        self.reward_eta_p = 0.7
-        self.reward_eta_v = 0.15
-        self.reward_eta_ddqc = 0.15
+        self.lp = 1
+        self.lv = 10
+        self.lddqc = 1
+        self.reward_eta_p = 0.5
+        self.reward_eta_v = 0.2
+        self.reward_eta_ddqc = 0.3
         # TODO: User defined linear position gain
         self.K_p = 2
         self.K_i = 0.5
@@ -230,7 +230,10 @@ Robotic Manipulation" by Murry et al.
                        q_t[2],
                        q_t[3],
                        q_t[4],
-                       q_t[5]]
+                       q_t[5],
+                       0,
+                       0,
+                       0]
         self.plot_data_buffer = plot_data_t
         return self._get_ob()
 
@@ -325,10 +328,10 @@ Robotic Manipulation" by Murry et al.
         v_hat_tp1 = np.array(LinkState[6])
         error_p_t = sum(abs(r_hat_tp1 - vd_t))
         error_v_t = sum(abs(v_hat_tp1 - vd_t))
+        error_ddqc_t = sum(abs(dqc_t - self.dq[-2, :]))
         reward_p_t = self.f_logistic(error_p_t, self.lp)
         reward_v_t = self.f_logistic(error_v_t, self.lv)
-        ddqc_t = sum(abs((dqc_t - self.dq[-1, :]) / dt))
-        reward_ddqc_t = self.f_logistic(ddqc_t, self.lddqc)
+        reward_ddqc_t = self.f_logistic(error_ddqc_t, self.lddqc)
         reward_t = self.reward_eta_p * reward_p_t + self.reward_eta_v * reward_v_t + self.reward_eta_ddqc * reward_ddqc_t
         plot_data_t = [r_hat_t[0],
                        r_hat_t[1],
@@ -347,7 +350,10 @@ Robotic Manipulation" by Murry et al.
                        dqc_t[2],
                        dqc_t[3],
                        dqc_t[4],
-                       dqc_t[5]]
+                       dqc_t[5],
+                       self.reward_eta_p * reward_p_t,
+                       self.reward_eta_v * reward_v_t,
+                       self.reward_eta_ddqc * reward_ddqc_t]
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
 
         # given action it returns 4-tuple (observation, reward, done, info)
@@ -362,7 +368,7 @@ Robotic Manipulation" by Murry et al.
 
     def render(self, mode='human'):
         """ Render Pybullet simulation """
-        render_video = True  # for fast debuging
+        render_video = False  # for fast debuging
         if render_video == True:
             pb.disconnect(physics_client)
             # render settings
@@ -432,7 +438,7 @@ Robotic Manipulation" by Murry et al.
                 pb.resetBasePositionAndOrientation(
                     target_object, rd_t, pb.getQuaternionFromEuler(
                         np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])))
-                dqc_t = self.plot_data_buffer[t, 12:]
+                dqc_t = self.plot_data_buffer[t, 12:18]
                 joint_velocities = list(dqc_t)
                 pb.setJointMotorControlArray(
                     arm,
@@ -539,6 +545,23 @@ Robotic Manipulation" by Murry et al.
         axs4[2, 1].set_ylabel("dqc_5")
         plt.legend()
         plt.savefig(self.output_dir_rendering + "/dqc.pdf", format="pdf", bbox_inches='tight')
+        plt.show()
+        
+        fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
+        axs5[0].plot(self.plot_data_buffer[:, 18], 'b', label='reward p')
+        axs5[0].set_xlabel("t")
+        axs5[0].set_ylabel("eta1*deltar")
+        plt.legend()
+        axs5[1].plot(self.plot_data_buffer[:, 19], 'b', label='reward v')
+        axs5[1].set_xlabel("t")
+        axs5[1].set_ylabel("eta2*deltav")
+        plt.legend()
+        axs5[2].plot(self.plot_data_buffer[:, 20], 'b', label='reward ddqc')
+        axs5[2].set_xlabel("t")
+        axs5[2].set_ylabel("eta3*ddqc")
+        plt.legend()
+        plt.legend()
+        plt.savefig(self.output_dir_rendering + "/rewards.pdf", format="pdf", bbox_inches='tight')
         plt.show()
 
     def close(self):
