@@ -54,7 +54,7 @@
       <material name="panda_white"/>
     </collision>
   </link>
-  <joint name="panda_joint2" type="revolute">
+  <joint name="panda_joint2" type="fixed">
     <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-1.7628" soft_upper_limit="1.7628"/>
     <origin rpy="-1.57079632679 0 0" xyz="0 0 0"/>
     <parent link="panda_link1"/>

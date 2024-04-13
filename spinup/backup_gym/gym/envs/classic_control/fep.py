@@ -17,10 +17,6 @@ __author__ = "Mahdi Nobar from ETH Zurich <mnobar@ethz.ch>"
 physics_client = pb.connect(pb.DIRECT)
 # Connect to physics client
 dt = 1 / 10  # sec
-pb.setTimeStep(timeStep=dt, physicsClientId=physics_client)
-# physics_client = p.connect(p.GUI,options="--mp4fps=3 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d" % (screen_width, screen_height))
-# # Set gravity
-pb.setGravity(0, 0, -9.81, physicsClientId=physics_client)
 # Load URDFs
 # Load robot, target object and plane urdf
 pb.setAdditionalSearchPath(pybullet_data.getDataPath())
@@ -82,18 +78,24 @@ Robotic Manipulation" by Murry et al.
         self.zd = np.linspace(self.zd_init, self.zd_init + deltaz, self.MAX_TIMESTEPS, endpoint=True)
         # TODO Attention: just the dimension of the observation space is enforced. The data here is not used. If you need to enforce them then modify the code.
         # Attention just 6 DOF is simulated (7th DOF is disabled)
+        # high_s = np.array([0.2, 0.2, 0.2,
+        #                    1.5, 1.5, 1.5, 1.5, 1.5, 1.5,
+        #                    2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
+        #                    87, 87, 87, 87, 12, 12,
+        #                    2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])
         high_s = np.array([0.2, 0.2, 0.2,
                            1.5, 1.5, 1.5, 1.5, 1.5, 1.5,
                            2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
                            87, 87, 87, 87, 12, 12,
-                           2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])
+                           2.1750])
         low_s = -high_s
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
         # Attention: limits of SAC actions
         # high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
         #                           2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
-        high_a = 0.05 * np.array([2.1750, 2.1750])  # TODO Attention: limits should be the same otherwise modify sac code
+        high_a = 0.05 * np.array(
+            [2.1750, 2.1750])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
         self.output_dir_rendering = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/"
@@ -139,6 +141,10 @@ Robotic Manipulation" by Murry et al.
         return [seed]
 
     def reset(self):
+        pb.setTimeStep(timeStep=dt, physicsClientId=physics_client)
+        # physics_client = p.connect(p.GUI,options="--mp4fps=3 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d" % (screen_width, screen_height))
+        # # Set gravity
+        pb.setGravity(0, 0, -9.81, physicsClientId=physics_client)
         # # randomize true model parameter in every episode
         # self.LINK_MASS_2_TRUE = 1.1 + np.random.normal(loc=0.0, scale=0.01, size=1)
         # at time t=0
@@ -177,15 +183,56 @@ Robotic Manipulation" by Murry et al.
             dq_t.append(joint_info[1])
             tau_t.append(joint_info[3])
         q_t = np.array(q_t)[:6]
-        if abs(sum(self.q_init - q_t)) > 1e-6:
-            raise ValueError('shouldn\'t q_init be equal to q_t?!')
+        # if abs(sum(self.q_init - q_t)) > 1e-6:
+        #     raise ValueError('shouldn\'t q_init be equal to q_t?!')
         dq_t = np.array(dq_t)[:6]
         tau_t = np.array(tau_t)[:6]  # CHECK!!!!!!!!!!!!!!!!!!!!¨ if tau_t is not 0 what is it and why?
         dqc_t = np.zeros(6)  # TODO check
+
+        # TODO CHECK
+        # simulate to start whith compensating the gravity when zero command is passed
+        for k in range(60):
+            pb.setJointMotorControlArray(
+                arm,
+                [0, 1, 2, 3, 4, 5, 6],
+                controlMode=pb.VELOCITY_CONTROL,
+                targetVelocities=list(np.zeros(7)),
+                forces=[87, 87, 87, 87, 12, 12, 12]
+            )
+            pb.stepSimulation(physicsClientId=physics_client)
+        pb.createConstraint(arm, 2, 0, 3, pb.JOINT_FIXED, [0, 0, 1], [0, 0, 1], [0, -0.316, 0])
+
         self.q = q_t.reshape(1, 6)
         self.dq = dq_t.reshape(1, 6)
         e0 = rd_t - r_hat_t
         self.e = e0.reshape(1, 3)
+        # self.state = [r_hat_t[0] - rd_t[0],
+        #               r_hat_t[1] - rd_t[1],
+        #               r_hat_t[2] - rd_t[2],
+        #               q_t[0],
+        #               q_t[1],
+        #               q_t[2],
+        #               q_t[3],
+        #               q_t[4],
+        #               q_t[5],
+        #               dq_t[0],
+        #               dq_t[1],
+        #               dq_t[2],
+        #               dq_t[3],
+        #               dq_t[4],
+        #               dq_t[5],
+        #               tau_t[0],
+        #               tau_t[1],
+        #               tau_t[2],
+        #               tau_t[3],
+        #               tau_t[4],
+        #               tau_t[5],
+        #               dqc_t[0],
+        #               dqc_t[1],
+        #               dqc_t[2],
+        #               dqc_t[3],
+        #               dqc_t[4],
+        #               dqc_t[5]]
         self.state = [r_hat_t[0] - rd_t[0],
                       r_hat_t[1] - rd_t[1],
                       r_hat_t[2] - rd_t[2],
@@ -207,12 +254,7 @@ Robotic Manipulation" by Murry et al.
                       tau_t[3],
                       tau_t[4],
                       tau_t[5],
-                      dqc_t[0],
-                      dqc_t[1],
-                      dqc_t[2],
-                      dqc_t[3],
-                      dqc_t[4],
-                      dqc_t[5]]
+                      dqc_t[0]]
         self.state_buffer = self.state
         plot_data_t = [r_hat_t[0],
                        r_hat_t[1],
@@ -232,9 +274,19 @@ Robotic Manipulation" by Murry et al.
                        q_t[3],
                        q_t[4],
                        q_t[5],
-                       0,
-                       0,
-                       0]
+                       dqc_t[0],
+                       dq_t[0],
+                       dq_t[1],
+                       dq_t[2],
+                       dq_t[3],
+                       dq_t[4],
+                       dq_t[5],
+                       tau_t[0],
+                       tau_t[1],
+                       tau_t[2],
+                       tau_t[3],
+                       tau_t[4],
+                       tau_t[5]]
         self.plot_data_buffer = plot_data_t
         return self._get_ob()
 
@@ -251,28 +303,32 @@ Robotic Manipulation" by Murry et al.
         r_hat_t = np.array(LinkState[0])
         v_hat_t = np.array(LinkState[6])
         # TODO check objVelocities in jacobian input
+        # [linearJacobian, angularJacobian] = pb.calculateJacobian(arm,
+        #                                                          9,
+        #                                                          list(LinkState[2]),
+        #                                                          list(np.append(self.q[-1, :], [0, 0, 0])),
+        #                                                          list(np.append(self.dq[-1, :], [0, 0, 0])),
+        #                                                          list(np.zeros(8)))
         [linearJacobian, angularJacobian] = pb.calculateJacobian(arm,
-                                                                 9,
-                                                                 list(LinkState[2]),
-                                                                 list(np.append(self.q[-1, :], [0, 0, 0])),
-                                                                 list(np.append(self.dq[-1, :], [0, 0, 0])),
-                                                                 list(np.zeros(9)))
+                             8,
+                             list(LinkState[2]),
+                             list(np.append(self.q[-1, :], [0, 0])),
+                             list(np.append(self.dq[-1, :], [0, 0])),
+                             list(np.zeros(8)))
         J_t = np.asarray(linearJacobian)[:, :6]
         Jpinv_t = self.pseudoInverseMat(J_t, ld=0.1)  # TODO: check pseudo-inverse damping coefficient
-        dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
-                                       dt=dt)
+        # dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
+        #                                dt=dt)
         # inject SAC action
-        dqc_t[0] = dqc_t[0] + a[0]
-        dqc_t[1] = dqc_t[1] + a[1]
+        dqc_t = np.array([0.2, 0, 0, 0, 0, 0, 0])  # dqc_t[0] + a[0]
         # TODO check
         # command joint speeds (only 6 joints)
-        joint_velocities = list(dqc_t)
         pb.setJointMotorControlArray(
             arm,
-            [0, 1, 2, 3, 4, 5],
+            [0, 1, 2, 3, 4, 5, 6],
             controlMode=pb.VELOCITY_CONTROL,
-            targetVelocities=joint_velocities,
-            forces=[87, 87, 87, 87, 12, 12]
+            targetVelocities=list(dqc_t),
+            forces=[87, 0, 0, 0, 0, 0, 0]
         )
         # default timestep is 1/240 second
         pb.stepSimulation(physicsClientId=physics_client)
@@ -300,11 +356,38 @@ Robotic Manipulation" by Murry et al.
         error_v_t = sum(abs(v_hat_tp1 - vd_t))
         error_ddqc_t = (abs(dqc_t[0] - self.state[12]))
         reward_p_t = self.f_logistic(error_p_t, self.lp)
-        reward_v_t = 0*self.f_logistic(error_v_t, self.lv)
-        reward_ddqc_t = 0*self.f_logistic(error_ddqc_t, self.lddqc)
+        reward_v_t = 0 * self.f_logistic(error_v_t, self.lv)
+        reward_ddqc_t = 0 * self.f_logistic(error_ddqc_t, self.lddqc)
         reward_t = self.reward_eta_p * reward_p_t + self.reward_eta_v * reward_v_t + self.reward_eta_ddqc * reward_ddqc_t
         # collect observations(after you apply action)
         # TODO double check concept
+        # obs = [r_hat_t[0] - rd_t[0],
+        #        r_hat_t[1] - rd_t[1],
+        #        r_hat_t[2] - rd_t[2],
+        #        q_tp1[0],
+        #        q_tp1[1],
+        #        q_tp1[2],
+        #        q_tp1[3],
+        #        q_tp1[4],
+        #        q_tp1[5],
+        #        dq_tp1[0],
+        #        dq_tp1[1],
+        #        dq_tp1[2],
+        #        dq_tp1[3],
+        #        dq_tp1[4],
+        #        dq_tp1[5],
+        #        tau_t[0],
+        #        tau_t[1],
+        #        tau_t[2],
+        #        tau_t[3],
+        #        tau_t[4],
+        #        tau_t[5],
+        #        dqc_t[0],
+        #        dqc_t[1],
+        #        dqc_t[2],
+        #        dqc_t[3],
+        #        dqc_t[4],
+        #        dqc_t[5]]
         obs = [r_hat_t[0] - rd_t[0],
                r_hat_t[1] - rd_t[1],
                r_hat_t[2] - rd_t[2],
@@ -326,15 +409,10 @@ Robotic Manipulation" by Murry et al.
                tau_t[3],
                tau_t[4],
                tau_t[5],
-               dqc_t[0],
-               dqc_t[1],
-               dqc_t[2],
-               dqc_t[3],
-               dqc_t[4],
-               dqc_t[5]]
+               dqc_t[0]]
         # update states
         self.state = obs
-        self.state_buffer = np.vstack((self.state_buffer, self.state))        
+        self.state_buffer = np.vstack((self.state_buffer, self.state))
         plot_data_t = [r_hat_t[0],
                        r_hat_t[1],
                        r_hat_t[2],
@@ -348,16 +426,28 @@ Robotic Manipulation" by Murry et al.
                        vd_t[1],
                        vd_t[2],
                        dqc_t[0],
-                       dqc_t[1],
-                       dqc_t[2],
-                       dqc_t[3],
-                       dqc_t[4],
-                       dqc_t[5],
-                       self.reward_eta_p * reward_p_t,
-                       self.reward_eta_v * reward_v_t,
-                       self.reward_eta_ddqc * reward_ddqc_t]
+                       self.q[-2, 0],
+                       self.q[-2, 1],
+                       self.q[-2, 2],
+                       self.q[-2, 3],
+                       self.q[-2, 4],
+                       self.q[-2, 5],
+                       self.dq[-2, 0],
+                       self.dq[-2, 1],
+                       self.dq[-2, 2],
+                       self.dq[-2, 3],
+                       self.dq[-2, 4],
+                       self.dq[-2, 5],
+                       tau_t[0],
+                       tau_t[1],
+                       tau_t[2],
+                       tau_t[3],
+                       tau_t[4],
+                       tau_t[5]]
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
-
+        # if terminal:
+        #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fepv0_6/rdee_j1.py",self.plot_data_buffer[:,0:3])
+        #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fepv0_6/vdee_j1.py",self.plot_data_buffer[:,9:12])
         # given action it returns 4-tuple (observation, reward, done, info)
         return (self._get_ob(), reward_t, terminal, {})
 
@@ -366,7 +456,8 @@ Robotic Manipulation" by Murry et al.
         return s
 
     def _terminal(self):
-        return bool(self.t >= self.MAX_TIMESTEPS - 1)
+        done = bool(self.t >= self.MAX_TIMESTEPS - 1)
+        return done
 
     def render(self, mode='human'):
         """ Render Pybullet simulation """
@@ -454,17 +545,17 @@ Robotic Manipulation" by Murry et al.
                 time.sleep(0.01)
 
         fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
-        axs1[0].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 4], 'r--', label='EE desired traj')
+        # axs1[0].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 4], 'r--', label='EE desired traj')
         axs1[0].plot(self.plot_data_buffer[:, 0], self.plot_data_buffer[:, 1], 'k',
                      label='EE position - PID only controller')
         axs1[0].set_xlabel("x")
         axs1[0].set_ylabel("y")
-        axs1[1].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
+        # axs1[1].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
         axs1[1].plot(self.plot_data_buffer[:, 0], self.plot_data_buffer[:, 2], 'k',
                      label='EE position - PID only controller')
         axs1[1].set_xlabel("x")
         axs1[1].set_ylabel("z")
-        axs1[2].plot(self.plot_data_buffer[:, 4], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
+        # axs1[2].plot(self.plot_data_buffer[:, 4], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
         axs1[2].plot(self.plot_data_buffer[:, 1], self.plot_data_buffer[:, 2], 'k',
                      label='EE position - PID only controller')
         axs1[2].set_xlabel("y")
@@ -474,23 +565,23 @@ Robotic Manipulation" by Murry et al.
         plt.show()
 
         fig2, axs2 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
-        axs2[0].plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 10], 'r--', label='EE desired traj',
-                     marker=".",
-                     markersize=30)
+        # axs2[0].plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 10], 'r--', label='EE desired traj',
+        #              marker=".",
+        #              markersize=30)
         axs2[0].plot(self.plot_data_buffer[:, 6], self.plot_data_buffer[:, 7], 'k',
                      label='EE position - PID only controller')
         axs2[0].set_xlabel("vx")
         axs2[0].set_ylabel("vy")
-        axs2[1].plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 11], 'r--', label='EE desired traj',
-                     marker=".",
-                     markersize=30)
+        # axs2[1].plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 11], 'r--', label='EE desired traj',
+        #              marker=".",
+        #              markersize=30)
         axs2[1].plot(self.plot_data_buffer[:, 6], self.plot_data_buffer[:, 8], 'k',
                      label='EE position - PID only controller')
         axs2[1].set_xlabel("vx")
         axs2[1].set_ylabel("vz")
-        axs2[2].plot(self.plot_data_buffer[:, 10], self.plot_data_buffer[:, 11], 'r--', label='EE desired velocity',
-                     marker=".",
-                     markersize=30)
+        # axs2[2].plot(self.plot_data_buffer[:, 10], self.plot_data_buffer[:, 11], 'r--', label='EE desired velocity',
+        #              marker=".",
+        #              markersize=30)
         axs2[2].plot(self.plot_data_buffer[:, 7], self.plot_data_buffer[:, 8], 'k',
                      label='EE velocity - PID only controller')
         axs2[2].set_xlabel("vy")
@@ -499,71 +590,155 @@ Robotic Manipulation" by Murry et al.
         plt.savefig(self.output_dir_rendering + "/velocity.pdf", format="pdf", bbox_inches='tight')
         plt.show()
 
-        fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(8, 12))
-        axs3[0].plot(abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, 'b', label='x error')
-        axs3[0].set_xlabel("t")
-        axs3[0].set_ylabel("|x-xd| [mm]")
-        plt.legend()
-        axs3[1].plot(abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, 'b', label='y error')
-        axs3[1].set_xlabel("t")
-        axs3[1].set_ylabel("|y-yd| [mm]")
-        plt.legend()
-        axs3[2].plot(abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, 'b', label='z error')
-        axs3[2].set_xlabel("t")
-        axs3[2].set_ylabel("|z-zd| [mm]")
-        plt.legend()
-        axs3[3].plot(
-            np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2, axis=1) * 1000, 'b',
-            label='Euclidean error')
-        axs3[3].set_xlabel("t")
-        axs3[3].set_ylabel("||r-rd||_2 [mm]")
-        plt.legend()
-        plt.savefig(self.output_dir_rendering + "/position_errors.pdf", format="pdf", bbox_inches='tight')
-        plt.show()
+        # fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(8, 12))
+        # axs3[0].plot(abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, 'b', label='x error')
+        # axs3[0].set_xlabel("t")
+        # axs3[0].set_ylabel("|x-xd| [mm]")
+        # plt.legend()
+        # axs3[1].plot(abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, 'b', label='y error')
+        # axs3[1].set_xlabel("t")
+        # axs3[1].set_ylabel("|y-yd| [mm]")
+        # plt.legend()
+        # axs3[2].plot(abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, 'b', label='z error')
+        # axs3[2].set_xlabel("t")
+        # axs3[2].set_ylabel("|z-zd| [mm]")
+        # plt.legend()
+        # axs3[3].plot(
+        #     np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2, axis=1) * 1000, 'b',
+        #     label='Euclidean error')
+        # axs3[3].set_xlabel("t")
+        # axs3[3].set_ylabel("||r-rd||_2 [mm]")
+        # plt.legend()
+        # plt.savefig(self.output_dir_rendering + "/position_errors.pdf", format="pdf", bbox_inches='tight')
+        # plt.show()
 
         fig4, axs4 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(12, 10))
         axs4[0, 0].plot(self.plot_data_buffer[:, 12], 'b', label='commanded SAC joint speeed 0')
         axs4[0, 0].set_xlabel("t")
         axs4[0, 0].set_ylabel("dqc_0")
         plt.legend()
-        axs4[1, 0].plot(self.plot_data_buffer[:, 13], 'b', label='commanded SAC joint speeed 1')
-        axs4[1, 0].set_xlabel("t")
-        axs4[1, 0].set_ylabel("dqc_1")
-        plt.legend()
-        axs4[2, 0].plot(self.plot_data_buffer[:, 14], 'b', label='commanded SAC joint speeed 2')
-        axs4[2, 0].set_xlabel("t")
-        axs4[2, 0].set_ylabel("dqc_2")
-        plt.legend()
-        axs4[0, 1].plot(self.plot_data_buffer[:, 15], 'b', label='commanded SAC joint speeed 3')
-        axs4[0, 1].set_xlabel("t")
-        axs4[0, 1].set_ylabel("dqc_3")
-        plt.legend()
-        axs4[1, 1].plot(self.plot_data_buffer[:, 16], 'b', label='commanded SAC joint speeed 4')
-        axs4[1, 1].set_xlabel("t")
-        axs4[1, 1].set_ylabel("dqc_4")
-        plt.legend()
-        axs4[2, 1].plot(self.plot_data_buffer[:, 17], 'b', label='commanded SAC joint speeed 5')
-        axs4[2, 1].set_xlabel("t")
-        axs4[2, 1].set_ylabel("dqc_5")
-        plt.legend()
+        # axs4[1, 0].plot(self.plot_data_buffer[:, 13], 'b', label='commanded SAC joint speeed 1')
+        # axs4[1, 0].set_xlabel("t")
+        # axs4[1, 0].set_ylabel("dqc_1")
+        # plt.legend()
+        # axs4[2, 0].plot(self.plot_data_buffer[:, 14], 'b', label='commanded SAC joint speeed 2')
+        # axs4[2, 0].set_xlabel("t")
+        # axs4[2, 0].set_ylabel("dqc_2")
+        # plt.legend()
+        # axs4[0, 1].plot(self.plot_data_buffer[:, 15], 'b', label='commanded SAC joint speeed 3')
+        # axs4[0, 1].set_xlabel("t")
+        # axs4[0, 1].set_ylabel("dqc_3")
+        # plt.legend()
+        # axs4[1, 1].plot(self.plot_data_buffer[:, 16], 'b', label='commanded SAC joint speeed 4')
+        # axs4[1, 1].set_xlabel("t")
+        # axs4[1, 1].set_ylabel("dqc_4")
+        # plt.legend()
+        # axs4[2, 1].plot(self.plot_data_buffer[:, 17], 'b', label='commanded SAC joint speeed 5')
+        # axs4[2, 1].set_xlabel("t")
+        # axs4[2, 1].set_ylabel("dqc_5")
+        # plt.legend()
         plt.savefig(self.output_dir_rendering + "/dqc.pdf", format="pdf", bbox_inches='tight')
         plt.show()
-        
-        fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
-        axs5[0].plot(self.plot_data_buffer[:, 18], 'b', label='reward p')
-        axs5[0].set_xlabel("t")
-        axs5[0].set_ylabel("eta1*deltar")
+
+        # fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
+        # axs5[0].plot(self.plot_data_buffer[:, 18], 'b', label='reward p')
+        # axs5[0].set_xlabel("t")
+        # axs5[0].set_ylabel("eta1*deltar")
+        # plt.legend()
+        # axs5[1].plot(self.plot_data_buffer[:, 19], 'b', label='reward v')
+        # axs5[1].set_xlabel("t")
+        # axs5[1].set_ylabel("eta2*deltav")
+        # plt.legend()
+        # axs5[2].plot(self.plot_data_buffer[:, 20], 'b', label='reward ddqc')
+        # axs5[2].set_xlabel("t")
+        # axs5[2].set_ylabel("eta3*ddqc")
+        # plt.legend()
+        # plt.legend()
+        # plt.savefig(self.output_dir_rendering + "/rewards.pdf", format="pdf", bbox_inches='tight')
+        # plt.show()
+
+        fig6, axs6 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(12, 10))
+        axs6[0, 0].plot(self.plot_data_buffer[:, 13], 'b', label='commanded SAC joint speeed 0')
+        axs6[0, 0].set_xlabel("t")
+        axs6[0, 0].set_ylabel("q_0")
         plt.legend()
-        axs5[1].plot(self.plot_data_buffer[:, 19], 'b', label='reward v')
-        axs5[1].set_xlabel("t")
-        axs5[1].set_ylabel("eta2*deltav")
+        axs6[1, 0].plot(self.plot_data_buffer[:, 14], 'b', label='commanded SAC joint speeed 1')
+        axs6[1, 0].set_xlabel("t")
+        axs6[1, 0].set_ylabel("q_1")
         plt.legend()
-        axs5[2].plot(self.plot_data_buffer[:, 20], 'b', label='reward ddqc')
-        axs5[2].set_xlabel("t")
-        axs5[2].set_ylabel("eta3*ddqc")
+        axs6[2, 0].plot(self.plot_data_buffer[:, 15], 'b', label='commanded SAC joint speeed 2')
+        axs6[2, 0].set_xlabel("t")
+        axs6[2, 0].set_ylabel("q_2")
         plt.legend()
+        axs6[0, 1].plot(self.plot_data_buffer[:, 16], 'b', label='commanded SAC joint speeed 3')
+        axs6[0, 1].set_xlabel("t")
+        axs6[0, 1].set_ylabel("q_3")
         plt.legend()
-        plt.savefig(self.output_dir_rendering + "/rewards.pdf", format="pdf", bbox_inches='tight')
+        axs6[1, 1].plot(self.plot_data_buffer[:, 17], 'b', label='commanded SAC joint speeed 4')
+        axs6[1, 1].set_xlabel("t")
+        axs6[1, 1].set_ylabel("q_4")
+        plt.legend()
+        axs6[2, 1].plot(self.plot_data_buffer[:, 18], 'b', label='commanded SAC joint speeed 5')
+        axs6[2, 1].set_xlabel("t")
+        axs6[2, 1].set_ylabel("q_5")
+        plt.legend()
+        plt.savefig(self.output_dir_rendering + "/q.pdf", format="pdf", bbox_inches='tight')
+        plt.show()
+
+        fig6, axs6 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(12, 10))
+        axs6[0, 0].plot(self.plot_data_buffer[:, 19], 'b', label='commanded SAC joint speeed 0')
+        axs6[0, 0].set_xlabel("t")
+        axs6[0, 0].set_ylabel("dq_0")
+        plt.legend()
+        axs6[1, 0].plot(self.plot_data_buffer[:, 20], 'b', label='commanded SAC joint speeed 1')
+        axs6[1, 0].set_xlabel("t")
+        axs6[1, 0].set_ylabel("dq_1")
+        plt.legend()
+        axs6[2, 0].plot(self.plot_data_buffer[:, 21], 'b', label='commanded SAC joint speeed 2')
+        axs6[2, 0].set_xlabel("t")
+        axs6[2, 0].set_ylabel("dq_2")
+        plt.legend()
+        axs6[0, 1].plot(self.plot_data_buffer[:, 22], 'b', label='commanded SAC joint speeed 3')
+        axs6[0, 1].set_xlabel("t")
+        axs6[0, 1].set_ylabel("dq_3")
+        plt.legend()
+        axs6[1, 1].plot(self.plot_data_buffer[:, 23], 'b', label='commanded SAC joint speeed 4')
+        axs6[1, 1].set_xlabel("t")
+        axs6[1, 1].set_ylabel("dq_4")
+        plt.legend()
+        axs6[2, 1].plot(self.plot_data_buffer[:, 24], 'b', label='commanded SAC joint speeed 5')
+        axs6[2, 1].set_xlabel("t")
+        axs6[2, 1].set_ylabel("dq_5")
+        plt.legend()
+        plt.savefig(self.output_dir_rendering + "/dq.pdf", format="pdf", bbox_inches='tight')
+        plt.show()
+
+        fig6, axs6 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(12, 10))
+        axs6[0, 0].plot(self.plot_data_buffer[:, 25], 'b', label='commanded SAC joint speeed 0')
+        axs6[0, 0].set_xlabel("t")
+        axs6[0, 0].set_ylabel("tau_0")
+        plt.legend()
+        axs6[1, 0].plot(self.plot_data_buffer[:, 26], 'b', label='commanded SAC joint speeed 1')
+        axs6[1, 0].set_xlabel("t")
+        axs6[1, 0].set_ylabel("tau_1")
+        plt.legend()
+        axs6[2, 0].plot(self.plot_data_buffer[:, 27], 'b', label='commanded SAC joint speeed 2')
+        axs6[2, 0].set_xlabel("t")
+        axs6[2, 0].set_ylabel("tau_2")
+        plt.legend()
+        axs6[0, 1].plot(self.plot_data_buffer[:, 28], 'b', label='commanded SAC joint speeed 3')
+        axs6[0, 1].set_xlabel("t")
+        axs6[0, 1].set_ylabel("tau_3")
+        plt.legend()
+        axs6[1, 1].plot(self.plot_data_buffer[:, 29], 'b', label='commanded SAC joint speeed 4')
+        axs6[1, 1].set_xlabel("t")
+        axs6[1, 1].set_ylabel("tau_4")
+        plt.legend()
+        axs6[2, 1].plot(self.plot_data_buffer[:, 30], 'b', label='commanded SAC joint speeed 5')
+        axs6[2, 1].set_xlabel("t")
+        axs6[2, 1].set_ylabel("tau_5")
+        plt.legend()
+        plt.savefig(self.output_dir_rendering + "/tau.pdf", format="pdf", bbox_inches='tight')
         plt.show()
 
     def close(self):
