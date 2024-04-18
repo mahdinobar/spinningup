@@ -108,9 +108,11 @@ Robotic Manipulation" by Murry et al.
         [m, n] = np.shape(A)
 
         # Compute the pseudo inverse for both left and right cases
-        if (m > n):
+        if (n==1):
+            pinvA = np.linalg.lstsq((A.T * A + ld * ld * np.eye(n, n)), A, rcond=None)[0]
+        elif (m > n):
             # Compute the left pseudoinverse.
-            pinvA = np.linalg.lstsq((A.T * A + ld * ld * np.eye(n, n)), A.T)[0]
+            pinvA = np.linalg.lstsq((A.T * A + ld * ld * np.eye(n, n)), A.T, rcond=None)[0]
         elif (m <= n):
             # Compute the right pseudoinverse.
             pinvA = np.linalg.lstsq((np.matmul(A, A.T) + ld * ld * np.eye(m, m)).T, A, rcond=None)[0].T
@@ -170,7 +172,7 @@ Robotic Manipulation" by Murry et al.
         for i in range(6):
             pb.resetJointState(arm, i, self.q_init[i])
         # In Pybullet, gripper halves are controlled separately+we also deactivated the 7th joint too
-        for j in range(6, 10):
+        for j in range(1, 10):
             pb.resetJointState(arm, j, 0)
         # Get end effector coordinates
         LinkState = pb.getLinkState(arm, 9, computeForwardKinematics=True, computeLinkVelocity=True)
@@ -197,7 +199,7 @@ Robotic Manipulation" by Murry et al.
                 [0, 1, 2, 3, 4, 5, 6],
                 controlMode=pb.VELOCITY_CONTROL,
                 targetVelocities=list(np.zeros(7)),
-                forces=[87, 87, 87, 87, 12, 12, 12]
+                forces=[87, 0, 0, 0, 0, 0, 0]
             )
             pb.stepSimulation(physicsClientId=physics_client)
         pb.createConstraint(arm, 2, 0, 3, pb.JOINT_FIXED, [0, 0, 1], [0, 0, 1], [0, -0.316, 0])
@@ -310,12 +312,12 @@ Robotic Manipulation" by Murry et al.
         #                                                          list(np.append(self.dq[-1, :], [0, 0, 0])),
         #                                                          list(np.zeros(8)))
         [linearJacobian, angularJacobian] = pb.calculateJacobian(arm,
-                             8,
+                             3,
                              list(LinkState[2]),
-                             list(np.append(self.q[-1, :], [0, 0])),
-                             list(np.append(self.dq[-1, :], [0, 0])),
-                             list(np.zeros(8)))
-        J_t = np.asarray(linearJacobian)[:, :6]
+                             list(np.append(self.q[-1, 0], [0, 0])),
+                             list(np.append(self.dq[-1, 0], [0, 0])),
+                             list(np.zeros(3)))
+        J_t = np.asarray(linearJacobian)[:, :1]
         Jpinv_t = self.pseudoInverseMat(J_t, ld=0.1)  # TODO: check pseudo-inverse damping coefficient
         # dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
         #                                dt=dt)
@@ -445,9 +447,9 @@ Robotic Manipulation" by Murry et al.
                        tau_t[4],
                        tau_t[5]]
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
-        # if terminal:
-        #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fepv0_6/rdee_j1.py",self.plot_data_buffer[:,0:3])
-        #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fepv0_6/vdee_j1.py",self.plot_data_buffer[:,9:12])
+        if terminal:
+            np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fepv0_6/rdee_j1.py",self.plot_data_buffer[:,0:3])
+            np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fepv0_6/vdee_j1.py",self.plot_data_buffer[:,6:9])
         # given action it returns 4-tuple (observation, reward, done, info)
         return (self._get_ob(), reward_t, terminal, {})
 
