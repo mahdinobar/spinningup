@@ -205,13 +205,13 @@ Robotic Manipulation" by Murry et al.
                       tau_t[2],
                       tau_t[3],
                       tau_t[4],
-                      tau_t[5]]
-                      # dqc_t[0],
-                      # dqc_t[1],
-                      # dqc_t[2],
-                      # dqc_t[3],
-                      # dqc_t[4],
-                      # dqc_t[5]]
+                      tau_t[5],
+                      dqc_t[0],
+                      dqc_t[1],
+                      dqc_t[2],
+                      dqc_t[3],
+                      dqc_t[4],
+                      dqc_t[5]]
         self.state_buffer = self.state
         plot_data_t = [r_hat_t[0],
                        r_hat_t[1],
@@ -308,13 +308,13 @@ Robotic Manipulation" by Murry et al.
                tau_t[2],
                tau_t[3],
                tau_t[4],
-               tau_t[5]]
-               # dqc_t[0],
-               # dqc_t[1],
-               # dqc_t[2],
-               # dqc_t[3],
-               # dqc_t[4],
-               # dqc_t[5]]
+               tau_t[5],
+               dqc_t[0],
+               dqc_t[1],
+               dqc_t[2],
+               dqc_t[3],
+               dqc_t[4],
+               dqc_t[5]]
         # update states
         self.state = obs
         self.state_buffer = np.vstack((self.state_buffer, self.state))
