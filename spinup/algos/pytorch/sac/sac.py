@@ -326,7 +326,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
         # Update handling (gradient descent on Q and pi networks and eventually polyak update the target q networks)
         if t >= update_after and (t + 1) % update_every == 0:
-            if sample_mode == 1 or sample_mode == 3:
+            if sample_mode == 1:
                 for j in range(update_every):
                     batch = replay_buffer.sample_batch(batch_size, sample_mode)
                     update(data=batch)
