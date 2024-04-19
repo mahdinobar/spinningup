@@ -9,7 +9,7 @@ import os
 
 TRAIN=1
 env_fn = lambda: gym.make('Fep-v0')
-exp_name = "Fepv0_7_6_16"
+exp_name = "Fepv0_7_6_17"
 if __name__ == '__main__':
     if TRAIN:
         # train
@@ -17,7 +17,7 @@ if __name__ == '__main__':
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         logger_kwargs = dict(output_dir=output_dir, exp_name=exp_name)
-        sac(env_fn, ac_kwargs={}, seed=0, steps_per_epoch=100, epochs=500, replay_size=1000000, gamma=0.99, polyak=0.995,
+        sac(env_fn, ac_kwargs={}, seed=0, steps_per_epoch=100, epochs=300, replay_size=1000000, gamma=0.99, polyak=0.995,
             lr=0.005, alpha=0.2, batch_size=100, start_steps=10000, update_after=99, update_every=100, num_test_episodes=2,
             max_ep_len=100, logger_kwargs=logger_kwargs, save_freq=1, initial_actions="zero", save_buffer=True, sample_mode = 1)
     else:

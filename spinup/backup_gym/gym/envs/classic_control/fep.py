@@ -84,14 +84,14 @@ Robotic Manipulation" by Murry et al.
         # Attention just 6 DOF is simulated (7th DOF is disabled)
         high_s = np.array([0.2, 0.2, 0.2,
                            1.5, 1.5, 1.5, 1.5, 1.5, 1.5,
-                           # 2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
+                           2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
                            87, 87, 87, 87, 12, 12,
                            2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])
         low_s = -high_s
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
         # Attention: limits of SAC actions
-        high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
+        high_a = 0.10 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
                                   2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
@@ -194,12 +194,12 @@ Robotic Manipulation" by Murry et al.
                       q_t[3],
                       q_t[4],
                       q_t[5],
-                      # dq_t[0],
-                      # dq_t[1],
-                      # dq_t[2],
-                      # dq_t[3],
-                      # dq_t[4],
-                      # dq_t[5],
+                      dq_t[0],
+                      dq_t[1],
+                      dq_t[2],
+                      dq_t[3],
+                      dq_t[4],
+                      dq_t[5],
                       tau_t[0],
                       tau_t[1],
                       tau_t[2],
@@ -311,12 +311,12 @@ Robotic Manipulation" by Murry et al.
                q_tp1[3],
                q_tp1[4],
                q_tp1[5],
-               # dq_tp1[0],
-               # dq_tp1[1],
-               # dq_tp1[2],
-               # dq_tp1[3],
-               # dq_tp1[4],
-               # dq_tp1[5],
+               dq_tp1[0],
+               dq_tp1[1],
+               dq_tp1[2],
+               dq_tp1[3],
+               dq_tp1[4],
+               dq_tp1[5],
                tau_t[0],
                tau_t[1],
                tau_t[2],
