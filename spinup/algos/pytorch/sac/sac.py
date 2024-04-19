@@ -48,7 +48,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         steps_per_epoch=4000, epochs=100, replay_size=int(1e6), gamma=0.99,
         polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=10000,
         update_after=1000, update_every=50, num_test_episodes=10, max_ep_len=1000,
-        logger_kwargs=dict(), save_freq=1, initial_actions="random"):
+        logger_kwargs=dict(), save_freq=1, initial_actions="random", save_buffer=False):
     """
     Soft Actor-Critic (SAC)
 
@@ -267,7 +267,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
     def get_action(o, deterministic=False):
         return f.act(torch.as_tensor(o, dtype=torch.float32),
-                      deterministic)
+                     deterministic)
 
     def test_agent():
         for j in range(num_test_episodes):
@@ -308,7 +308,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         # Ignore the "done" signal if it comes from hitting the time
         # horizon (that is, when it's an artificial terminal signal
         # that isn't based on the agent's state: at gym: The keyword argument "max_episode_steps" will ensure that GridWorld environments that are instantiated via gymnasium.make will be wrapped in a TimeLimit wrapper (see the wrapper documentation for more information). A done signal will then be produced if the agent has reached the target or 300 steps have been executed in the current episode. To distinguish truncation and termination, you can check info["TimeLimit.truncated"])
-        d = False if ep_len==max_ep_len else d
+        d = False if ep_len == max_ep_len else d
 
         # Store experience to replay buffer
         replay_buffer.store(o, a, r, o2, d)
@@ -353,7 +353,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             logger.log_tabular('EpLen', average_only=True)
             logger.log_tabular('TestEpLen', average_only=True)
             logger.log_tabular('TotalEnvInteracts', t)
-            if not(t >= update_after and (t + 1) % update_every == 0):
+            if not (t >= update_after and (t + 1) % update_every == 0):
                 q_info = dict(Q1Vals=np.zeros(1), Q2Vals=np.zeros(1))
                 logger.store(**q_info, LogPi=0, LossPi=0, LossQ=0)
             logger.log_tabular('Q1Vals', with_min_and_max=True)
@@ -363,6 +363,13 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             logger.log_tabular('LossQ', average_only=True)
             logger.log_tabular('Time', time.time() - start_time)
             logger.dump_tabular()
+
+    if save_buffer==True:
+        np.save(logger_kwargs["output_dir"] + "buf_act.npy", replay_buffer.act_buf)
+        np.save(logger_kwargs["output_dir"] + "buf_done.npy", replay_buffer.done_buf)
+        np.save(logger_kwargs["output_dir"] + "buf_rew.npy", replay_buffer.rew_buf)
+        np.save(logger_kwargs["output_dir"] + "buf_obs.npy", replay_buffer.obs_buf)
+        np.save(logger_kwargs["output_dir"] + "buf_obs2.npy", replay_buffer.obs2_buf)
 
 
 if __name__ == '__main__':
