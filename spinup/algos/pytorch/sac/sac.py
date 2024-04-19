@@ -266,7 +266,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
                 p_targ.data.add_((1 - polyak) * p.data)
 
     def get_action(o, deterministic=False):
-        return f.act(torch.as_tensor(o, dtype=torch.float32),
+        return ac.act(torch.as_tensor(o, dtype=torch.float32),
                      deterministic)
 
     def test_agent():
