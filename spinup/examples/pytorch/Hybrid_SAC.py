@@ -9,7 +9,7 @@ import os
 
 TRAIN=1
 env_fn = lambda: gym.make('Fep-v0')
-exp_name = "Fepv0_7_6_4"
+exp_name = "Fepv0_7_6_5"
 if __name__ == '__main__':
     if TRAIN:
         # train

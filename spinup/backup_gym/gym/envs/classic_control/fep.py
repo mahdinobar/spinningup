@@ -85,8 +85,8 @@ Robotic Manipulation" by Murry et al.
         high_s = np.array([0.2, 0.2, 0.2,
                            1.5, 1.5, 1.5, 1.5, 1.5, 1.5,
                            2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
-                           87, 87, 87, 87, 12, 12])
-                           # 2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])
+                           87, 87, 87, 87, 12, 12,
+                           2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])
         low_s = -high_s
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
