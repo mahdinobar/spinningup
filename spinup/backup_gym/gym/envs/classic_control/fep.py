@@ -84,7 +84,7 @@ Robotic Manipulation" by Murry et al.
         # Attention just 6 DOF is simulated (7th DOF is disabled)
         high_s = np.array([0.2, 0.2, 0.2,
                            1.5, 1.5, 1.5, 1.5, 1.5, 1.5,
-                           2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
+                           # 2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
                            87, 87, 87, 87, 12, 12,
                            2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])
         low_s = -high_s
@@ -194,12 +194,12 @@ Robotic Manipulation" by Murry et al.
                       q_t[3],
                       q_t[4],
                       q_t[5],
-                      dq_t[0],
-                      dq_t[1],
-                      dq_t[2],
-                      dq_t[3],
-                      dq_t[4],
-                      dq_t[5],
+                      # dq_t[0],
+                      # dq_t[1],
+                      # dq_t[2],
+                      # dq_t[3],
+                      # dq_t[4],
+                      # dq_t[5],
                       tau_t[0],
                       tau_t[1],
                       tau_t[2],
@@ -285,9 +285,6 @@ Robotic Manipulation" by Murry et al.
         tau_t = np.array(tau_t)[:6]
         self.q = np.vstack((self.q, q_tp1))  # Attention
         self.dq = np.vstack((self.dq, dq_tp1))  # Attention
-        # update states
-        self.state = obs
-        self.state_buffer = np.vstack((self.state_buffer, self.state))
         # check done episode
         terminal = self._terminal()
         # calculate reward
@@ -314,12 +311,12 @@ Robotic Manipulation" by Murry et al.
                q_tp1[3],
                q_tp1[4],
                q_tp1[5],
-               dq_tp1[0],
-               dq_tp1[1],
-               dq_tp1[2],
-               dq_tp1[3],
-               dq_tp1[4],
-               dq_tp1[5],
+               # dq_tp1[0],
+               # dq_tp1[1],
+               # dq_tp1[2],
+               # dq_tp1[3],
+               # dq_tp1[4],
+               # dq_tp1[5],
                tau_t[0],
                tau_t[1],
                tau_t[2],
@@ -332,7 +329,9 @@ Robotic Manipulation" by Murry et al.
                dqc_t[3],
                dqc_t[4],
                dqc_t[5]]
-
+        # update states
+        self.state = obs
+        self.state_buffer = np.vstack((self.state_buffer, self.state))
         plot_data_t = [r_hat_t[0],
                        r_hat_t[1],
                        r_hat_t[2],
