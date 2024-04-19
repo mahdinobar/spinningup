@@ -31,11 +31,13 @@ class ReplayBuffer:
         self.ptr = (self.ptr + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
 
-    def sample_batch(self, batch_size=32, sample_mode=2, sequence_length=1):
+    def sample_batch(self, batch_size=32, sample_mode=1, sequence_length=1):
         if sample_mode == 1:
             idxs = np.random.randint(0, self.size, size=batch_size)
         elif sample_mode == 2:
             idxs = np.random.randint(sequence_length - 1, self.size, size=1) - np.arange(0, sequence_length, 1)
+        elif sample_mode == 3:
+            idxs = np.array([item for item in range(self.size-batch_size,self.size,1)])
         batch = dict(obs=self.obs_buf[idxs],
                      obs2=self.obs2_buf[idxs],
                      act=self.act_buf[idxs],
@@ -48,7 +50,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         steps_per_epoch=4000, epochs=100, replay_size=int(1e6), gamma=0.99,
         polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=10000,
         update_after=1000, update_every=50, num_test_episodes=10, max_ep_len=1000,
-        logger_kwargs=dict(), save_freq=1, initial_actions="random", save_buffer=False):
+        logger_kwargs=dict(), save_freq=1, initial_actions="random", save_buffer=False, sample_mode=1):
     """
     Soft Actor-Critic (SAC)
 
@@ -324,8 +326,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
         # Update handling (gradient descent on Q and pi networks and eventually polyak update the target q networks)
         if t >= update_after and (t + 1) % update_every == 0:
-            sample_mode = 1
-            if sample_mode == 1:
+            if sample_mode == 1 or sample_mode == 3:
                 for j in range(update_every):
                     batch = replay_buffer.sample_batch(batch_size, sample_mode)
                     update(data=batch)
