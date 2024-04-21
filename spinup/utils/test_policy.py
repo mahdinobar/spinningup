@@ -124,7 +124,7 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True, 
 
         if d or (ep_len == max_ep_len):
             if render:
-                env.render()
+                env.render(output_dir)
                 # time.sleep(1e-3)
             if "Tworr" in output_dir:
                 # plotting for planar (modify for others)

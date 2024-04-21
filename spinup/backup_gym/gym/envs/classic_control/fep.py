@@ -56,11 +56,11 @@ Robotic Manipulation" by Murry et al.
         self.K_p = 2
         self.K_i = 0.5
         self.K_d = 0.1
-        self.torque_noise_max = 0.  # TODO
+        self.korque_noise_max = 0.  # TODO
         self.viewer = None
         self.state = None
         self.state_buffer = None
-        self.t = 0
+        self.k = 0
         # self.xd_init = 0.43086
         # self.yd_init = -0.07530
         # self.zd_init = 0.17432
@@ -91,11 +91,11 @@ Robotic Manipulation" by Murry et al.
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
         # Attention: limits of SAC actions
-        high_a = 0.10 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
+        high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
                                   2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
-        self.output_dir_rendering = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/"
+        # output_dir_rendering = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/"
 
     def pseudoInverseMat(self, A, ld):
         # Input: Any m-by-n matrix, and a damping factor.
@@ -141,8 +141,8 @@ Robotic Manipulation" by Murry et al.
         # # randomize true model parameter in every episode
         # self.LINK_MASS_2_TRUE = 1.1 + np.random.normal(loc=0.0, scale=0.01, size=1)
         # at time t=0
-        self.t = 0
-        rd_t = np.array([self.xd[self.t], self.yd[self.t], self.zd[self.t]])
+        self.k = 0
+        rd_t = np.array([self.xd[self.k], self.yd[self.k], self.zd[self.k]])
         vd_t = np.array([self.vxd, self.vyd, self.vzd])
         # Reset robot at the origin and move the target object to the goal position and orientation
         pb.resetBasePositionAndOrientation(
@@ -239,9 +239,9 @@ Robotic Manipulation" by Murry et al.
 
     def step(self, a):
         # update time index
-        self.t += 1  # Attention doublecheck
+        self.k += 1  # Attention doublecheck
         rd_t = np.array(
-            [self.xd[self.t], self.yd[self.t], self.zd[self.t]])  # attention: index desired starts from t=-1
+            [self.xd[self.k], self.yd[self.k], self.zd[self.k]])  # attention: index desired starts from t=-1
         pb.resetBasePositionAndOrientation(
             target_object, rd_t, pb.getQuaternionFromEuler(
                 np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])))
@@ -261,7 +261,7 @@ Robotic Manipulation" by Murry et al.
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
         # inject SAC action
-        dqc_t = dqc_t + a
+        dqc_t = dqc_t #+ a
         # TODO check
         # command joint speeds (only 6 joints)
         pb.setJointMotorControlArray(
@@ -363,9 +363,9 @@ Robotic Manipulation" by Murry et al.
         return s
 
     def _terminal(self):
-        return bool(self.t >= self.MAX_TIMESTEPS - 1)
+        return bool(self.k >= self.MAX_TIMESTEPS-1)
 
-    def render(self, mode='human'):
+    def render(self, output_dir_rendering, mode='human'):
         """ Render Pybullet simulation """
         render_video = False  # for fast debuging
         if render_video == True:
@@ -393,7 +393,7 @@ Robotic Manipulation" by Murry et al.
             # Load robot, target object and plane urdf
             pb.setAdditionalSearchPath(pybullet_data.getDataPath())
             pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
-                                 self.output_dir_rendering + "/simulation.mp4")  # added by Pierre
+                                 output_dir_rendering + "/simulation.mp4")  # added by Pierre
             arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep/panda.urdf",
                               useFixedBase=True)
             target_object = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
@@ -450,118 +450,189 @@ Robotic Manipulation" by Murry et al.
                 pb.stepSimulation(physicsClientId=physics_client)
                 time.sleep(0.01)
 
-        fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
-        axs1[0].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 4], 'r--', label='EE desired traj')
-        axs1[0].plot(self.plot_data_buffer[:, 0], self.plot_data_buffer[:, 1], 'k',
-                     label='EE position - PID only controller')
-        axs1[0].set_xlabel("x")
-        axs1[0].set_ylabel("y")
-        axs1[1].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
-        axs1[1].plot(self.plot_data_buffer[:, 0], self.plot_data_buffer[:, 2], 'k',
-                     label='EE position - PID only controller')
-        axs1[1].set_xlabel("x")
-        axs1[1].set_ylabel("z")
-        axs1[2].plot(self.plot_data_buffer[:, 4], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
-        axs1[2].plot(self.plot_data_buffer[:, 1], self.plot_data_buffer[:, 2], 'k',
-                     label='EE position - PID only controller')
-        axs1[2].set_xlabel("y")
-        axs1[2].set_ylabel("z")
-        plt.legend()
-        plt.savefig(self.output_dir_rendering + "/position.pdf", format="pdf", bbox_inches='tight')
-        plt.show()
+        render_test_buffer = False
+        if render_test_buffer == True:
+            fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
+            axs1[0].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 4], 'r--', label='EE desired traj')
+            axs1[0].plot(self.plot_data_buffer[:, 0], self.plot_data_buffer[:, 1], 'k',
+                         label='EE position - PID only controller')
+            axs1[0].set_xlabel("x")
+            axs1[0].set_ylabel("y")
+            axs1[1].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
+            axs1[1].plot(self.plot_data_buffer[:, 0], self.plot_data_buffer[:, 2], 'k',
+                         label='EE position - PID only controller')
+            axs1[1].set_xlabel("x")
+            axs1[1].set_ylabel("z")
+            axs1[2].plot(self.plot_data_buffer[:, 4], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
+            axs1[2].plot(self.plot_data_buffer[:, 1], self.plot_data_buffer[:, 2], 'k',
+                         label='EE position - PID only controller')
+            axs1[2].set_xlabel("y")
+            axs1[2].set_ylabel("z")
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/position.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
 
-        fig2, axs2 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
-        axs2[0].plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 10], 'r--', label='EE desired traj',
-                     marker=".",
-                     markersize=30)
-        axs2[0].plot(self.plot_data_buffer[:, 6], self.plot_data_buffer[:, 7], 'k',
-                     label='EE position - PID only controller')
-        axs2[0].set_xlabel("vx")
-        axs2[0].set_ylabel("vy")
-        axs2[1].plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 11], 'r--', label='EE desired traj',
-                     marker=".",
-                     markersize=30)
-        axs2[1].plot(self.plot_data_buffer[:, 6], self.plot_data_buffer[:, 8], 'k',
-                     label='EE position - PID only controller')
-        axs2[1].set_xlabel("vx")
-        axs2[1].set_ylabel("vz")
-        axs2[2].plot(self.plot_data_buffer[:, 10], self.plot_data_buffer[:, 11], 'r--', label='EE desired velocity',
-                     marker=".",
-                     markersize=30)
-        axs2[2].plot(self.plot_data_buffer[:, 7], self.plot_data_buffer[:, 8], 'k',
-                     label='EE velocity - PID only controller')
-        axs2[2].set_xlabel("vy")
-        axs2[2].set_ylabel("vz")
-        plt.legend()
-        plt.savefig(self.output_dir_rendering + "/velocity.pdf", format="pdf", bbox_inches='tight')
-        plt.show()
+            fig2, axs2 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
+            axs2[0].plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 10], 'r--', label='EE desired traj',
+                         marker=".",
+                         markersize=30)
+            axs2[0].plot(self.plot_data_buffer[:, 6], self.plot_data_buffer[:, 7], 'k',
+                         label='EE position - PID only controller')
+            axs2[0].set_xlabel("vx")
+            axs2[0].set_ylabel("vy")
+            axs2[1].plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 11], 'r--', label='EE desired traj',
+                         marker=".",
+                         markersize=30)
+            axs2[1].plot(self.plot_data_buffer[:, 6], self.plot_data_buffer[:, 8], 'k',
+                         label='EE position - PID only controller')
+            axs2[1].set_xlabel("vx")
+            axs2[1].set_ylabel("vz")
+            axs2[2].plot(self.plot_data_buffer[:, 10], self.plot_data_buffer[:, 11], 'r--', label='EE desired velocity',
+                         marker=".",
+                         markersize=30)
+            axs2[2].plot(self.plot_data_buffer[:, 7], self.plot_data_buffer[:, 8], 'k',
+                         label='EE velocity - PID only controller')
+            axs2[2].set_xlabel("vy")
+            axs2[2].set_ylabel("vz")
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/velocity.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
 
-        fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(8, 12))
-        axs3[0].plot(abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, 'b', label='x error')
-        axs3[0].set_xlabel("t")
-        axs3[0].set_ylabel("|x-xd| [mm]")
-        plt.legend()
-        axs3[1].plot(abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, 'b', label='y error')
-        axs3[1].set_xlabel("t")
-        axs3[1].set_ylabel("|y-yd| [mm]")
-        plt.legend()
-        axs3[2].plot(abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, 'b', label='z error')
-        axs3[2].set_xlabel("t")
-        axs3[2].set_ylabel("|z-zd| [mm]")
-        plt.legend()
-        axs3[3].plot(
-            np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2, axis=1) * 1000, 'b',
-            label='Euclidean error')
-        axs3[3].set_xlabel("t")
-        axs3[3].set_ylabel("||r-rd||_2 [mm]")
-        plt.legend()
-        plt.savefig(self.output_dir_rendering + "/position_errors.pdf", format="pdf", bbox_inches='tight')
-        plt.show()
+            fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(8, 12))
+            axs3[0].plot(abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, 'b', label='x error')
+            axs3[0].set_xlabel("t")
+            axs3[0].set_ylabel("|x-xd| [mm]")
+            plt.legend()
+            axs3[1].plot(abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, 'b', label='y error')
+            axs3[1].set_xlabel("t")
+            axs3[1].set_ylabel("|y-yd| [mm]")
+            plt.legend()
+            axs3[2].plot(abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, 'b', label='z error')
+            axs3[2].set_xlabel("t")
+            axs3[2].set_ylabel("|z-zd| [mm]")
+            plt.legend()
+            axs3[3].plot(
+                np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2, axis=1) * 1000, 'b',
+                label='Euclidean error')
+            axs3[3].set_xlabel("t")
+            axs3[3].set_ylabel("||r-rd||_2 [mm]")
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/position_errors.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
 
-        fig4, axs4 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(12, 10))
-        axs4[0, 0].plot(self.plot_data_buffer[:, 12], 'b', label='commanded SAC joint speeed 0')
-        axs4[0, 0].set_xlabel("t")
-        axs4[0, 0].set_ylabel("dqc_0")
-        plt.legend()
-        axs4[1, 0].plot(self.plot_data_buffer[:, 13], 'b', label='commanded SAC joint speeed 1')
-        axs4[1, 0].set_xlabel("t")
-        axs4[1, 0].set_ylabel("dqc_1")
-        plt.legend()
-        axs4[2, 0].plot(self.plot_data_buffer[:, 14], 'b', label='commanded SAC joint speeed 2')
-        axs4[2, 0].set_xlabel("t")
-        axs4[2, 0].set_ylabel("dqc_2")
-        plt.legend()
-        axs4[0, 1].plot(self.plot_data_buffer[:, 15], 'b', label='commanded SAC joint speeed 3')
-        axs4[0, 1].set_xlabel("t")
-        axs4[0, 1].set_ylabel("dqc_3")
-        plt.legend()
-        axs4[1, 1].plot(self.plot_data_buffer[:, 16], 'b', label='commanded SAC joint speeed 4')
-        axs4[1, 1].set_xlabel("t")
-        axs4[1, 1].set_ylabel("dqc_4")
-        plt.legend()
-        axs4[2, 1].plot(self.plot_data_buffer[:, 17], 'b', label='commanded SAC joint speeed 5')
-        axs4[2, 1].set_xlabel("t")
-        axs4[2, 1].set_ylabel("dqc_5")
-        plt.legend()
-        plt.savefig(self.output_dir_rendering + "/dqc.pdf", format="pdf", bbox_inches='tight')
-        plt.show()
+            fig4, axs4 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(12, 10))
+            axs4[0, 0].plot(self.plot_data_buffer[:, 12], 'b', label='commanded SAC joint speeed 0')
+            axs4[0, 0].set_xlabel("t")
+            axs4[0, 0].set_ylabel("dqc_0")
+            plt.legend()
+            axs4[1, 0].plot(self.plot_data_buffer[:, 13], 'b', label='commanded SAC joint speeed 1')
+            axs4[1, 0].set_xlabel("t")
+            axs4[1, 0].set_ylabel("dqc_1")
+            plt.legend()
+            axs4[2, 0].plot(self.plot_data_buffer[:, 14], 'b', label='commanded SAC joint speeed 2')
+            axs4[2, 0].set_xlabel("t")
+            axs4[2, 0].set_ylabel("dqc_2")
+            plt.legend()
+            axs4[0, 1].plot(self.plot_data_buffer[:, 15], 'b', label='commanded SAC joint speeed 3')
+            axs4[0, 1].set_xlabel("t")
+            axs4[0, 1].set_ylabel("dqc_3")
+            plt.legend()
+            axs4[1, 1].plot(self.plot_data_buffer[:, 16], 'b', label='commanded SAC joint speeed 4')
+            axs4[1, 1].set_xlabel("t")
+            axs4[1, 1].set_ylabel("dqc_4")
+            plt.legend()
+            axs4[2, 1].plot(self.plot_data_buffer[:, 17], 'b', label='commanded SAC joint speeed 5')
+            axs4[2, 1].set_xlabel("t")
+            axs4[2, 1].set_ylabel("dqc_5")
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/dqc.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
 
-        fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
-        axs5[0].plot(self.plot_data_buffer[:, 18], 'b', label='reward p')
-        axs5[0].set_xlabel("t")
-        axs5[0].set_ylabel("eta1*deltar")
-        plt.legend()
-        axs5[1].plot(self.plot_data_buffer[:, 19], 'b', label='reward v')
-        axs5[1].set_xlabel("t")
-        axs5[1].set_ylabel("eta2*deltav")
-        plt.legend()
-        axs5[2].plot(self.plot_data_buffer[:, 20], 'b', label='reward ddqc')
-        axs5[2].set_xlabel("t")
-        axs5[2].set_ylabel("eta3*ddqc")
-        plt.legend()
-        plt.legend()
-        plt.savefig(self.output_dir_rendering + "/rewards.pdf", format="pdf", bbox_inches='tight')
-        plt.show()
+            fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
+            axs5[0].plot(self.plot_data_buffer[:, 18], 'b', label='reward p')
+            axs5[0].set_xlabel("t")
+            axs5[0].set_ylabel("eta1*deltar")
+            plt.legend()
+            axs5[1].plot(self.plot_data_buffer[:, 19], 'b', label='reward v')
+            axs5[1].set_xlabel("t")
+            axs5[1].set_ylabel("eta2*deltav")
+            plt.legend()
+            axs5[2].plot(self.plot_data_buffer[:, 20], 'b', label='reward ddqc')
+            axs5[2].set_xlabel("t")
+            axs5[2].set_ylabel("eta3*ddqc")
+            plt.legend()
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/rewards.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
+
+        render_training_buffer=True
+        if render_training_buffer==True:
+            buf_act=np.load(output_dir_rendering + "/buf_act.npy")
+            buf_done = np.load(output_dir_rendering + "/buf_done.npy")
+            buf_rew = np.load(output_dir_rendering + "/buf_rew.npy")
+            buf_obs = np.load(output_dir_rendering + "/buf_obs.npy")
+            buf_obs2 = np.load(output_dir_rendering + "/buf_obs2.npy")
+            idx_last=np.where(np.sum(buf_obs, 1) == 0)[0][0]
+            fig6, axs6 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 10))
+            axs6[0].plot(buf_obs[0:idx_last, :][:, 0], 'b', label='r_hat_tp1[0] - rd_t[0]')
+            axs6[0].set_xlabel("t")
+            axs6[0].set_ylabel("r_hat_tp1[0] - rd_t[0]")
+            plt.legend()
+            axs6[1].plot(buf_obs[0:idx_last, :][:, 1], 'b', label='r_hat_tp1[1] - rd_t[1]')
+            axs6[1].set_xlabel("t")
+            axs6[1].set_ylabel("r_hat_tp1[1] - rd_t[1]")
+            plt.legend()
+            axs6[2].plot(buf_obs[0:idx_last, :][:, 2], 'b', label='r_hat_tp1[2] - rd_t[2]')
+            axs6[2].set_xlabel("t")
+            axs6[2].set_ylabel("r_hat_tp1[2] - rd_t[2]")
+            plt.legend()
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/buffer_states.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
+            fig7, axs7 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 10))
+            axs7[0].plot(buf_act[0:idx_last][:, 0], 'b', label='a[0]')
+            axs7[0].set_xlabel("t")
+            axs7[0].set_ylabel("a[0]")
+            plt.legend()
+            plt.legend()
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/buffer_action.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
+            fig8, axs8 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 10))
+            axs8[0].plot(buf_rew[0:idx_last], 'b', label='r')
+            axs8[0].set_xlabel("t")
+            axs8[0].set_ylabel("r")
+            plt.legend()
+            plt.legend()
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/buffer_reward.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
+            fig9, axs9 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 10))
+            axs9[0].plot(buf_obs2[0:idx_last, :][:, 0], 'b', label='r_hat_tp1[0] - rd_t[0]')
+            axs9[0].set_xlabel("t")
+            axs9[0].set_ylabel("obs2[0]")
+            plt.legend()
+            axs9[1].plot(buf_obs2[0:idx_last, :][:, 1], 'b', label='r_hat_tp1[1] - rd_t[1]')
+            axs9[1].set_xlabel("t")
+            axs9[1].set_ylabel("obs2[1]")
+            plt.legend()
+            axs9[2].plot(buf_obs2[0:idx_last, :][:, 2], 'b', label='r_hat_tp1[2] - rd_t[2]')
+            axs9[2].set_xlabel("t")
+            axs9[2].set_ylabel("obs2[2]")
+            plt.legend()
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/buffer_obs2_debug.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
+            fig10, axs10 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 10))
+            axs10[0].plot(buf_done[0:idx_last], 'b', label='done')
+            axs10[0].set_xlabel("t")
+            axs10[0].set_ylabel("done")
+            plt.legend()
+            plt.legend()
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/buffer_action.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
+
 
     def close(self):
         if self.viewer:
