@@ -7,9 +7,9 @@ import spinup.algos.pytorch.sac.core as core
 from spinup.utils.test_policy import load_policy_and_env, run_policy
 import os
 
-TRAIN=0
+TRAIN=1
 env_fn = lambda: gym.make('Fep-v0')
-exp_name = "Fepv0_8_5"
+exp_name = "Fepv0_8_6"
 if __name__ == '__main__':
     if TRAIN:
         # train

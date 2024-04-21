@@ -82,11 +82,11 @@ Robotic Manipulation" by Murry et al.
         self.zd = np.linspace(self.zd_init, self.zd_init + deltaz, self.MAX_TIMESTEPS, endpoint=True)
         # TODO Attention: just the dimension of the observation space is enforced. The data here is not used. If you need to enforce them then modify the code.
         # Attention just 6 DOF is simulated (7th DOF is disabled)
-        high_s = np.array([0.2, 0.2, 0.2,
-                           1.5, 1.5, 1.5, 1.5, 1.5, 1.5,
-                           2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
-                           87, 87, 87, 87, 12, 12,
-                           2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])
+        high_s = np.array([0.2, 0.2, 0.2])
+                           # 1.5, 1.5, 1.5, 1.5, 1.5, 1.5,
+                           # 2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
+                           # 87, 87, 87, 87, 12, 12,
+                           # 2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])
         low_s = -high_s
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
@@ -188,31 +188,31 @@ Robotic Manipulation" by Murry et al.
         self.e = e0.reshape(1, 3)
         self.state = [r_hat_t[0] - rd_t[0],
                       r_hat_t[1] - rd_t[1],
-                      r_hat_t[2] - rd_t[2],
-                      q_t[0],
-                      q_t[1],
-                      q_t[2],
-                      q_t[3],
-                      q_t[4],
-                      q_t[5],
-                      dq_t[0],
-                      dq_t[1],
-                      dq_t[2],
-                      dq_t[3],
-                      dq_t[4],
-                      dq_t[5],
-                      tau_t[0],
-                      tau_t[1],
-                      tau_t[2],
-                      tau_t[3],
-                      tau_t[4],
-                      tau_t[5],
-                      dqc_t[0],
-                      dqc_t[1],
-                      dqc_t[2],
-                      dqc_t[3],
-                      dqc_t[4],
-                      dqc_t[5]]
+                      r_hat_t[2] - rd_t[2]]
+                      # q_t[0],
+                      # q_t[1],
+                      # q_t[2],
+                      # q_t[3],
+                      # q_t[4],
+                      # q_t[5],
+                      # dq_t[0],
+                      # dq_t[1],
+                      # dq_t[2],
+                      # dq_t[3],
+                      # dq_t[4],
+                      # dq_t[5],
+                      # tau_t[0],
+                      # tau_t[1],
+                      # tau_t[2],
+                      # tau_t[3],
+                      # tau_t[4],
+                      # tau_t[5],
+                      # dqc_t[0],
+                      # dqc_t[1],
+                      # dqc_t[2],
+                      # dqc_t[3],
+                      # dqc_t[4],
+                      # dqc_t[5]]
         self.state_buffer = self.state
         plot_data_t = [r_hat_t[0],
                        r_hat_t[1],
@@ -305,31 +305,31 @@ Robotic Manipulation" by Murry et al.
         # TODO double check concept
         obs = [r_hat_tp1[0] - rd_t[0],
                r_hat_tp1[1] - rd_t[1],
-               r_hat_tp1[2] - rd_t[2],
-               q_tp1[0],
-               q_tp1[1],
-               q_tp1[2],
-               q_tp1[3],
-               q_tp1[4],
-               q_tp1[5],
-               dq_tp1[0],
-               dq_tp1[1],
-               dq_tp1[2],
-               dq_tp1[3],
-               dq_tp1[4],
-               dq_tp1[5],
-               tau_t[0],
-               tau_t[1],
-               tau_t[2],
-               tau_t[3],
-               tau_t[4],
-               tau_t[5],
-               dqc_t[0],
-               dqc_t[1],
-               dqc_t[2],
-               dqc_t[3],
-               dqc_t[4],
-               dqc_t[5]]
+               r_hat_tp1[2] - rd_t[2]]
+               # q_tp1[0],
+               # q_tp1[1],
+               # q_tp1[2],
+               # q_tp1[3],
+               # q_tp1[4],
+               # q_tp1[5],
+               # dq_tp1[0],
+               # dq_tp1[1],
+               # dq_tp1[2],
+               # dq_tp1[3],
+               # dq_tp1[4],
+               # dq_tp1[5],
+               # tau_t[0],
+               # tau_t[1],
+               # tau_t[2],
+               # tau_t[3],
+               # tau_t[4],
+               # tau_t[5],
+               # dqc_t[0],
+               # dqc_t[1],
+               # dqc_t[2],
+               # dqc_t[3],
+               # dqc_t[4],
+               # dqc_t[5]]
         # update states
         self.state = obs
         self.state_buffer = np.vstack((self.state_buffer, self.state))
@@ -577,15 +577,23 @@ Robotic Manipulation" by Murry et al.
             fig6, axs6 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
             idx_start=900
             idx_end=1210
-            axs6[0].plot(range(idx_start,idx_end,1), buf_obs[0:idx_last, :][idx_start:idx_end, 0], 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[0] - rd_t[0]')
+            idx_vline=1000-1
+            x=range(idx_start, idx_end, 1)
+            y=buf_obs[0:idx_last, :][idx_start:idx_end, 0]
+            axs6[0].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[0] - rd_t[0]')
+            axs6[0].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs6[0].set_xlabel("timestep")
             axs6[0].set_ylabel("r_hat_tp1[0] - rd_t[0]")
             plt.legend()
-            axs6[1].plot(range(idx_start,idx_end,1),buf_obs[0:idx_last, :][idx_start:idx_end, 1], 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[1] - rd_t[1]')
+            y=buf_obs[0:idx_last, :][idx_start:idx_end, 1]
+            axs6[1].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[1] - rd_t[1]')
+            axs6[1].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs6[1].set_xlabel("timestep")
             axs6[1].set_ylabel("r_hat_tp1[1] - rd_t[1]")
             plt.legend()
-            axs6[2].plot(range(idx_start,idx_end,1),buf_obs[0:idx_last, :][idx_start:idx_end, 2], 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[2] - rd_t[2]')
+            y=buf_obs[0:idx_last, :][idx_start:idx_end, 2]
+            axs6[2].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[2] - rd_t[2]')
+            axs6[2].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs6[2].set_xlabel("timestep")
             axs6[2].set_ylabel("r_hat_tp1[2] - rd_t[2]")
             plt.legend()
@@ -593,7 +601,9 @@ Robotic Manipulation" by Murry et al.
             plt.savefig(output_dir_rendering + "/buffer_states.pdf", format="pdf", bbox_inches='tight')
             plt.show()
             fig7, axs7 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
-            axs7[0].plot(range(idx_start,idx_end,1),buf_act[0:idx_last][idx_start:idx_end, 0], 'b', linewidth=0.08, marker=".", markersize=2, label='a[0]')
+            y=buf_act[0:idx_last][idx_start:idx_end, 0]
+            axs7[0].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='a[0]')
+            axs7[0].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs7[0].set_xlabel("timestep")
             axs7[0].set_ylabel("a[0]")
             plt.legend()
@@ -602,7 +612,9 @@ Robotic Manipulation" by Murry et al.
             plt.savefig(output_dir_rendering + "/buffer_action.pdf", format="pdf", bbox_inches='tight')
             plt.show()
             fig8, axs8 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
-            axs8[0].plot(range(idx_start,idx_end,1),buf_rew[0:idx_last][idx_start:idx_end], 'b', linewidth=0.08, marker=".",markersize=2, label='reward')
+            y=buf_rew[0:idx_last][idx_start:idx_end]
+            axs8[0].plot(x,y, 'b', linewidth=0.08, marker=".",markersize=2, label='reward')
+            axs8[0].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs8[0].set_xlabel("timestep")
             axs8[0].set_ylabel("r")
             plt.legend()
@@ -611,15 +623,21 @@ Robotic Manipulation" by Murry et al.
             plt.savefig(output_dir_rendering + "/buffer_reward.pdf", format="pdf", bbox_inches='tight')
             plt.show()
             fig9, axs9 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
-            axs9[0].plot(range(idx_start,idx_end,1),buf_obs2[0:idx_last, :][idx_start:idx_end, 0], 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[0] - rd_t[0]')
+            y=buf_obs2[0:idx_last, :][idx_start:idx_end, 0]
+            axs9[0].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[0] - rd_t[0]')
+            axs9[0].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs9[0].set_xlabel("timestep")
             axs9[0].set_ylabel("obs2[0]")
             plt.legend()
-            axs9[1].plot(range(idx_start,idx_end,1),buf_obs2[0:idx_last, :][idx_start:idx_end, 1], 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[1] - rd_t[1]')
+            y=buf_obs2[0:idx_last, :][idx_start:idx_end, 1]
+            axs9[1].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[1] - rd_t[1]')
+            axs9[1].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs9[1].set_xlabel("timestep")
             axs9[1].set_ylabel("obs2[1]")
             plt.legend()
-            axs9[2].plot(range(idx_start,idx_end,1),buf_obs2[0:idx_last, :][idx_start:idx_end, 2], 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[2] - rd_t[2]')
+            y=buf_obs2[0:idx_last, :][idx_start:idx_end, 2]
+            axs9[2].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[2] - rd_t[2]')
+            axs9[2].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs9[2].set_xlabel("timestep")
             axs9[2].set_ylabel("obs2[2]")
             plt.legend()
@@ -627,7 +645,9 @@ Robotic Manipulation" by Murry et al.
             plt.savefig(output_dir_rendering + "/buffer_obs2_debug.pdf", format="pdf", bbox_inches='tight')
             plt.show()
             fig10, axs10 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
-            axs10[0].plot(range(idx_start,idx_end,1),buf_done[0:idx_last][idx_start:idx_end], 'b', linewidth=0.08, marker=".", markersize=2, label='done')
+            y=buf_done[0:idx_last][idx_start:idx_end]
+            axs10[0].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='done')
+            axs10[0].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs10[0].set_xlabel("timestep")
             axs10[0].set_ylabel("done")
             plt.legend()
@@ -635,7 +655,18 @@ Robotic Manipulation" by Murry et al.
             plt.legend()
             plt.savefig(output_dir_rendering + "/buffer_done.pdf", format="pdf", bbox_inches='tight')
             plt.show()
-
+            fig11, axs11 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
+            y = buf_obs[0:idx_last, :][idx_start:idx_end, 3]
+            axs11[0].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='a[0]')
+            axs11[0].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
+            axs11[0].set_xlabel("timestep")
+            axs11[0].set_ylabel("q[0]")
+            axs11[0].hlines(self.q_init[0], min(x), max(x), 'g', linestyles="dashdot")
+            plt.legend()
+            plt.legend()
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/buffer_states_q.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
 
     def close(self):
         if self.viewer:
