@@ -630,7 +630,7 @@ Robotic Manipulation" by Murry et al.
             plt.legend()
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/buffer_action.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/buffer_done.pdf", format="pdf", bbox_inches='tight')
             plt.show()
 
 
