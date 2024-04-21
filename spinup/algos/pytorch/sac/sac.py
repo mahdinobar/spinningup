@@ -294,7 +294,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         # Until start_steps have elapsed, randomly sample actions
         # from a uniform distribution for better exploration. Afterwards, 
         # use the learned policy. 
-        if t > start_steps:
+        if t >= start_steps:
             a = get_action(o)
         else:
             if initial_actions == "random":
