@@ -450,7 +450,7 @@ Robotic Manipulation" by Murry et al.
                 pb.stepSimulation(physicsClientId=physics_client)
                 time.sleep(0.01)
 
-        render_test_buffer = False
+        render_test_buffer = True
         if render_test_buffer == True:
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
             axs1[0].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 4], 'r--', label='EE desired traj')
