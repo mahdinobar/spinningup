@@ -35,9 +35,14 @@ class ReplayBuffer:
         if sample_mode == 1:
             idxs = np.random.randint(0, self.size, size=batch_size)
         elif sample_mode == 2:
-            idxs = np.random.randint(sequence_length - 1, self.size, size=1) - np.arange(0, sequence_length, 1)
+            # idxs = np.random.randint(sequence_length - 1, self.size, size=1) - np.arange(0, sequence_length, 1)
+            idxs = np.random.randint(0, self.size // batch_size, 1) * batch_size + np.random.randint(0,
+                                                                                                    batch_size - sequence_length,
+                                                                                                    1) - np.arange(0,
+                                                                                                                   sequence_length,
+                                                                                                                   1)
         elif sample_mode == 3:
-            idxs = np.array([item for item in range(self.size-batch_size,self.size,1)])
+            idxs = np.array([item for item in range(self.size - batch_size, self.size, 1)])
         batch = dict(obs=self.obs_buf[idxs],
                      obs2=self.obs2_buf[idxs],
                      act=self.act_buf[idxs],
@@ -269,7 +274,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
     def get_action(o, deterministic=False):
         return ac.act(torch.as_tensor(o, dtype=torch.float32),
-                     deterministic)
+                      deterministic)
 
     def test_agent():
         for j in range(num_test_episodes):
@@ -331,7 +336,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
                     batch = replay_buffer.sample_batch(batch_size, sample_mode)
                     update(data=batch)
             elif sample_mode == 2:
-                sequence_length = 100
+                sequence_length = 20
                 for j in range(update_every):
                     batch = replay_buffer.sample_batch(batch_size, sample_mode, sequence_length)
                     update(data=batch)
@@ -365,7 +370,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             logger.log_tabular('Time', time.time() - start_time)
             logger.dump_tabular()
 
-    if save_buffer==True:
+    if save_buffer == True:
         np.save(logger_kwargs["output_dir"] + "/buf_act.npy", replay_buffer.act_buf)
         np.save(logger_kwargs["output_dir"] + "/buf_done.npy", replay_buffer.done_buf)
         np.save(logger_kwargs["output_dir"] + "/buf_rew.npy", replay_buffer.rew_buf)
