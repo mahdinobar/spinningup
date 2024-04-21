@@ -91,9 +91,9 @@ Robotic Manipulation" by Murry et al.
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
         # Attention: limits of SAC actions
-        # high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
-        #                           2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
-        high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750])  # TODO Attention: limits should be the same otherwise modify sac code
+        high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
+                                  2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
+        # high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
         # output_dir_rendering = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/"
@@ -262,7 +262,7 @@ Robotic Manipulation" by Murry et al.
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
         # inject SAC action
-        dqc_t[0:3] = dqc_t[0:3] + a
+        dqc_t = dqc_t + a
         # TODO check
         # command joint speeds (only 6 joints)
         pb.setJointMotorControlArray(
