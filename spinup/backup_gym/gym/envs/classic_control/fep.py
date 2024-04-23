@@ -86,8 +86,7 @@ Robotic Manipulation" by Murry et al.
                            1.5, 1.5, 1.5, 1.5, 1.5, 1.5,
                            2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
                            87, 87, 87, 87, 12, 12,
-                           2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
-                           self.xd_init + deltax*1.1, self.yd_init + deltay*1.1, self.zd_init + deltaz*1.1])
+                           2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])
         low_s = -high_s
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
@@ -213,10 +212,7 @@ Robotic Manipulation" by Murry et al.
                       dqc_t[2],
                       dqc_t[3],
                       dqc_t[4],
-                      dqc_t[5],
-                      rd_t[0],
-                      rd_t[1],
-                      rd_t[2]]
+                      dqc_t[5]]
         self.state_buffer = self.state
         plot_data_t = [r_hat_t[0],
                        r_hat_t[1],
@@ -333,10 +329,7 @@ Robotic Manipulation" by Murry et al.
                dqc_t[2],
                dqc_t[3],
                dqc_t[4],
-               dqc_t[5],
-               rd_t[0],
-               rd_t[1],
-               rd_t[2]]
+               dqc_t[5]]
         # update states
         self.state = obs
         self.state_buffer = np.vstack((self.state_buffer, self.state))
@@ -371,7 +364,7 @@ Robotic Manipulation" by Murry et al.
         return s
 
     def _terminal(self):
-        return bool(self.k >= self.MAX_TIMESTEPS - 1)
+        return bool(self.k >= self.MAX_TIMESTEPS-1)
 
     def render(self, output_dir_rendering, mode='human'):
         """ Render Pybullet simulation """
@@ -458,7 +451,7 @@ Robotic Manipulation" by Murry et al.
                 pb.stepSimulation(physicsClientId=physics_client)
                 time.sleep(0.01)
 
-        render_test_buffer = False
+        render_test_buffer = True
         if render_test_buffer == True:
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
             axs1[0].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 4], 'r--', label='EE desired traj')
@@ -520,8 +513,7 @@ Robotic Manipulation" by Murry et al.
             axs3[2].set_ylabel("|z-zd| [mm]")
             plt.legend()
             axs3[3].plot(
-                np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2, axis=1) * 1000,
-                'b',
+                np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2, axis=1) * 1000, 'b',
                 label='Euclidean error')
             axs3[3].set_xlabel("t")
             axs3[3].set_ylabel("||r-rd||_2 [mm]")
@@ -574,39 +566,57 @@ Robotic Manipulation" by Murry et al.
             plt.savefig(output_dir_rendering + "/rewards.pdf", format="pdf", bbox_inches='tight')
             plt.show()
 
-        render_training_buffer = True
-        if render_training_buffer == True:
-            buf_act = np.load(output_dir_rendering + "/buf_act.npy")
+        render_training_buffer=True
+        if render_training_buffer==True:
+            buf_act=np.load(output_dir_rendering + "/buf_act.npy")
             buf_done = np.load(output_dir_rendering + "/buf_done.npy")
             buf_rew = np.load(output_dir_rendering + "/buf_rew.npy")
             buf_obs = np.load(output_dir_rendering + "/buf_obs.npy")
             buf_obs2 = np.load(output_dir_rendering + "/buf_obs2.npy")
-            idx_last = np.where(np.sum(buf_obs, 1) == 0)[0][0]
+            idx_last=np.where(np.sum(buf_obs, 1) == 0)[0][0]
             fig6, axs6 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
-            idx_start = 900
-            idx_end = 1210
-            idx_vline = 1000 - 1
-            x = range(idx_start, idx_end, 1)
-            y = buf_obs[0:idx_last, :][idx_start:idx_end, 0]
+            idx_start=900
+            idx_end=1210
+            idx_vline=1000-1
+            x=range(idx_start, idx_end, 1)
+            y=buf_obs[0:idx_last, :][idx_start:idx_end, 0]
             axs6[0].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[0] - rd_t[0]')
             axs6[0].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs6[0].set_xlabel("timestep")
             axs6[0].set_ylabel("r_hat_tp1[0] - rd_t[0]")
             plt.legend()
-            y = buf_obs[0:idx_last, :][idx_start:idx_end, 1]
-            axs6[1].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[1] - rd_t[1]')
+            y=buf_obs[0:idx_last, :][idx_start:idx_end, 1]
+            axs6[1].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[1] - rd_t[1]')
             axs6[1].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs6[1].set_xlabel("timestep")
             axs6[1].set_ylabel("r_hat_tp1[1] - rd_t[1]")
             plt.legend()
-            y = buf_obs[0:idx_last, :][idx_start:idx_end, 2]
-            axs6[2].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[2] - rd_t[2]')
+            y=buf_obs[0:idx_last, :][idx_start:idx_end, 2]
+            axs6[2].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[2] - rd_t[2]')
             axs6[2].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs6[2].set_xlabel("timestep")
             axs6[2].set_ylabel("r_hat_tp1[2] - rd_t[2]")
             plt.legend()
-            plt.legend()
             plt.savefig(output_dir_rendering + "/buffer_states.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
+            fig7, axs7 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
+            y=buf_act[0:idx_last][idx_start:idx_end, 0]
+            axs7[0].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='a[0]')
+            axs7[0].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
+            axs7[0].set_xlabel("timestep")
+            axs7[0].set_ylabel("a[0]")
+            y=buf_act[0:idx_last][idx_start:idx_end, 1]
+            axs7[1].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='a[1]')
+            axs7[1].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
+            axs7[1].set_xlabel("timestep")
+            axs7[1].set_ylabel("a[1]")
+            y=buf_act[0:idx_last][idx_start:idx_end, 2]
+            axs7[2].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='a[2]')
+            axs7[2].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
+            axs7[2].set_xlabel("timestep")
+            axs7[2].set_ylabel("a[2]")
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/buffer_action.pdf", format="pdf", bbox_inches='tight')
             plt.show()
             fig7, axs7 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
             y = buf_act[0:idx_last][idx_start:idx_end, 0]
@@ -614,37 +624,62 @@ Robotic Manipulation" by Murry et al.
             axs7[0].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs7[0].set_xlabel("timestep")
             axs7[0].set_ylabel("a[0]")
+            y = buf_act[0:idx_last][idx_start:idx_end, 1]
+            axs7[1].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='a[1]')
+            axs7[1].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
+            axs7[1].set_xlabel("timestep")
+            axs7[1].set_ylabel("a[1]")
+            y = buf_act[0:idx_last][idx_start:idx_end, 2]
+            axs7[2].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='a[2]')
+            axs7[2].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
+            axs7[2].set_xlabel("timestep")
+            axs7[2].set_ylabel("a[2]")
             plt.legend()
+            plt.savefig(output_dir_rendering + "/buffer_action_0to2.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
+            fig70, axs70 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
+            y = buf_act[0:idx_last][idx_start:idx_end, 3]
+            axs70[0].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='a[3]')
+            axs70[0].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
+            axs70[0].set_xlabel("timestep")
+            axs70[0].set_ylabel("a[3]")
+            y = buf_act[0:idx_last][idx_start:idx_end, 4]
+            axs70[1].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='a[4]')
+            axs70[1].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
+            axs70[1].set_xlabel("timestep")
+            axs70[1].set_ylabel("a[4]")
+            y = buf_act[0:idx_last][idx_start:idx_end, 5]
+            axs70[2].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='a[5]')
+            axs70[2].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
+            axs70[2].set_xlabel("timestep")
+            axs70[2].set_ylabel("a[5]")
             plt.legend()
-            plt.legend()
-            plt.savefig(output_dir_rendering + "/buffer_action.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/buffer_action_3to5.pdf", format="pdf", bbox_inches='tight')
             plt.show()
             fig8, axs8 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
-            y = buf_rew[0:idx_last][idx_start:idx_end]
-            axs8[0].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='reward')
+            y=buf_rew[0:idx_last][idx_start:idx_end]
+            axs8[0].plot(x,y, 'b', linewidth=0.08, marker=".",markersize=2, label='reward')
             axs8[0].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs8[0].set_xlabel("timestep")
             axs8[0].set_ylabel("r")
             plt.legend()
-            plt.legend()
-            plt.legend()
             plt.savefig(output_dir_rendering + "/buffer_reward.pdf", format="pdf", bbox_inches='tight')
             plt.show()
             fig9, axs9 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
-            y = buf_obs2[0:idx_last, :][idx_start:idx_end, 0]
-            axs9[0].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[0] - rd_t[0]')
+            y=buf_obs2[0:idx_last, :][idx_start:idx_end, 0]
+            axs9[0].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[0] - rd_t[0]')
             axs9[0].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs9[0].set_xlabel("timestep")
             axs9[0].set_ylabel("obs2[0]")
             plt.legend()
-            y = buf_obs2[0:idx_last, :][idx_start:idx_end, 1]
-            axs9[1].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[1] - rd_t[1]')
+            y=buf_obs2[0:idx_last, :][idx_start:idx_end, 1]
+            axs9[1].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[1] - rd_t[1]')
             axs9[1].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs9[1].set_xlabel("timestep")
             axs9[1].set_ylabel("obs2[1]")
             plt.legend()
-            y = buf_obs2[0:idx_last, :][idx_start:idx_end, 2]
-            axs9[2].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[2] - rd_t[2]')
+            y=buf_obs2[0:idx_last, :][idx_start:idx_end, 2]
+            axs9[2].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[2] - rd_t[2]')
             axs9[2].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs9[2].set_xlabel("timestep")
             axs9[2].set_ylabel("obs2[2]")
@@ -653,27 +688,57 @@ Robotic Manipulation" by Murry et al.
             plt.savefig(output_dir_rendering + "/buffer_obs2_debug.pdf", format="pdf", bbox_inches='tight')
             plt.show()
             fig10, axs10 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
-            y = buf_done[0:idx_last][idx_start:idx_end]
-            axs10[0].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='done')
+            y=buf_done[0:idx_last][idx_start:idx_end]
+            axs10[0].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='done')
             axs10[0].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs10[0].set_xlabel("timestep")
             axs10[0].set_ylabel("done")
-            plt.legend()
-            plt.legend()
             plt.legend()
             plt.savefig(output_dir_rendering + "/buffer_done.pdf", format="pdf", bbox_inches='tight')
             plt.show()
             fig11, axs11 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
             y = buf_obs[0:idx_last, :][idx_start:idx_end, 3]
-            axs11[0].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='a[0]')
+            axs11[0].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='q[0]')
             axs11[0].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
             axs11[0].set_xlabel("timestep")
             axs11[0].set_ylabel("q[0]")
             axs11[0].hlines(self.q_init[0], min(x), max(x), 'g', linestyles="dashdot")
+            y = buf_obs[0:idx_last, :][idx_start:idx_end, 4]
+            axs11[1].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='q[1]')
+            axs11[1].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
+            axs11[1].set_xlabel("timestep")
+            axs11[1].set_ylabel("q[1]")
+            axs11[1].hlines(self.q_init[1], min(x), max(x), 'g', linestyles="dashdot")
+            y = buf_obs[0:idx_last, :][idx_start:idx_end, 5]
+            axs11[2].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='q[2]')
+            axs11[2].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
+            axs11[2].set_xlabel("timestep")
+            axs11[2].set_ylabel("q[2]")
+            axs11[2].hlines(self.q_init[2], min(x), max(x), 'g', linestyles="dashdot")
             plt.legend()
+            plt.savefig(output_dir_rendering + "/buffer_states_q_0to2.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
+            fig110, axs110 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
+            y = buf_obs[0:idx_last, :][idx_start:idx_end, 3]
+            axs110[0].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='q[3]')
+            axs110[0].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
+            axs110[0].set_xlabel("timestep")
+            axs110[0].set_ylabel("q[3]")
+            axs110[0].hlines(self.q_init[3], min(x), max(x), 'g', linestyles="dashdot")
+            y = buf_obs[0:idx_last, :][idx_start:idx_end, 4]
+            axs110[1].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='q[4]')
+            axs110[1].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
+            axs110[1].set_xlabel("timestep")
+            axs110[1].set_ylabel("q[4]")
+            axs110[1].hlines(self.q_init[4], min(x), max(x), 'g', linestyles="dashdot")
+            y = buf_obs[0:idx_last, :][idx_start:idx_end, 5]
+            axs110[2].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='q[5]')
+            axs110[2].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
+            axs110[2].set_xlabel("timestep")
+            axs110[2].set_ylabel("q[5]")
+            axs110[2].hlines(self.q_init[5], min(x), max(x), 'g', linestyles="dashdot")
             plt.legend()
-            plt.legend()
-            plt.savefig(output_dir_rendering + "/buffer_states_q.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/buffer_states_q_3to5.pdf", format="pdf", bbox_inches='tight')
             plt.show()
 
     def close(self):
