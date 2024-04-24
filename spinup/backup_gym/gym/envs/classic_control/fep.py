@@ -141,6 +141,10 @@ Robotic Manipulation" by Murry et al.
     def reset(self):
         # # randomize true model parameter in every episode
         # self.LINK_MASS_2_TRUE = 1.1 + np.random.normal(loc=0.0, scale=0.01, size=1)
+        # # randomize PID gains
+        # self.K_p = 2 + np.random.normal(loc=0.0, scale=1, size=1)
+        # self.K_i = 0.5 + np.random.normal(loc=0.0, scale=0.5, size=1)
+        # self.K_d = 0.1 + np.random.normal(loc=0.0, scale=0.1, size=1)
         # at time t=0
         self.k = 0
         rd_t = np.array([self.xd[self.k], self.yd[self.k], self.zd[self.k]])
