@@ -269,7 +269,7 @@ Robotic Manipulation" by Murry et al.
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
         # inject SAC action
-        dqc_t = dqc_t  # + a
+        dqc_t = dqc_t + a
         # TODO check
         # command joint speeds (only 6 joints)
         pb.setJointMotorControlArray(
