@@ -86,8 +86,7 @@ Robotic Manipulation" by Murry et al.
                            1.5, 1.5, 1.5, 1.5, 1.5, 1.5,
                            2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
                            87, 87, 87, 87, 12, 12,
-                           2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
-                           self.xd_init + deltax, self.yd_init + deltay, self.zd_init + deltaz])
+                           2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])
         low_s = -high_s
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
@@ -217,10 +216,7 @@ Robotic Manipulation" by Murry et al.
                       dqc_t[2],
                       dqc_t[3],
                       dqc_t[4],
-                      dqc_t[5],
-                      self.xd[self.k+1],
-                      self.yd[self.k+1],
-                      self.zd[self.k+1]]
+                      dqc_t[5]]
         self.state_buffer = self.state
         plot_data_t = [r_hat_t[0],
                        r_hat_t[1],
@@ -342,10 +338,7 @@ Robotic Manipulation" by Murry et al.
                dqc_t[2],
                dqc_t[3],
                dqc_t[4],
-               dqc_t[5],
-               self.xd[next_p_idx],
-               self.yd[next_p_idx],
-               self.zd[next_p_idx]]
+               dqc_t[5]]
         # update states
         self.state = obs
         self.state_buffer = np.vstack((self.state_buffer, self.state))

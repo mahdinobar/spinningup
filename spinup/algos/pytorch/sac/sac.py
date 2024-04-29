@@ -238,7 +238,8 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
     device = torch.device("cpu")
     target_entropy = -torch.prod(torch.Tensor(ac.pi.mu_layer.out_features).to(device)).item()
-    log_alpha = torch.zeros(1, requires_grad=True, device=device)
+    # log_alpha=torch.zeros(1, requires_grad=True, device=device)
+    log_alpha = np.exp(alpha) * torch.ones(1, requires_grad=True, device=device)
     alpha_optim = Adam([log_alpha], lr=lr)
 
     # Set up model saving
@@ -272,7 +273,10 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         alpha_optim.zero_grad()
         alpha_loss.backward()
         alpha_optim.step()
-        # alpha = log_alpha.exp()
+        alpha = log_alpha.exp()
+        # alpha_info = dict(LogAlpha=alpha.detach().numpy())
+        # logger.store(LossAlpha=alpha_loss.item(), **alpha_info)
+        logger.store(LossAlpha=alpha_loss.item(), LogAlpha=alpha.detach().numpy())
 
         # Unfreeze Q-networks so you can optimize it at next (DDPG, SAC, ...) step.
         for p in q_params:
@@ -378,11 +382,13 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             logger.log_tabular('TotalEnvInteracts', t)
             if not (t >= update_after and (t + 1) % update_every == 0):
                 q_info = dict(Q1Vals=np.zeros(1), Q2Vals=np.zeros(1))
-                logger.store(**q_info, LogPi=0, LossPi=0, LossQ=0)
+                logger.store(**q_info, LogPi=0, LossPi=0, LossQ=0, LossAlpha=0, LogAlpha=0)
             logger.log_tabular('Q1Vals', with_min_and_max=True)
             logger.log_tabular('Q2Vals', with_min_and_max=True)
             logger.log_tabular('LogPi', with_min_and_max=True)
             logger.log_tabular('LossPi', average_only=True)
+            logger.log_tabular('LogAlpha', average_only=True)
+            logger.log_tabular('LossAlpha', average_only=True)
             logger.log_tabular('LossQ', average_only=True)
             logger.log_tabular('Time', time.time() - start_time)
             logger.dump_tabular()
