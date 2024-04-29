@@ -53,7 +53,7 @@ class ReplayBuffer:
 
 def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         steps_per_epoch=4000, epochs=100, replay_size=int(1e6), gamma=0.99,
-        polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=10000,
+        polyak=0.995, lr=1e-3, alpha_init=0.2, batch_size=100, start_steps=10000,
         update_after=1000, update_every=50, num_test_episodes=10, max_ep_len=1000,
         logger_kwargs=dict(), save_freq=1, initial_actions="random", save_buffer=False, sample_mode=1, automatic_entropy_tuning=False):
     """
@@ -194,6 +194,8 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         if automatic_entropy_tuning==True:
             # get updated alpha
             alpha = log_alpha.exp()
+        else:
+            alpha = alpha_init
 
         # Bellman backup for Q functions
         with torch.no_grad():
@@ -227,6 +229,9 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         if automatic_entropy_tuning==True:
             # get updated alpha
             alpha = log_alpha.exp()
+        else:
+            alpha = alpha_init
+
         # Entropy-regularized policy loss
         loss_pi = (alpha * logp_pi - q_pi).mean()
         # Useful info for logging
@@ -282,7 +287,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         else:
             # alpha_info = dict(LogAlpha=alpha.detach().numpy())
             # logger.store(LossAlpha=alpha_loss.item(), **alpha_info)
-            logger.store(LossAlpha=0, LogAlpha=alpha)
+            logger.store(LossAlpha=0, LogAlpha=alpha_init)
         # Unfreeze Q-networks so you can optimize it at next (DDPG, SAC, ...) step.
         for p in q_params:
             p.requires_grad = True
