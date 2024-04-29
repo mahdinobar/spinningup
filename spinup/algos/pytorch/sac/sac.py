@@ -236,10 +236,10 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
     pi_optimizer = Adam(ac.pi.parameters(), lr=lr)
     q_optimizer = Adam(q_params, lr=lr)
 
-    device = torch.device("cuda" if args.cuda else "cpu")
-    target_entropy = -torch.prod(torch.Tensor(action_space.shape).to(device)).item()
+    device = torch.device("cpu")
+    target_entropy = -torch.prod(torch.Tensor(ac.pi.mu_layer.out_features).to(device)).item()
     log_alpha = torch.zeros(1, requires_grad=True, device=device)
-    alpha_optim = Adam([log_alpha], lr=args.lr)
+    alpha_optim = Adam([log_alpha], lr=lr)
 
     # Set up model saving
     logger.setup_pytorch_saver(ac)
