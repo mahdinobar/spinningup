@@ -9,7 +9,7 @@ import os
 
 TRAIN=1
 env_fn = lambda: gym.make('Fep-v0')
-exp_name = "Fepv0_9_tuning_alpha"
+exp_name = "Fepv0_9_tuning_alpha_4"
 if __name__ == '__main__':
     if TRAIN:
         # train
@@ -17,9 +17,9 @@ if __name__ == '__main__':
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         logger_kwargs = dict(output_dir=output_dir, exp_name=exp_name)
-        sac(env_fn, ac_kwargs={}, seed=0, steps_per_epoch=100, epochs=200, replay_size=1000000, gamma=0.99, polyak=0.995,
-            lr=0.01, alpha_init=0.001, batch_size=100, start_steps=1000, update_after=1000, update_every=100, num_test_episodes=2,
-            max_ep_len=np.inf, logger_kwargs=logger_kwargs, save_freq=1, initial_actions="zero", save_buffer=True, sample_mode = 1, automatic_entropy_tuning=True)
+        sac(env_fn, ac_kwargs={}, seed=0, steps_per_epoch=100, epochs=300, replay_size=1000000, gamma=0.99, polyak=0.995,
+            lr=3e-4, alpha_init=0.001, batch_size=100, start_steps=10000, update_after=10000, update_every=100, num_test_episodes=2,
+            max_ep_len=np.inf, logger_kwargs=logger_kwargs, save_freq=1, initial_actions="random", save_buffer=True, sample_mode = 1, automatic_entropy_tuning=True)
     else:
         output_dir='/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/'+exp_name
         env_loaded, get_action = load_policy_and_env(output_dir)
