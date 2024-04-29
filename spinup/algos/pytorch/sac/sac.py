@@ -281,13 +281,13 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             alpha_loss.backward()
             alpha_optim.step()
             alpha = log_alpha.exp()
-            # alpha_info = dict(LogAlpha=alpha.detach().numpy())
+            # alpha_info = dict(Alpha=alpha.detach().numpy())
             # logger.store(LossAlpha=alpha_loss.item(), **alpha_info)
-            logger.store(LossAlpha=alpha_loss.item(), LogAlpha=alpha.detach().numpy())
+            logger.store(LossAlpha=alpha_loss.item(), Alpha=alpha.detach().numpy())
         else:
-            # alpha_info = dict(LogAlpha=alpha.detach().numpy())
+            # alpha_info = dict(Alpha=alpha.detach().numpy())
             # logger.store(LossAlpha=alpha_loss.item(), **alpha_info)
-            logger.store(LossAlpha=0, LogAlpha=alpha_init)
+            logger.store(LossAlpha=0, Alpha=alpha_init)
         # Unfreeze Q-networks so you can optimize it at next (DDPG, SAC, ...) step.
         for p in q_params:
             p.requires_grad = True
@@ -392,12 +392,12 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             logger.log_tabular('TotalEnvInteracts', t)
             if not (t >= update_after and (t + 1) % update_every == 0):
                 q_info = dict(Q1Vals=np.zeros(1), Q2Vals=np.zeros(1))
-                logger.store(**q_info, LogPi=0, LossPi=0, LossQ=0, LossAlpha=0, LogAlpha=0)
+                logger.store(**q_info, LogPi=0, LossPi=0, LossQ=0, LossAlpha=0, Alpha=0)
             logger.log_tabular('Q1Vals', with_min_and_max=True)
             logger.log_tabular('Q2Vals', with_min_and_max=True)
             logger.log_tabular('LogPi', with_min_and_max=True)
             logger.log_tabular('LossPi', average_only=True)
-            logger.log_tabular('LogAlpha', average_only=True)
+            logger.log_tabular('Alpha', average_only=True)
             logger.log_tabular('LossAlpha', average_only=True)
             logger.log_tabular('LossQ', average_only=True)
             logger.log_tabular('Time', time.time() - start_time)
