@@ -192,6 +192,9 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         q1 = ac.q1(o, a)
         q2 = ac.q2(o, a)
 
+        # get updated alpha
+        alpha = log_alpha.exp()
+
         # Bellman backup for Q functions
         with torch.no_grad():
             # Target actions come from *current* policy
@@ -221,18 +224,22 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         q1_pi = ac.q1(o, pi)
         q2_pi = ac.q2(o, pi)
         q_pi = torch.min(q1_pi, q2_pi)
-
+        # get updated alpha
+        alpha = log_alpha.exp()
         # Entropy-regularized policy loss
         loss_pi = (alpha * logp_pi - q_pi).mean()
-
         # Useful info for logging
         pi_info = dict(LogPi=logp_pi.detach().numpy())
-
         return loss_pi, pi_info
 
     # Set up optimizers for policy and q-function
     pi_optimizer = Adam(ac.pi.parameters(), lr=lr)
     q_optimizer = Adam(q_params, lr=lr)
+
+    device = torch.device("cuda" if args.cuda else "cpu")
+    target_entropy = -torch.prod(torch.Tensor(action_space.shape).to(device)).item()
+    log_alpha = torch.zeros(1, requires_grad=True, device=device)
+    alpha_optim = Adam([log_alpha], lr=args.lr)
 
     # Set up model saving
     logger.setup_pytorch_saver(ac)
@@ -257,6 +264,15 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         loss_pi, pi_info = compute_loss_pi(data)
         loss_pi.backward()
         pi_optimizer.step()
+
+
+        o = data['obs']
+        pi, logp_pi = ac.pi(o)
+        alpha_loss = -(log_alpha * (logp_pi + target_entropy).detach()).mean()
+        alpha_optim.zero_grad()
+        alpha_loss.backward()
+        alpha_optim.step()
+        # alpha = log_alpha.exp()
 
         # Unfreeze Q-networks so you can optimize it at next (DDPG, SAC, ...) step.
         for p in q_params:

@@ -86,12 +86,13 @@ Robotic Manipulation" by Murry et al.
                            1.5, 1.5, 1.5, 1.5, 1.5, 1.5,
                            2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
                            87, 87, 87, 87, 12, 12,
-                           2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])
+                           2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
+                           self.xd_init + deltax, self.yd_init + deltay, self.zd_init + deltaz])
         low_s = -high_s
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
         # Attention: limits of SAC actions
-        high_a = 0.5 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
+        high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
                                   2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
         # high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
@@ -216,7 +217,10 @@ Robotic Manipulation" by Murry et al.
                       dqc_t[2],
                       dqc_t[3],
                       dqc_t[4],
-                      dqc_t[5]]
+                      dqc_t[5],
+                      self.xd[self.k+1],
+                      self.yd[self.k+1],
+                      self.zd[self.k+1]]
         self.state_buffer = self.state
         plot_data_t = [r_hat_t[0],
                        r_hat_t[1],
@@ -306,6 +310,11 @@ Robotic Manipulation" by Murry et al.
         reward_ddqc_t = self.f_logistic(error_ddqc_t, self.lddqc)
         reward_t = self.reward_eta_p * reward_p_t + self.reward_eta_v * reward_v_t + self.reward_eta_ddqc * reward_ddqc_t
         # collect observations(after you apply action)
+        # manual correction
+        if self.k<self.MAX_TIMESTEPS-1:
+            next_p_idx=self.k+1
+        else:
+            next_p_idx = self.k #TODO correct
         # TODO double check concept
         obs = [r_hat_tp1[0] - rd_t[0],
                r_hat_tp1[1] - rd_t[1],
@@ -333,7 +342,10 @@ Robotic Manipulation" by Murry et al.
                dqc_t[2],
                dqc_t[3],
                dqc_t[4],
-               dqc_t[5]]
+               dqc_t[5],
+               self.xd[next_p_idx],
+               self.yd[next_p_idx],
+               self.zd[next_p_idx]]
         # update states
         self.state = obs
         self.state_buffer = np.vstack((self.state_buffer, self.state))
@@ -580,7 +592,7 @@ Robotic Manipulation" by Murry et al.
             idx_last=np.where(np.sum(buf_obs, 1) == 0)[0][0]
             fig6, axs6 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
             idx_start=900
-            idx_end=1210
+            idx_end=400*100 #1210
             idx_vline=1000-1
             x=range(idx_start, idx_end, 1)
             y=buf_obs[0:idx_last, :][idx_start:idx_end, 0]
