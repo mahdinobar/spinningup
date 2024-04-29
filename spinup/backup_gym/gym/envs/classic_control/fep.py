@@ -91,7 +91,7 @@ Robotic Manipulation" by Murry et al.
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
         # Attention: limits of SAC actions
-        high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
+        high_a = 0.5 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
                                   2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
         # high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
@@ -584,9 +584,9 @@ Robotic Manipulation" by Murry et al.
             buf_obs2 = np.load(output_dir_rendering + "/buf_obs2.npy")
             idx_last=np.where(np.sum(buf_obs, 1) == 0)[0][0]
             fig6, axs6 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
-            idx_start=900
-            idx_end=400*100 #1210
-            idx_vline=1000-1
+            idx_start=9000
+            idx_end=300*100 #1210
+            idx_vline=idx_start+100-1
             x=range(idx_start, idx_end, 1)
             y=buf_obs[0:idx_last, :][idx_start:idx_end, 0]
             axs6[0].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[0] - rd_t[0]')
