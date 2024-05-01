@@ -91,9 +91,9 @@ Robotic Manipulation" by Murry et al.
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
         # Attention: limits of SAC actions
-        # high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
-        #                           2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
-        high_a = np.array([2, 0.5, 0.1])
+        high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
+                                  2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
+        # high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
         # output_dir_rendering = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/"
@@ -114,7 +114,7 @@ Robotic Manipulation" by Murry et al.
             pinvA = np.linalg.lstsq((np.matmul(A, A.T) + ld * ld * np.eye(m, m)).T, A, rcond=None)[0].T
         return pinvA
 
-    def q_command(self, r_ee, v_ee, Jpinv, rd, vd, e, dt, a):
+    def q_command(self, r_ee, v_ee, Jpinv, rd, vd, e, dt):
         """
         PID Traj Tracking Feedback Controller
         Inputs:
@@ -126,7 +126,7 @@ Robotic Manipulation" by Murry et al.
         """
         e_t = (rd - r_ee)
         e = np.vstack((e, e_t.reshape(1, 3)))
-        v_command = vd + (self.K_p+a[0]) * e_t + (self.K_i+a[1]) * np.sum(e[1:, :], 0) * dt + (self.K_d+a[2]) * (vd - v_ee)
+        v_command = vd + self.K_p * e_t + self.K_i * np.sum(e[1:, :], 0) * dt + self.K_d * (vd - v_ee)
         dqc = np.dot(Jpinv, v_command)
         return dqc, e
 
@@ -264,9 +264,9 @@ Robotic Manipulation" by Murry et al.
         J_t = np.asarray(linearJacobian)[:, :6]
         Jpinv_t = self.pseudoInverseMat(J_t, ld=0.1)  # TODO: check pseudo-inverse damping coefficient
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
-                                       dt=dt, a=a)
+                                       dt=dt)
         # inject SAC action
-        dqc_t = dqc_t
+        dqc_t = dqc_t + a
         # TODO check
         # command joint speeds (only 6 joints)
         pb.setJointMotorControlArray(
@@ -298,7 +298,7 @@ Robotic Manipulation" by Murry et al.
         LinkState_tp1 = pb.getLinkState(arm, 9, computeForwardKinematics=True, computeLinkVelocity=True)
         r_hat_tp1 = np.array(LinkState[0])
         v_hat_tp1 = np.array(LinkState[6])
-        error_p_t = sum(abs(r_hat_tp1 - vd_t))
+        error_p_t = sum(abs(r_hat_tp1 - rd_t))
         error_v_t = sum(abs(v_hat_tp1 - vd_t))
         error_ddqc_t = sum(abs(dqc_t - self.dq[-2, :]))
         reward_p_t = self.f_logistic(error_p_t, self.lp)
