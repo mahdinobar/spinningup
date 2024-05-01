@@ -161,7 +161,7 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
         plt.figure()
         plot_data(data, xaxis=xaxis, value=value, condition=condition, smooth=smooth, estimator=estimator)
     # plt.hlines(44.47124, 0, 10e4, 'k', linestyles="dashed", label='PID only')
-    plt.hlines( 98.97066, 0, 10e4, 'k', linestyles="dashed", label='PID only')
+    plt.hlines( 83.8, 0, 10e4, 'k', linestyles="dashed", label='PID only')
     plt.savefig(all_logdirs[-1]+"learning_curve", format="pdf", bbox_inches='tight')
     plt.show()
 
