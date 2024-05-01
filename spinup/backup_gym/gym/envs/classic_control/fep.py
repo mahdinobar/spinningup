@@ -46,7 +46,7 @@ Robotic Manipulation" by Murry et al.
         np.random.seed(seed)
         self.seed(seed=seed)
         # TODO: reward params
-        self.lp = 28
+        self.lp = 33
         self.lv = 10
         self.lddqc = 1
         self.reward_eta_p = 1
