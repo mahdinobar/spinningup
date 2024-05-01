@@ -403,12 +403,12 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             logger.log_tabular('Time', time.time() - start_time)
             logger.dump_tabular()
 
-    if save_buffer == True:
-        np.save(logger_kwargs["output_dir"] + "/buf_act.npy", replay_buffer.act_buf)
-        np.save(logger_kwargs["output_dir"] + "/buf_done.npy", replay_buffer.done_buf)
-        np.save(logger_kwargs["output_dir"] + "/buf_rew.npy", replay_buffer.rew_buf)
-        np.save(logger_kwargs["output_dir"] + "/buf_obs.npy", replay_buffer.obs_buf)
-        np.save(logger_kwargs["output_dir"] + "/buf_obs2.npy", replay_buffer.obs2_buf)
+        if save_buffer == True:
+            np.save(logger_kwargs["output_dir"] + "/buf_act.npy", replay_buffer.act_buf)
+            np.save(logger_kwargs["output_dir"] + "/buf_done.npy", replay_buffer.done_buf)
+            np.save(logger_kwargs["output_dir"] + "/buf_rew.npy", replay_buffer.rew_buf)
+            np.save(logger_kwargs["output_dir"] + "/buf_obs.npy", replay_buffer.obs_buf)
+            np.save(logger_kwargs["output_dir"] + "/buf_obs2.npy", replay_buffer.obs2_buf)
 
 
 if __name__ == '__main__':
