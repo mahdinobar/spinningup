@@ -9,7 +9,7 @@ import os
 
 TRAIN=1
 env_fn = lambda: gym.make('Fep-v0')
-exp_name = "Fepv0_14_TargetEntropy01times_lp65_50percentAction"
+exp_name = "Fepv0_14_TargetEntropy01times_lp65_5percentAction"
 if __name__ == '__main__':
     if TRAIN:
         # train
