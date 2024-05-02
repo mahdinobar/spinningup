@@ -46,14 +46,14 @@ Robotic Manipulation" by Murry et al.
         np.random.seed(seed)
         self.seed(seed=seed)
         # TODO: reward params
-        self.lp = 65
+        self.lp = 200
         self.lv = 10
         self.lddqc = 1
         self.reward_eta_p = 1
         self.reward_eta_v = 0
         self.reward_eta_ddqc = 0
         # TODO: User defined linear position gain
-        self.K_p = 2
+        self.K_p = 5
         self.K_i = 0.5
         self.K_d = 0.1
         self.korque_noise_max = 0.  # TODO
@@ -91,7 +91,7 @@ Robotic Manipulation" by Murry et al.
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
         # Attention: limits of SAC actions
-        high_a = 0.3 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
+        high_a = 0.2 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
                                   2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
         # high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
@@ -460,7 +460,7 @@ Robotic Manipulation" by Murry et al.
                 pb.stepSimulation(physicsClientId=physics_client)
                 time.sleep(0.01)
 
-        render_test_buffer = 0
+        render_test_buffer = True
         if render_test_buffer == True:
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
             axs1[0].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 4], 'r--', label='EE desired traj')

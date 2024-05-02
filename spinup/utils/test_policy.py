@@ -130,7 +130,6 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True, 
         if d or (ep_len == max_ep_len):
             if "Fep" in output_dir:
                 env.render(output_dir)
-                logger.store(EpRet=ep_ret, EpLen=ep_len)
             if "Tworr" in output_dir:
                 # plotting for planar (modify for others)
                 # np.save(
@@ -167,10 +166,13 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True, 
                 plt.legend()
                 plt.savefig(output_dir + "/velocity.pdf", format="pdf", bbox_inches='tight')
                 plt.show()
-                logger.store(EpRet=ep_ret, EpLen=ep_len)
             n += 1
-        print('Episode %d \t EpRet %.3f \t EpLen %d' % (n, ep_ret, ep_len))
-        o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
+
+            logger.store(EpRet=ep_ret, EpLen=ep_len)
+            print('Episode %d \t EpRet %.3f \t EpLen %d' % (n, ep_ret, ep_len))
+            o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
+            n += 1
+
     logger.log_tabular('EpRet', with_min_and_max=True)
     logger.log_tabular('EpLen', average_only=True)
     logger.dump_tabular()
