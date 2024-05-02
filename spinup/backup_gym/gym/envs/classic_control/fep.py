@@ -585,7 +585,7 @@ Robotic Manipulation" by Murry et al.
             idx_last=np.where(np.sum(buf_obs, 1) == 0)[0][0]
             fig6, axs6 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
             idx_start=0
-            idx_end=500*100 #1210
+            idx_end=300*100 #1210
             idx_vline=idx_start+10000-1
             x=range(idx_start, idx_end, 1)
             y=buf_obs[0:idx_last, :][idx_start:idx_end, 0]
@@ -607,25 +607,6 @@ Robotic Manipulation" by Murry et al.
             axs6[2].set_ylabel("r_hat_tp1[2] - rd_t[2]")
             plt.legend()
             plt.savefig(output_dir_rendering + "/buffer_states.pdf", format="pdf", bbox_inches='tight')
-            plt.show()
-            fig7, axs7 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
-            y=buf_act[0:idx_last][idx_start:idx_end, 0]
-            axs7[0].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='a[0]')
-            axs7[0].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
-            axs7[0].set_xlabel("timestep")
-            axs7[0].set_ylabel("a[0]")
-            y=buf_act[0:idx_last][idx_start:idx_end, 1]
-            axs7[1].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='a[1]')
-            axs7[1].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
-            axs7[1].set_xlabel("timestep")
-            axs7[1].set_ylabel("a[1]")
-            y=buf_act[0:idx_last][idx_start:idx_end, 2]
-            axs7[2].plot(x,y, 'b', linewidth=0.08, marker=".", markersize=2, label='a[2]')
-            axs7[2].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
-            axs7[2].set_xlabel("timestep")
-            axs7[2].set_ylabel("a[2]")
-            plt.legend()
-            plt.savefig(output_dir_rendering + "/buffer_action.pdf", format="pdf", bbox_inches='tight')
             plt.show()
             fig7, axs7 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
             y = buf_act[0:idx_last][idx_start:idx_end, 0]

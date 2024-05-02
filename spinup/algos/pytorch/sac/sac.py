@@ -244,7 +244,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
     if automatic_entropy_tuning is True:
         device = torch.device("cpu")
-        target_entropy = 1*-ac.pi.mu_layer.out_features
+        target_entropy = 0.01*-ac.pi.mu_layer.out_features
         # log_alpha=torch.zeros(1, requires_grad=True, device=device)
         log_alpha = torch.tensor([np.exp(alpha_init)], requires_grad=True, device=device)
         alpha_optim = Adam([log_alpha], lr=lr)
