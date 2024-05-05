@@ -7,7 +7,7 @@ import spinup.algos.pytorch.sac.core as core
 from spinup.utils.test_policy import load_policy_and_env, run_policy
 import os
 
-TRAIN=1
+TRAIN=0
 env_fn = lambda: gym.make('Fep-v0')
 exp_name = "Fepv0_15_lr0001_3000epochs_lp100_separated_pose_errors"
 if __name__ == '__main__':
