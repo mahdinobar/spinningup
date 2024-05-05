@@ -3,7 +3,7 @@
   <link name="base_link">
     <visual>
       <geometry>
-        <mesh filename="/home/mahdi/ETHZ/codes/RLCFEP/code/gym_envs/gym_envs/fep_env/URDFs/fep/dobot_conveyer.stl" scale=".020625 .020625 .020625"/>
+        <mesh filename="/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep/dobot_conveyer.stl" scale=".020625 .020625 .020625"/>
       </geometry>
       <material name="black">
             <color rgba="0.45 0.45 0.45 1"/>
@@ -12,7 +12,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-    <mesh filename="/home/mahdi/ETHZ/codes/RLCFEP/code/gym_envs/gym_envs/fep_env/URDFs/fep/dobot_conveyer.stl" scale=".020625 .020625 .020625"/>
+    <mesh filename="/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep/dobot_conveyer.stl" scale=".020625 .020625 .020625"/>
       </geometry>
     </collision>
     <inertial>

@@ -24,14 +24,14 @@ pb.setGravity(0, 0, -9.81, physicsClientId=physics_client)
 # Load URDFs
 # Load robot, target object and plane urdf
 pb.setAdditionalSearchPath(pybullet_data.getDataPath())
-arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep/panda.urdf",
+arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep/panda.urdf",
                   useFixedBase=True)
-target_object = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
+target_object = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
                             useFixedBase=True)
 conveyor_object = pb.loadURDF(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
+    "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
     useFixedBase=True)
-plane = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
+plane = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
                     useFixedBase=True)
 
 
@@ -427,14 +427,14 @@ Robotic Manipulation" by Murry et al.
             pb.setAdditionalSearchPath(pybullet_data.getDataPath())
             pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
                                  output_dir_rendering + "/simulation.mp4")  # added by Pierre
-            arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep/panda.urdf",
+            arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep/panda.urdf",
                               useFixedBase=True)
-            target_object = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
+            target_object = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
                                         useFixedBase=True)
             conveyor_object = pb.loadURDF(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
+                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
                 useFixedBase=True)
-            plane = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
+            plane = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
                                 useFixedBase=True)
             # Initialise debug camera angle
             pb.resetDebugVisualizerCamera(
