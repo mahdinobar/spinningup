@@ -244,7 +244,10 @@ Robotic Manipulation" by Murry et al.
                        tau_t[2],
                        tau_t[3],
                        tau_t[4],
-                       tau_t[5]]
+                       tau_t[5],
+                       0,
+                       0,
+                       0]
         self.plot_data_buffer = plot_data_t
         return self._get_ob()
 
@@ -304,12 +307,17 @@ Robotic Manipulation" by Murry et al.
         LinkState_tp1 = pb.getLinkState(arm, 9, computeForwardKinematics=True, computeLinkVelocity=True)
         r_hat_tp1 = np.array(LinkState[0])
         v_hat_tp1 = np.array(LinkState[6])
-        error_p_t = sum(abs(r_hat_tp1 - rd_t))
+        # error_p_t = sum(abs(r_hat_tp1 - rd_t))
         error_v_t = sum(abs(v_hat_tp1 - vd_t))
         error_ddqc_t = sum(abs(dqc_t - self.dq[-2, :]))
-        reward_p_t = self.f_logistic(error_p_t, self.lp)
+        # reward_p_t = self.f_logistic(error_p_t, self.lp)
+        reward_px_t = self.f_logistic(abs(r_hat_tp1[0] - rd_t[0]), self.lp)
+        reward_py_t = self.f_logistic(abs(r_hat_tp1[1] - rd_t[1]), self.lp)
+        reward_pz_t = self.f_logistic(abs(r_hat_tp1[2] - rd_t[2]), self.lp)
+        reward_p_t = (reward_px_t+reward_py_t+reward_pz_t)/3
         reward_v_t = self.f_logistic(error_v_t, self.lv)
         reward_ddqc_t = self.f_logistic(error_ddqc_t, self.lddqc)
+        # reward_t = self.reward_eta_p * reward_p_t + self.reward_eta_v * reward_v_t + self.reward_eta_ddqc * reward_ddqc_t
         reward_t = self.reward_eta_p * reward_p_t + self.reward_eta_v * reward_v_t + self.reward_eta_ddqc * reward_ddqc_t
         # collect observations(after you apply action)
         # manual correction
@@ -374,7 +382,10 @@ Robotic Manipulation" by Murry et al.
                        tau_t[2],
                        tau_t[3],
                        tau_t[4],
-                       tau_t[5]]
+                       tau_t[5],
+                       reward_px_t,
+                       reward_py_t,
+                       reward_pz_t]
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
 
         # given action it returns 4-tuple (observation, reward, done, info)
@@ -587,6 +598,24 @@ Robotic Manipulation" by Murry et al.
             plt.legend()
             plt.savefig(output_dir_rendering + "/rewards.pdf", format="pdf", bbox_inches='tight')
             plt.show()
+
+            fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(5, 10))
+            axs5[0].plot(self.plot_data_buffer[:, 27], 'b', label='reward_px_t')
+            axs5[0].set_xlabel("t")
+            axs5[0].set_ylabel("reward_px_t")
+            plt.legend()
+            axs5[1].plot(self.plot_data_buffer[:, 28], 'b', label='reward_px_t')
+            axs5[1].set_xlabel("t")
+            axs5[1].set_ylabel("reward_py_t")
+            plt.legend()
+            axs5[2].plot(self.plot_data_buffer[:, 29], 'b', label='reward_px_t')
+            axs5[2].set_xlabel("t")
+            axs5[2].set_ylabel("reward_pz_t")
+            plt.legend()
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/rewards_position.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
+
 
             fig5, axs5 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(10, 8))
             axs5[0, 0].plot(self.plot_data_buffer[:, 21], 'b', label='commanded torque 0')
