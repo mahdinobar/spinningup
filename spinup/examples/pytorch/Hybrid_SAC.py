@@ -9,7 +9,7 @@ import os
 
 TRAIN=1
 env_fn = lambda: gym.make('Fep-v0')
-exp_name = "Fepv0_15_lr0002_3000epochs_lp100_separated_pose_errors"
+exp_name = "Fepv0_15_lr0001_3000epochs_lp100_separated_pose_errors"
 if __name__ == '__main__':
     if TRAIN:
         # train
@@ -18,7 +18,7 @@ if __name__ == '__main__':
             os.makedirs(output_dir)
         logger_kwargs = dict(output_dir=output_dir, exp_name=exp_name)
         sac(env_fn, ac_kwargs={}, seed=0, steps_per_epoch=100, epochs=3000, replay_size=1000000, gamma=0.99, polyak=0.995,
-            lr=0.002, alpha_init=0.001, batch_size=100, start_steps=10000, update_after=10000, update_every=100, num_test_episodes=2,
+            lr=0.001, alpha_init=0.001, batch_size=100, start_steps=10000, update_after=10000, update_every=100, num_test_episodes=2,
             max_ep_len=np.inf, logger_kwargs=logger_kwargs, save_freq=1, initial_actions="random", save_buffer=True, sample_mode = 1, automatic_entropy_tuning=True)
     else:
         output_dir='/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/'+exp_name
