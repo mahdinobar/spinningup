@@ -91,7 +91,7 @@ Robotic Manipulation" by Murry et al.
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
         # Attention: limits of SAC actions
-        high_a = 0.2 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
+        high_a = 0.3 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
                                  2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
         # high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
