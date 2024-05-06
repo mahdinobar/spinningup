@@ -147,7 +147,7 @@ Robotic Manipulation" by Murry et al.
         # self.K_d = 0.1 + np.random.normal(loc=0.0, scale=0.1, size=1)
         # at time t=0
         self.k = 0
-        noisy_target=True
+        noisy_target=False
         if noisy_target==True:
             self.vxd = 0.005+np.random.normal(loc=0.0, scale=0.001, size=1)[0]  # m/s
             self.vyd = 0.05+np.random.normal(loc=0.0, scale=0.005, size=1)[0]  # m/s
