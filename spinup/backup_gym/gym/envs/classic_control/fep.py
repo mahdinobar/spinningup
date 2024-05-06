@@ -149,8 +149,8 @@ Robotic Manipulation" by Murry et al.
         self.k = 0
         noisy_target=True
         if noisy_target==True:
-            self.vxd = 0.005+np.random.normal(loc=0.0, scale=0.001, size=1)  # m/s
-            self.vyd = 0.05+np.random.normal(loc=0.0, scale=0.005, size=1)  # m/s
+            self.vxd = 0.005+np.random.normal(loc=0.0, scale=0.001, size=1)[0]  # m/s
+            self.vyd = 0.05+np.random.normal(loc=0.0, scale=0.005, size=1)[0]  # m/s
             self.vzd = 0  # m/s
             deltax = self.vxd * dt * self.MAX_TIMESTEPS
             deltay = self.vyd * dt * self.MAX_TIMESTEPS
