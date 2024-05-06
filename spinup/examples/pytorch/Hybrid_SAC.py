@@ -9,7 +9,7 @@ import os
 
 TRAIN=1
 env_fn = lambda: gym.make('Fep-v0')
-exp_name = "Fepv0_15_lr0001_5000epochs_lp130_separated_pose_errors_30percentActions"
+exp_name = "Fepv0_15_lr0001_5000epochs_lp130_separated_pose_errors_25percentActions"
 if __name__ == '__main__':
     if TRAIN:
         # train
