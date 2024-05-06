@@ -91,7 +91,7 @@ Robotic Manipulation" by Murry et al.
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
         # Attention: limits of SAC actions
-        high_a = 0.25 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
+        high_a = 0.2 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
                                  2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
         # high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
@@ -163,7 +163,11 @@ Robotic Manipulation" by Murry et al.
         # np.array(
         #     pb.calculateInverseKinematics(arm, 9, list(rd_t), solver=0, residualThreshold=1e-6, maxNumIterations=1000)[
         #     0:6])
-        self.q_init = np.array([-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466])
+	q_init_noise=True
+        if q_init_noise==True:
+            self.q_init = np.array([-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466])+np.random.normal(loc=0.0, scale=0.02, size=6)
+        else:
+            self.q_init = np.array([-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466])
         # Reset joint at initial angles
         for i in range(6):
             pb.resetJointState(arm, i, self.q_init[i])
