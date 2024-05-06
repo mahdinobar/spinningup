@@ -43,10 +43,11 @@ Robotic Manipulation" by Murry et al.
 
     def __init__(self):
         seed = 1
+        # reset seed(here is where seed is reset to count 0)
         np.random.seed(seed)
         self.seed(seed=seed)
         # TODO: reward params
-        self.lp = 100
+        self.lp = 130
         self.lv = 10
         self.lddqc = 1
         self.reward_eta_p = 1
@@ -147,6 +148,17 @@ Robotic Manipulation" by Murry et al.
         # self.K_d = 0.1 + np.random.normal(loc=0.0, scale=0.1, size=1)
         # at time t=0
         self.k = 0
+        noisy_target=True
+        if noisy_target==True:
+            self.vxd = 0.005+np.random.normal(loc=0.0, scale=0.001, size=1)[0]  # m/s
+            self.vyd = 0.05+np.random.normal(loc=0.0, scale=0.005, size=1)[0]  # m/s
+            self.vzd = 0  # m/s
+            deltax = self.vxd * dt * self.MAX_TIMESTEPS
+            deltay = self.vyd * dt * self.MAX_TIMESTEPS
+            deltaz = self.vzd * dt * self.MAX_TIMESTEPS
+            self.xd = np.linspace(self.xd_init, self.xd_init + deltax, self.MAX_TIMESTEPS, endpoint=True)
+            self.yd = np.linspace(self.yd_init, self.yd_init + deltay, self.MAX_TIMESTEPS, endpoint=True)
+            self.zd = np.linspace(self.zd_init, self.zd_init + deltaz, self.MAX_TIMESTEPS, endpoint=True)+np.random.normal(loc=0.0, scale=0.001, size=self.MAX_TIMESTEPS)
         rd_t = np.array([self.xd[self.k], self.yd[self.k], self.zd[self.k]])
         vd_t = np.array([self.vxd, self.vyd, self.vzd])
         # Reset robot at the origin and move the target object to the goal position and orientation
@@ -163,7 +175,11 @@ Robotic Manipulation" by Murry et al.
         # np.array(
         #     pb.calculateInverseKinematics(arm, 9, list(rd_t), solver=0, residualThreshold=1e-6, maxNumIterations=1000)[
         #     0:6])
-        self.q_init = np.array([-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466])
+        q_init_noise=True
+        if q_init_noise==True:
+            self.q_init = np.array([-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466])+np.random.normal(loc=0.0, scale=0.02, size=6)
+        else:
+            self.q_init = np.array([-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466])
         # Reset joint at initial angles
         for i in range(6):
             pb.resetJointState(arm, i, self.q_init[i])
@@ -486,21 +502,21 @@ Robotic Manipulation" by Murry et al.
         render_test_buffer = True
         if render_test_buffer == True:
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
-            axs1[0].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 4], 'r--', label='EE desired traj')
-            axs1[0].plot(self.plot_data_buffer[:, 0], self.plot_data_buffer[:, 1], 'k',
+            axs1[0].plot(self.plot_data_buffer[:, 3]*1000, self.plot_data_buffer[:, 4]*1000, 'r--', label='EE desired traj')
+            axs1[0].plot(self.plot_data_buffer[:, 0]*1000, self.plot_data_buffer[:, 1]*1000, 'k',
                          label='EE position - PID only controller')
-            axs1[0].set_xlabel("x")
-            axs1[0].set_ylabel("y")
-            axs1[1].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
-            axs1[1].plot(self.plot_data_buffer[:, 0], self.plot_data_buffer[:, 2], 'k',
+            axs1[0].set_xlabel("x[mm]")
+            axs1[0].set_ylabel("y[mm]")
+            axs1[1].plot(self.plot_data_buffer[:, 3]*1000, self.plot_data_buffer[:, 5]*1000, 'r--', label='EE desired traj')
+            axs1[1].plot(self.plot_data_buffer[:, 0]*1000, self.plot_data_buffer[:, 2]*1000, 'k',
                          label='EE position - PID only controller')
-            axs1[1].set_xlabel("x")
-            axs1[1].set_ylabel("z")
-            axs1[2].plot(self.plot_data_buffer[:, 4], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
-            axs1[2].plot(self.plot_data_buffer[:, 1], self.plot_data_buffer[:, 2], 'k',
+            axs1[1].set_xlabel("x[mm]")
+            axs1[1].set_ylabel("z[mm]")
+            axs1[2].plot(self.plot_data_buffer[:, 4]*1000, self.plot_data_buffer[:, 5]*1000, 'r--', label='EE desired traj')
+            axs1[2].plot(self.plot_data_buffer[:, 1]*1000, self.plot_data_buffer[:, 2]*1000, 'k',
                          label='EE position - PID only controller')
-            axs1[2].set_xlabel("y")
-            axs1[2].set_ylabel("z")
+            axs1[2].set_xlabel("y[mm]")
+            axs1[2].set_ylabel("z[mm]")
             plt.legend()
             plt.savefig(output_dir_rendering + "/position.pdf", format="pdf", bbox_inches='tight')
             plt.show()
