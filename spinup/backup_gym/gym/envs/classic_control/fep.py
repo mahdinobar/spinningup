@@ -147,6 +147,17 @@ Robotic Manipulation" by Murry et al.
         # self.K_d = 0.1 + np.random.normal(loc=0.0, scale=0.1, size=1)
         # at time t=0
         self.k = 0
+        noisy_target=True
+        if noisy_target==True:
+            self.vxd = 0.005+np.random.normal(loc=0.0, scale=0.001, size=1)  # m/s
+            self.vyd = 0.05+np.random.normal(loc=0.0, scale=0.005, size=1)  # m/s
+            self.vzd = 0  # m/s
+            deltax = self.vxd * dt * self.MAX_TIMESTEPS
+            deltay = self.vyd * dt * self.MAX_TIMESTEPS
+            deltaz = self.vzd * dt * self.MAX_TIMESTEPS
+            self.xd = np.linspace(self.xd_init, self.xd_init + deltax, self.MAX_TIMESTEPS, endpoint=True)
+            self.yd = np.linspace(self.yd_init, self.yd_init + deltay, self.MAX_TIMESTEPS, endpoint=True)
+            self.zd = np.linspace(self.zd_init, self.zd_init + deltaz, self.MAX_TIMESTEPS, endpoint=True)+np.random.normal(loc=0.0, scale=0.001, size=self.MAX_TIMESTEPS)
         rd_t = np.array([self.xd[self.k], self.yd[self.k], self.zd[self.k]])
         vd_t = np.array([self.vxd, self.vyd, self.vzd])
         # Reset robot at the origin and move the target object to the goal position and orientation
@@ -163,7 +174,7 @@ Robotic Manipulation" by Murry et al.
         # np.array(
         #     pb.calculateInverseKinematics(arm, 9, list(rd_t), solver=0, residualThreshold=1e-6, maxNumIterations=1000)[
         #     0:6])
-	q_init_noise=True
+        q_init_noise=True
         if q_init_noise==True:
             self.q_init = np.array([-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466])+np.random.normal(loc=0.0, scale=0.02, size=6)
         else:
