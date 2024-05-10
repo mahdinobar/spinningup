@@ -148,17 +148,18 @@ Robotic Manipulation" by Murry et al.
         # self.K_d = 0.1 + np.random.normal(loc=0.0, scale=0.1, size=1)
         # at time t=0
         self.k = 0
-        noisy_target=True
-        if noisy_target==True:
-            self.vxd = 0.005+np.random.normal(loc=0.0, scale=0.001, size=1)[0]  # m/s
-            self.vyd = 0.05+np.random.normal(loc=0.0, scale=0.005, size=1)[0]  # m/s
+        noisy_target = False
+        if noisy_target == True:
+            self.vxd = 0.005 + np.random.normal(loc=0.0, scale=0.001, size=1)[0]  # m/s
+            self.vyd = 0.05 + np.random.normal(loc=0.0, scale=0.005, size=1)[0]  # m/s
             self.vzd = 0  # m/s
             deltax = self.vxd * dt * self.MAX_TIMESTEPS
             deltay = self.vyd * dt * self.MAX_TIMESTEPS
             deltaz = self.vzd * dt * self.MAX_TIMESTEPS
             self.xd = np.linspace(self.xd_init, self.xd_init + deltax, self.MAX_TIMESTEPS, endpoint=True)
             self.yd = np.linspace(self.yd_init, self.yd_init + deltay, self.MAX_TIMESTEPS, endpoint=True)
-            self.zd = np.linspace(self.zd_init, self.zd_init + deltaz, self.MAX_TIMESTEPS, endpoint=True)+np.random.normal(loc=0.0, scale=0.001, size=self.MAX_TIMESTEPS)
+            self.zd = np.linspace(self.zd_init, self.zd_init + deltaz, self.MAX_TIMESTEPS,
+                                  endpoint=True) + np.random.normal(loc=0.0, scale=0.001, size=self.MAX_TIMESTEPS)
         rd_t = np.array([self.xd[self.k], self.yd[self.k], self.zd[self.k]])
         vd_t = np.array([self.vxd, self.vyd, self.vzd])
         # Reset robot at the origin and move the target object to the goal position and orientation
@@ -175,9 +176,12 @@ Robotic Manipulation" by Murry et al.
         # np.array(
         #     pb.calculateInverseKinematics(arm, 9, list(rd_t), solver=0, residualThreshold=1e-6, maxNumIterations=1000)[
         #     0:6])
-        q_init_noise=True
-        if q_init_noise==True:
-            self.q_init = np.array([-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466])+np.random.normal(loc=0.0, scale=0.02, size=6)
+        q_init_noise = True
+        if q_init_noise == True:
+            self.q_init = np.array(
+                [-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466]) + np.random.normal(loc=0.0,
+                                                                                                                scale=0.02,
+                                                                                                                size=6)
         else:
             self.q_init = np.array([-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466])
         # Reset joint at initial angles
@@ -330,7 +334,7 @@ Robotic Manipulation" by Murry et al.
         reward_px_t = self.f_logistic(abs(r_hat_tp1[0] - rd_t[0]), self.lp)
         reward_py_t = self.f_logistic(abs(r_hat_tp1[1] - rd_t[1]), self.lp)
         reward_pz_t = self.f_logistic(abs(r_hat_tp1[2] - rd_t[2]), self.lp)
-        reward_p_t = (reward_px_t+reward_py_t+reward_pz_t)/3
+        reward_p_t = (reward_px_t + reward_py_t + reward_pz_t) / 3
         reward_v_t = self.f_logistic(error_v_t, self.lv)
         reward_ddqc_t = self.f_logistic(error_ddqc_t, self.lddqc)
         # reward_t = self.reward_eta_p * reward_p_t + self.reward_eta_v * reward_v_t + self.reward_eta_ddqc * reward_ddqc_t
@@ -501,19 +505,24 @@ Robotic Manipulation" by Murry et al.
 
         render_test_buffer = True
         if render_test_buffer == True:
+            plot_data_buffer_no_SAC = np.load(
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fepv0_15_lr0001_5000epochs_lp130_separated_pose_errors_qinitnoisy/without SAC/plot_data_buffer.npy")
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
-            axs1[0].plot(self.plot_data_buffer[:, 3]*1000, self.plot_data_buffer[:, 4]*1000, 'r--', label='EE desired traj')
-            axs1[0].plot(self.plot_data_buffer[:, 0]*1000, self.plot_data_buffer[:, 1]*1000, 'k',
+            axs1[0].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 4] * 1000, 'r--',
+                         label='EE desired traj')
+            axs1[0].plot(self.plot_data_buffer[:, 0] * 1000, self.plot_data_buffer[:, 1] * 1000, 'k',
                          label='EE position - PID only controller')
             axs1[0].set_xlabel("x[mm]")
             axs1[0].set_ylabel("y[mm]")
-            axs1[1].plot(self.plot_data_buffer[:, 3]*1000, self.plot_data_buffer[:, 5]*1000, 'r--', label='EE desired traj')
-            axs1[1].plot(self.plot_data_buffer[:, 0]*1000, self.plot_data_buffer[:, 2]*1000, 'k',
+            axs1[1].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 5] * 1000, 'r--',
+                         label='EE desired traj')
+            axs1[1].plot(self.plot_data_buffer[:, 0] * 1000, self.plot_data_buffer[:, 2] * 1000, 'k',
                          label='EE position - PID only controller')
             axs1[1].set_xlabel("x[mm]")
             axs1[1].set_ylabel("z[mm]")
-            axs1[2].plot(self.plot_data_buffer[:, 4]*1000, self.plot_data_buffer[:, 5]*1000, 'r--', label='EE desired traj')
-            axs1[2].plot(self.plot_data_buffer[:, 1]*1000, self.plot_data_buffer[:, 2]*1000, 'k',
+            axs1[2].plot(self.plot_data_buffer[:, 4] * 1000, self.plot_data_buffer[:, 5] * 1000, 'r--',
+                         label='EE desired traj')
+            axs1[2].plot(self.plot_data_buffer[:, 1] * 1000, self.plot_data_buffer[:, 2] * 1000, 'k',
                          label='EE position - PID only controller')
             axs1[2].set_xlabel("y[mm]")
             axs1[2].set_ylabel("z[mm]")
@@ -566,6 +575,41 @@ Robotic Manipulation" by Murry et al.
                 label='Euclidean error')
             axs3[3].set_xlabel("t")
             axs3[3].set_ylabel("||r-rd||_2 [mm]")
+            # axs3[3].set_ylim([0, 10])
+            # axs3[3].set_yscale('log')
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/position_errors.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
+
+            fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 8))
+            axs3[0].plot(abs(plot_data_buffer_no_SAC[:, 0] - plot_data_buffer_no_SAC[:, 3]) * 1000, 'b',
+                         label='without SAC')
+            axs3[0].plot(abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, 'r', label='with SAC')
+            axs3[0].set_xlabel("t")
+            axs3[0].set_ylabel("|x-xd| [mm]")
+            plt.legend()
+            axs3[1].plot(abs(plot_data_buffer_no_SAC[:, 1] - plot_data_buffer_no_SAC[:, 4]) * 1000, 'b',
+                         label='without SAC')
+            axs3[1].plot(abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, 'r', label='with SAC')
+            axs3[1].set_xlabel("t")
+            axs3[1].set_ylabel("|y-yd| [mm]")
+            plt.legend()
+            axs3[2].plot(abs(plot_data_buffer_no_SAC[:, 2] - plot_data_buffer_no_SAC[:, 5]) * 1000, 'b',
+                         label='without SAC')
+            axs3[2].plot(abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, 'r', label='with SAC')
+            axs3[2].set_xlabel("t")
+            axs3[2].set_ylabel("|z-zd| [mm]")
+            plt.legend()
+            axs3[3].plot(
+                np.linalg.norm((plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
+                               axis=1) * 1000, 'b', label='without SAC')
+            axs3[3].plot(
+                np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2, axis=1) * 1000,
+                'r', label='with SAC')
+            axs3[3].set_xlabel("t")
+            axs3[3].set_ylabel("||r-rd||_2 [mm]")
+            # axs3[3].set_ylim([0, 10])
+            # axs3[3].set_yscale('log')
             plt.legend()
             plt.savefig(output_dir_rendering + "/position_errors.pdf", format="pdf", bbox_inches='tight')
             plt.show()
@@ -632,7 +676,6 @@ Robotic Manipulation" by Murry et al.
             plt.savefig(output_dir_rendering + "/rewards_position.pdf", format="pdf", bbox_inches='tight')
             plt.show()
 
-
             fig5, axs5 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(10, 8))
             axs5[0, 0].plot(self.plot_data_buffer[:, 21], 'b', label='commanded torque 0')
             axs5[0, 0].set_xlabel("t")
@@ -661,7 +704,7 @@ Robotic Manipulation" by Murry et al.
             plt.savefig(output_dir_rendering + "/tau.pdf", format="pdf", bbox_inches='tight')
             plt.show()
 
-        render_training_buffer = True
+        render_training_buffer = False
         if render_training_buffer == True:
             buf_act = np.load(output_dir_rendering + "/buf_act.npy")
             buf_done = np.load(output_dir_rendering + "/buf_done.npy")
