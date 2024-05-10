@@ -530,6 +530,30 @@ Robotic Manipulation" by Murry et al.
             plt.savefig(output_dir_rendering + "/position.pdf", format="pdf", bbox_inches='tight')
             plt.show()
 
+            fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(6, 8))
+            plt.rcParams['font.family'] = 'Serif'
+            axs1[0].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 4] * 1000, 'k--',
+                         label='EE desired traj')
+            axs1[0].plot(self.plot_data_buffer[:, 0] * 1000, self.plot_data_buffer[:, 1] * 1000, 'r')
+            axs1[0].plot(plot_data_buffer_no_SAC[:, 0] * 1000, plot_data_buffer_no_SAC[:, 1] * 1000, 'b')
+            axs1[0].set_xlabel("x[mm]")
+            axs1[0].set_ylabel("y[mm]")
+            axs1[1].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 5] * 1000, 'k--',
+                         label='EE desired traj')
+            axs1[1].plot(self.plot_data_buffer[:, 0] * 1000, self.plot_data_buffer[:, 2] * 1000, 'r')
+            axs1[1].plot(plot_data_buffer_no_SAC[:, 0] * 1000, plot_data_buffer_no_SAC[:, 2] * 1000, 'b')
+            axs1[1].set_xlabel("x[mm]")
+            axs1[1].set_ylabel("z[mm]")
+            axs1[2].plot(self.plot_data_buffer[:, 4] * 1000, self.plot_data_buffer[:, 5] * 1000, 'k--',
+                         label='EE desired traj')
+            axs1[2].plot(self.plot_data_buffer[:, 1] * 1000, self.plot_data_buffer[:, 2] * 1000, 'r',label='with SAC')
+            axs1[2].plot(plot_data_buffer_no_SAC[:, 1] * 1000, plot_data_buffer_no_SAC[:, 2] * 1000, 'b',label='without SAC')
+            axs1[2].set_xlabel("y[mm]")
+            axs1[2].set_ylabel("z[mm]")
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/position_both.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
+
             fig2, axs2 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
             axs2[0].plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 10], 'r--', label='EE desired traj',
                          marker=".",
@@ -582,6 +606,7 @@ Robotic Manipulation" by Murry et al.
             plt.show()
 
             fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 8))
+            plt.rcParams['font.family'] = 'Serif'
             axs3[0].plot(abs(plot_data_buffer_no_SAC[:, 0] - plot_data_buffer_no_SAC[:, 3]) * 1000, 'b',
                          label='without SAC')
             axs3[0].plot(abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, 'r', label='with SAC')
@@ -611,7 +636,7 @@ Robotic Manipulation" by Murry et al.
             # axs3[3].set_ylim([0, 10])
             # axs3[3].set_yscale('log')
             plt.legend()
-            plt.savefig(output_dir_rendering + "/position_errors.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/position_errors_both.pdf", format="pdf", bbox_inches='tight')
             plt.show()
 
             fig4, axs4 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(8, 6))
