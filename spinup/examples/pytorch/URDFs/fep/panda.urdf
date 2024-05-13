@@ -149,6 +149,7 @@
     <child link="panda_link6"/>
     <axis xyz="0 0 1"/>
     <limit effort="12" lower="-0.0873" upper="3.8223" velocity="2.6100"/>
+
   </joint>
   <link name="panda_link7">
     <visual>
