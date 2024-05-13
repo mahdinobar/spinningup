@@ -24,10 +24,29 @@ pb.setGravity(0, 0, -9.81, physicsClientId=physics_client)
 # Load URDFs
 # Load robot, target object and plane urdf
 pb.setAdditionalSearchPath(pybullet_data.getDataPath())
-arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep/panda.urdf",
+arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda.urdf",
                   useFixedBase=True)
+# arm_biased_kinematics = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics.urdf",
+#                   useFixedBase=True)
+
+
+# import os
+# import rospkg
+# import subprocess
+# rospack = rospkg.RosPack()
+# xacro_filename = os.path.join("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro")
+# urdf_filename = os.path.join("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf")
+# urdf = open(urdf_filename, "w")
+#
+# # Recompile the URDF to make sure it's up to date
+# subprocess.call(['rosrun', 'xacro', 'xacro.py', xacro_filename], stdout=urdf)
+#
+#
+# arm2 = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro",
+#                   useFixedBase=True)
 target_object = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
                             useFixedBase=True)
+pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf")
 conveyor_object = pb.loadURDF(
     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
     useFixedBase=True)
@@ -47,15 +66,15 @@ Robotic Manipulation" by Murry et al.
         np.random.seed(seed)
         self.seed(seed=seed)
         # TODO: reward params
-        self.lp = 130
+        self.lp = 160
         self.lv = 10
         self.lddqc = 1
         self.reward_eta_p = 1
         self.reward_eta_v = 0
         self.reward_eta_ddqc = 0
         # TODO: User defined linear position gain
-        self.K_p = 5
-        self.K_i = 0.5
+        self.K_p = 10
+        self.K_i = 2
         self.K_d = 0.1
         self.korque_noise_max = 0.  # TODO
         self.viewer = None
@@ -165,6 +184,8 @@ Robotic Manipulation" by Murry et al.
         # Reset robot at the origin and move the target object to the goal position and orientation
         pb.resetBasePositionAndOrientation(
             arm, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]))
+        # pb.resetBasePositionAndOrientation(
+        #     arm_biased_kinematics, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]))
         pb.resetBasePositionAndOrientation(
             target_object, rd_t, pb.getQuaternionFromEuler(
                 np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])))  # orient just for rendering
@@ -179,17 +200,24 @@ Robotic Manipulation" by Murry et al.
         q_init_noise = True
         if q_init_noise == True:
             self.q_init = np.array(
-                [-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466]) + np.random.normal(loc=0.0,
-                                                                                                                scale=0.02,
-                                                                                                                size=6)
+            [-0.44282133, -0.27180934, 0.17985816, -2.65595454, -0.16388257, 2.47417267]) + np.random.normal(loc=0.0,
+                                                                                                           scale=0.02,
+                                                                                                           size=6)
+            # self.q_init = np.array(
+            #     [-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466]) + np.random.normal(loc=0.0,
+            #                                                                                                     scale=0.02,
+            #                                                                                                     size=6)
         else:
-            self.q_init = np.array([-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466])
+            self.q_init = np.array([-0.44282133, -0.27180934, 0.17985816, -2.65595454, -0.16388257, 2.47417267])
+            # self.q_init = np.array([-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466])
         # Reset joint at initial angles
         for i in range(6):
             pb.resetJointState(arm, i, self.q_init[i])
+            # pb.resetJointState(arm_biased_kinematics, i, self.q_init[i])
         # In Pybullet, gripper halves are controlled separately+we also deactivated the 7th joint too
         for j in range(6, 10):
             pb.resetJointState(arm, j, 0)
+            # pb.resetJointState(arm_biased_kinematics, j, 0)
         # Get end effector coordinates
         LinkState = pb.getLinkState(arm, 9, computeForwardKinematics=True, computeLinkVelocity=True)
         r_hat_t = np.array(LinkState[0])
@@ -284,12 +312,13 @@ Robotic Manipulation" by Murry et al.
         r_hat_t = np.array(LinkState[0])
         v_hat_t = np.array(LinkState[6])
         # TODO check objVelocities in jacobian input
+        # Attention: use biased kinematics model for jacobian calculation
         [linearJacobian, angularJacobian] = pb.calculateJacobian(arm,
                                                                  9,
                                                                  list(LinkState[2]),
-                                                                 list(np.append(self.q[-1, :], [0, 0, 0])),
-                                                                 list(np.append(self.dq[-1, :], [0, 0, 0])),
-                                                                 list(np.zeros(9)))
+                                                                 list(np.append(self.q[-1, :], [0])),
+                                                                 list(np.append(self.dq[-1, :], [0])),
+                                                                 list(np.zeros(7)))
         J_t = np.asarray(linearJacobian)[:, :6]
         Jpinv_t = self.pseudoInverseMat(J_t, ld=0.1)  # TODO: check pseudo-inverse damping coefficient
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
@@ -308,12 +337,15 @@ Robotic Manipulation" by Murry et al.
         # default timestep is 1/240 second
         pb.stepSimulation(physicsClientId=physics_client)
         # get measured values at time tp1 denotes t+1 for q and ddq as well as applied torque at time t
-        info = pb.getJointStates(arm, range(7))
+        info = pb.getJointStates(arm, range(10))
         q_tp1, dq_tp1, tau_t = [], [], []
         for joint_info in info:
             q_tp1.append(joint_info[0])
             dq_tp1.append(joint_info[1])
             tau_t.append(joint_info[3])
+        # Attention: hard reset for biased kinematics model
+        # for i in range(10):
+        #     pb.resetJointState(arm_biased_kinematics, i, q_tp1[i])
         q_tp1 = np.array(q_tp1)[:6]
         dq_tp1 = np.array(dq_tp1)[:6]
         tau_t = np.array(tau_t)[:6]
@@ -421,6 +453,8 @@ Robotic Manipulation" by Murry et al.
     def render(self, output_dir_rendering, mode='human'):
         """ Render Pybullet simulation """
         render_video = False  # for fast debuging
+        render_test_buffer = True
+        render_training_buffer = True
         if render_video == True:
             pb.disconnect(physics_client)
             # render settings
@@ -431,11 +465,11 @@ Robotic Manipulation" by Murry et al.
             _cam_yaw = 15
             _cam_pitch = -40
             _cam_roll = 0
-            camera_target_pos = [0.2, 0, 0.1]
+            camera_target_pos = [0.2, 0, 0.]
             _screen_width = 3840  # 1920
             _screen_height = 2160  # 1080
             physics_client_rendering = pb.connect(pb.GUI,
-                                                  options='--mp4fps=5 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d' % (
+                                                  options='--mp4fps=10 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d' % (
                                                       _screen_width, _screen_height))
             dt = 1 / 10  # sec
             pb.setTimeStep(timeStep=dt, physicsClientId=physics_client_rendering)
@@ -447,8 +481,10 @@ Robotic Manipulation" by Murry et al.
             pb.setAdditionalSearchPath(pybullet_data.getDataPath())
             pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
                                  output_dir_rendering + "/simulation.mp4")  # added by Pierre
-            arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep/panda.urdf",
+            arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda.urdf",
                               useFixedBase=True)
+            # arm_biased_kinematics = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics.urdf",
+            #                   useFixedBase=True)
             target_object = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
                                         useFixedBase=True)
             conveyor_object = pb.loadURDF(
@@ -458,11 +494,17 @@ Robotic Manipulation" by Murry et al.
                                 useFixedBase=True)
             # Initialise debug camera angle
             pb.resetDebugVisualizerCamera(
-                cameraDistance=_cam_dist,
-                cameraYaw=_cam_yaw,
-                cameraPitch=_cam_pitch,
+                cameraDistance=1.2,
+                cameraYaw=5,
+                cameraPitch=-30,
                 cameraTargetPosition=camera_target_pos,
                 physicsClientId=physics_client_rendering)
+            # pb.resetDebugVisualizerCamera(
+            #     cameraDistance=_cam_dist,
+            #     cameraYaw=_cam_yaw,
+            #     cameraPitch=_cam_pitch,
+            #     cameraTargetPosition=camera_target_pos,
+            #     physicsClientId=physics_client_rendering)
             t = 0
             rd_t = np.array([self.xd[t], self.yd[t], self.zd[t]])
             vd_t = np.array([self.vxd, self.vyd, self.vzd])
@@ -470,7 +512,7 @@ Robotic Manipulation" by Murry et al.
             pb.resetBasePositionAndOrientation(
                 arm, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]))
             pb.resetBasePositionAndOrientation(
-                target_object, rd_t, pb.getQuaternionFromEuler(
+                target_object, rd_t + [0, 0, -0.07], pb.getQuaternionFromEuler(
                     np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])))  # orient just for rendering
             # set conveyer pose and orient
             pb.resetBasePositionAndOrientation(
@@ -488,7 +530,7 @@ Robotic Manipulation" by Murry et al.
             for t in range(1, self.MAX_TIMESTEPS):
                 rd_t = np.array([self.xd[t], self.yd[t], self.zd[t]])
                 pb.resetBasePositionAndOrientation(
-                    target_object, rd_t, pb.getQuaternionFromEuler(
+                    target_object, rd_t + [0, 0, -0.07], pb.getQuaternionFromEuler(
                         np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])))
                 dqc_t = self.plot_data_buffer[t, 12:18]
                 joint_velocities = list(dqc_t)
@@ -503,10 +545,9 @@ Robotic Manipulation" by Murry et al.
                 pb.stepSimulation(physicsClientId=physics_client)
                 time.sleep(0.01)
 
-        render_test_buffer = True
         if render_test_buffer == True:
-            plot_data_buffer_no_SAC = np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fepv0_15_lr0001_5000epochs_lp130_separated_pose_errors_qinitnoisy/without SAC/plot_data_buffer.npy")
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep3v0_16/plot_data_buffer.npy", self.plot_data_buffer)
+            plot_data_buffer_no_SAC = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep3v0_16/plot_data_buffer.npy")
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
             axs1[0].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 4] * 1000, 'r--',
                          label='EE desired traj')
@@ -546,8 +587,9 @@ Robotic Manipulation" by Murry et al.
             axs1[1].set_ylabel("z[mm]")
             axs1[2].plot(self.plot_data_buffer[:, 4] * 1000, self.plot_data_buffer[:, 5] * 1000, 'k--',
                          label='EE desired traj')
-            axs1[2].plot(self.plot_data_buffer[:, 1] * 1000, self.plot_data_buffer[:, 2] * 1000, 'r',label='with SAC')
-            axs1[2].plot(plot_data_buffer_no_SAC[:, 1] * 1000, plot_data_buffer_no_SAC[:, 2] * 1000, 'b',label='without SAC')
+            axs1[2].plot(self.plot_data_buffer[:, 1] * 1000, self.plot_data_buffer[:, 2] * 1000, 'r', label='with SAC')
+            axs1[2].plot(plot_data_buffer_no_SAC[:, 1] * 1000, plot_data_buffer_no_SAC[:, 2] * 1000, 'b',
+                         label='without SAC')
             axs1[2].set_xlabel("y[mm]")
             axs1[2].set_ylabel("z[mm]")
             plt.legend()
@@ -729,7 +771,6 @@ Robotic Manipulation" by Murry et al.
             plt.savefig(output_dir_rendering + "/tau.pdf", format="pdf", bbox_inches='tight')
             plt.show()
 
-        render_training_buffer = False
         if render_training_buffer == True:
             buf_act = np.load(output_dir_rendering + "/buf_act.npy")
             buf_done = np.load(output_dir_rendering + "/buf_done.npy")
