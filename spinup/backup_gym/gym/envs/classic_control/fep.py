@@ -26,6 +26,9 @@ pb.setGravity(0, 0, -9.81, physicsClientId=physics_client)
 pb.setAdditionalSearchPath(pybullet_data.getDataPath())
 arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda.urdf",
                   useFixedBase=True)
+arm_biased_kinematics = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics.urdf",
+                  useFixedBase=True)
+
 
 # import os
 # import rospkg
@@ -63,14 +66,14 @@ Robotic Manipulation" by Murry et al.
         np.random.seed(seed)
         self.seed(seed=seed)
         # TODO: reward params
-        self.lp = 200
+        self.lp = 400
         self.lv = 10
         self.lddqc = 1
         self.reward_eta_p = 1
         self.reward_eta_v = 0
         self.reward_eta_ddqc = 0
         # TODO: User defined linear position gain
-        self.K_p = 8
+        self.K_p = 6
         self.K_i = 1
         self.K_d = 0.1
         self.korque_noise_max = 0.  # TODO
@@ -182,6 +185,8 @@ Robotic Manipulation" by Murry et al.
         pb.resetBasePositionAndOrientation(
             arm, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]))
         pb.resetBasePositionAndOrientation(
+            arm_biased_kinematics, [100, 100, 100], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]))
+        pb.resetBasePositionAndOrientation(
             target_object, rd_t, pb.getQuaternionFromEuler(
                 np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])))  # orient just for rendering
         # set conveyer pose and orient
@@ -208,9 +213,11 @@ Robotic Manipulation" by Murry et al.
         # Reset joint at initial angles
         for i in range(6):
             pb.resetJointState(arm, i, self.q_init[i])
+            pb.resetJointState(arm_biased_kinematics, i, self.q_init[i])
         # In Pybullet, gripper halves are controlled separately+we also deactivated the 7th joint too
         for j in range(6, 10):
             pb.resetJointState(arm, j, 0)
+            pb.resetJointState(arm_biased_kinematics, j, 0)
         # Get end effector coordinates
         LinkState = pb.getLinkState(arm, 9, computeForwardKinematics=True, computeLinkVelocity=True)
         r_hat_t = np.array(LinkState[0])
@@ -305,7 +312,8 @@ Robotic Manipulation" by Murry et al.
         r_hat_t = np.array(LinkState[0])
         v_hat_t = np.array(LinkState[6])
         # TODO check objVelocities in jacobian input
-        [linearJacobian, angularJacobian] = pb.calculateJacobian(arm,
+        # Attention: use biased kinematics model for jacobian calculation
+        [linearJacobian, angularJacobian] = pb.calculateJacobian(arm_biased_kinematics,
                                                                  9,
                                                                  list(LinkState[2]),
                                                                  list(np.append(self.q[-1, :], [0])),
@@ -316,7 +324,7 @@ Robotic Manipulation" by Murry et al.
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
         # inject SAC action
-        dqc_t = dqc_t  + a
+        dqc_t = dqc_t + a
         # TODO check
         # command joint speeds (only 6 joints)
         pb.setJointMotorControlArray(
@@ -326,15 +334,26 @@ Robotic Manipulation" by Murry et al.
             targetVelocities=list(dqc_t),
             forces=[87, 87, 87, 87, 12, 12]
         )
+
+        # pb.setJointMotorControlArray(
+        #     arm_biased_kinematics,
+        #     [0, 1, 2, 3, 4, 5],
+        #     controlMode=pb.VELOCITY_CONTROL,
+        #     targetVelocities=list(dqc_t),
+        #     forces=[87, 87, 87, 87, 12, 12]
+        # )
         # default timestep is 1/240 second
         pb.stepSimulation(physicsClientId=physics_client)
         # get measured values at time tp1 denotes t+1 for q and ddq as well as applied torque at time t
-        info = pb.getJointStates(arm, range(7))
+        info = pb.getJointStates(arm, range(10))
         q_tp1, dq_tp1, tau_t = [], [], []
         for joint_info in info:
             q_tp1.append(joint_info[0])
             dq_tp1.append(joint_info[1])
             tau_t.append(joint_info[3])
+        # # Attention: hard reset for biased kinematics model
+        for i in range(10):
+            pb.resetJointState(arm_biased_kinematics, i, q_tp1[i])
         q_tp1 = np.array(q_tp1)[:6]
         dq_tp1 = np.array(dq_tp1)[:6]
         tau_t = np.array(tau_t)[:6]
@@ -441,7 +460,7 @@ Robotic Manipulation" by Murry et al.
 
     def render(self, output_dir_rendering, mode='human'):
         """ Render Pybullet simulation """
-        render_video = True  # for fast debuging
+        render_video = False  # for fast debuging
         render_test_buffer = True
         render_training_buffer = True
         if render_video == True:
@@ -471,6 +490,8 @@ Robotic Manipulation" by Murry et al.
             pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
                                  output_dir_rendering + "/simulation.mp4")  # added by Pierre
             arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda.urdf",
+                              useFixedBase=True)
+            arm_biased_kinematics = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics.urdf",
                               useFixedBase=True)
             target_object = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
                                         useFixedBase=True)
@@ -533,8 +554,8 @@ Robotic Manipulation" by Murry et al.
                 time.sleep(0.01)
 
         if render_test_buffer == True:
-            plot_data_buffer_no_SAC = np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fepv0_15_lr0001_5000epochs_lp130_separated_pose_errors_qinitnoisy/without SAC/plot_data_buffer.npy")
+            # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep3v0_16/plot_data_buffer.npy", self.plot_data_buffer)
+            plot_data_buffer_no_SAC = np.load("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep3v0_16/plot_data_buffer.npy")
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
             axs1[0].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 4] * 1000, 'r--',
                          label='EE desired traj')
