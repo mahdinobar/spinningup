@@ -24,10 +24,26 @@ pb.setGravity(0, 0, -9.81, physicsClientId=physics_client)
 # Load URDFs
 # Load robot, target object and plane urdf
 pb.setAdditionalSearchPath(pybullet_data.getDataPath())
-arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep/panda.urdf",
+arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda.urdf",
                   useFixedBase=True)
+
+# import os
+# import rospkg
+# import subprocess
+# rospack = rospkg.RosPack()
+# xacro_filename = os.path.join("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro")
+# urdf_filename = os.path.join("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf")
+# urdf = open(urdf_filename, "w")
+#
+# # Recompile the URDF to make sure it's up to date
+# subprocess.call(['rosrun', 'xacro', 'xacro.py', xacro_filename], stdout=urdf)
+#
+#
+# arm2 = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro",
+#                   useFixedBase=True)
 target_object = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
                             useFixedBase=True)
+pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf")
 conveyor_object = pb.loadURDF(
     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
     useFixedBase=True)
@@ -43,6 +59,7 @@ Robotic Manipulation" by Murry et al.
 
     def __init__(self):
         seed = 1
+        # reset seed(here is where seed is reset to count 0)
         np.random.seed(seed)
         self.seed(seed=seed)
         # TODO: reward params
@@ -53,8 +70,8 @@ Robotic Manipulation" by Murry et al.
         self.reward_eta_v = 0
         self.reward_eta_ddqc = 0
         # TODO: User defined linear position gain
-        self.K_p = 5
-        self.K_i = 0.5
+        self.K_p = 10
+        self.K_i = 2
         self.K_d = 0.1
         self.korque_noise_max = 0.  # TODO
         self.viewer = None
@@ -91,12 +108,12 @@ Robotic Manipulation" by Murry et al.
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
         # Attention: limits of SAC actions
-        high_a = 0.3 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
+        high_a = 0.2 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
                                  2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
         # high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
-        # output_dir_rendering = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/"
+        # output_dir_rendering = "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/"
 
     def pseudoInverseMat(self, A, ld):
         # Input: Any m-by-n matrix, and a damping factor.
@@ -147,17 +164,18 @@ Robotic Manipulation" by Murry et al.
         # self.K_d = 0.1 + np.random.normal(loc=0.0, scale=0.1, size=1)
         # at time t=0
         self.k = 0
-        noisy_target=True
-        if noisy_target==True:
-            self.vxd = 0.005+np.random.normal(loc=0.0, scale=0.001, size=1)[0]  # m/s
-            self.vyd = 0.05+np.random.normal(loc=0.0, scale=0.005, size=1)[0]  # m/s
+        noisy_target = False
+        if noisy_target == True:
+            self.vxd = 0.005 + np.random.normal(loc=0.0, scale=0.001, size=1)[0]  # m/s
+            self.vyd = 0.05 + np.random.normal(loc=0.0, scale=0.005, size=1)[0]  # m/s
             self.vzd = 0  # m/s
             deltax = self.vxd * dt * self.MAX_TIMESTEPS
             deltay = self.vyd * dt * self.MAX_TIMESTEPS
             deltaz = self.vzd * dt * self.MAX_TIMESTEPS
             self.xd = np.linspace(self.xd_init, self.xd_init + deltax, self.MAX_TIMESTEPS, endpoint=True)
             self.yd = np.linspace(self.yd_init, self.yd_init + deltay, self.MAX_TIMESTEPS, endpoint=True)
-            self.zd = np.linspace(self.zd_init, self.zd_init + deltaz, self.MAX_TIMESTEPS, endpoint=True)+np.random.normal(loc=0.0, scale=0.001, size=self.MAX_TIMESTEPS)
+            self.zd = np.linspace(self.zd_init, self.zd_init + deltaz, self.MAX_TIMESTEPS,
+                                  endpoint=True) + np.random.normal(loc=0.0, scale=0.001, size=self.MAX_TIMESTEPS)
         rd_t = np.array([self.xd[self.k], self.yd[self.k], self.zd[self.k]])
         vd_t = np.array([self.vxd, self.vyd, self.vzd])
         # Reset robot at the origin and move the target object to the goal position and orientation
@@ -174,11 +192,19 @@ Robotic Manipulation" by Murry et al.
         # np.array(
         #     pb.calculateInverseKinematics(arm, 9, list(rd_t), solver=0, residualThreshold=1e-6, maxNumIterations=1000)[
         #     0:6])
-        q_init_noise=True
-        if q_init_noise==True:
-            self.q_init = np.array([-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466])+np.random.normal(loc=0.0, scale=0.02, size=6)
+        q_init_noise = True
+        if q_init_noise == True:
+            self.q_init = np.array(
+            [-0.44282133, -0.27180934, 0.17985816, -2.65595454, -0.16388257, 2.47417267]) + np.random.normal(loc=0.0,
+                                                                                                           scale=0.02,
+                                                                                                           size=6)
+            # self.q_init = np.array(
+            #     [-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466]) + np.random.normal(loc=0.0,
+            #                                                                                                     scale=0.02,
+            #                                                                                                     size=6)
         else:
-            self.q_init = np.array([-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466])
+            self.q_init = np.array([-0.44282133, -0.27180934, 0.17985816, -2.65595454, -0.16388257, 2.47417267])
+            # self.q_init = np.array([-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466])
         # Reset joint at initial angles
         for i in range(6):
             pb.resetJointState(arm, i, self.q_init[i])
@@ -282,15 +308,15 @@ Robotic Manipulation" by Murry et al.
         [linearJacobian, angularJacobian] = pb.calculateJacobian(arm,
                                                                  9,
                                                                  list(LinkState[2]),
-                                                                 list(np.append(self.q[-1, :], [0, 0, 0])),
-                                                                 list(np.append(self.dq[-1, :], [0, 0, 0])),
-                                                                 list(np.zeros(9)))
+                                                                 list(np.append(self.q[-1, :], [0])),
+                                                                 list(np.append(self.dq[-1, :], [0])),
+                                                                 list(np.zeros(7)))
         J_t = np.asarray(linearJacobian)[:, :6]
         Jpinv_t = self.pseudoInverseMat(J_t, ld=0.1)  # TODO: check pseudo-inverse damping coefficient
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
         # inject SAC action
-        dqc_t = dqc_t + a
+        dqc_t = dqc_t  # + a
         # TODO check
         # command joint speeds (only 6 joints)
         pb.setJointMotorControlArray(
@@ -329,7 +355,7 @@ Robotic Manipulation" by Murry et al.
         reward_px_t = self.f_logistic(abs(r_hat_tp1[0] - rd_t[0]), self.lp)
         reward_py_t = self.f_logistic(abs(r_hat_tp1[1] - rd_t[1]), self.lp)
         reward_pz_t = self.f_logistic(abs(r_hat_tp1[2] - rd_t[2]), self.lp)
-        reward_p_t = (reward_px_t+reward_py_t+reward_pz_t)/3
+        reward_p_t = (reward_px_t + reward_py_t + reward_pz_t) / 3
         reward_v_t = self.f_logistic(error_v_t, self.lv)
         reward_ddqc_t = self.f_logistic(error_ddqc_t, self.lddqc)
         # reward_t = self.reward_eta_p * reward_p_t + self.reward_eta_v * reward_v_t + self.reward_eta_ddqc * reward_ddqc_t
@@ -415,7 +441,9 @@ Robotic Manipulation" by Murry et al.
 
     def render(self, output_dir_rendering, mode='human'):
         """ Render Pybullet simulation """
-        render_video = False  # for fast debuging
+        render_video = True  # for fast debuging
+        render_test_buffer = True
+        render_training_buffer = True
         if render_video == True:
             pb.disconnect(physics_client)
             # render settings
@@ -426,11 +454,11 @@ Robotic Manipulation" by Murry et al.
             _cam_yaw = 15
             _cam_pitch = -40
             _cam_roll = 0
-            camera_target_pos = [0.2, 0, 0.1]
+            camera_target_pos = [0.2, 0, 0.]
             _screen_width = 3840  # 1920
             _screen_height = 2160  # 1080
             physics_client_rendering = pb.connect(pb.GUI,
-                                                  options='--mp4fps=5 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d' % (
+                                                  options='--mp4fps=10 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d' % (
                                                       _screen_width, _screen_height))
             dt = 1 / 10  # sec
             pb.setTimeStep(timeStep=dt, physicsClientId=physics_client_rendering)
@@ -442,7 +470,7 @@ Robotic Manipulation" by Murry et al.
             pb.setAdditionalSearchPath(pybullet_data.getDataPath())
             pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
                                  output_dir_rendering + "/simulation.mp4")  # added by Pierre
-            arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep/panda.urdf",
+            arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda.urdf",
                               useFixedBase=True)
             target_object = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
                                         useFixedBase=True)
@@ -453,11 +481,17 @@ Robotic Manipulation" by Murry et al.
                                 useFixedBase=True)
             # Initialise debug camera angle
             pb.resetDebugVisualizerCamera(
-                cameraDistance=_cam_dist,
-                cameraYaw=_cam_yaw,
-                cameraPitch=_cam_pitch,
+                cameraDistance=1.2,
+                cameraYaw=5,
+                cameraPitch=-30,
                 cameraTargetPosition=camera_target_pos,
                 physicsClientId=physics_client_rendering)
+            # pb.resetDebugVisualizerCamera(
+            #     cameraDistance=_cam_dist,
+            #     cameraYaw=_cam_yaw,
+            #     cameraPitch=_cam_pitch,
+            #     cameraTargetPosition=camera_target_pos,
+            #     physicsClientId=physics_client_rendering)
             t = 0
             rd_t = np.array([self.xd[t], self.yd[t], self.zd[t]])
             vd_t = np.array([self.vxd, self.vyd, self.vzd])
@@ -465,7 +499,7 @@ Robotic Manipulation" by Murry et al.
             pb.resetBasePositionAndOrientation(
                 arm, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]))
             pb.resetBasePositionAndOrientation(
-                target_object, rd_t, pb.getQuaternionFromEuler(
+                target_object, rd_t + [0, 0, -0.07], pb.getQuaternionFromEuler(
                     np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])))  # orient just for rendering
             # set conveyer pose and orient
             pb.resetBasePositionAndOrientation(
@@ -483,7 +517,7 @@ Robotic Manipulation" by Murry et al.
             for t in range(1, self.MAX_TIMESTEPS):
                 rd_t = np.array([self.xd[t], self.yd[t], self.zd[t]])
                 pb.resetBasePositionAndOrientation(
-                    target_object, rd_t, pb.getQuaternionFromEuler(
+                    target_object, rd_t + [0, 0, -0.07], pb.getQuaternionFromEuler(
                         np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])))
                 dqc_t = self.plot_data_buffer[t, 12:18]
                 joint_velocities = list(dqc_t)
@@ -498,26 +532,55 @@ Robotic Manipulation" by Murry et al.
                 pb.stepSimulation(physicsClientId=physics_client)
                 time.sleep(0.01)
 
-        render_test_buffer = True
         if render_test_buffer == True:
+            plot_data_buffer_no_SAC = np.load(
+                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fepv0_15_lr0001_5000epochs_lp130_separated_pose_errors_qinitnoisy/without SAC/plot_data_buffer.npy")
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
-            axs1[0].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 4], 'r--', label='EE desired traj')
-            axs1[0].plot(self.plot_data_buffer[:, 0], self.plot_data_buffer[:, 1], 'k',
+            axs1[0].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 4] * 1000, 'r--',
+                         label='EE desired traj')
+            axs1[0].plot(self.plot_data_buffer[:, 0] * 1000, self.plot_data_buffer[:, 1] * 1000, 'k',
                          label='EE position - PID only controller')
-            axs1[0].set_xlabel("x")
-            axs1[0].set_ylabel("y")
-            axs1[1].plot(self.plot_data_buffer[:, 3], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
-            axs1[1].plot(self.plot_data_buffer[:, 0], self.plot_data_buffer[:, 2], 'k',
+            axs1[0].set_xlabel("x[mm]")
+            axs1[0].set_ylabel("y[mm]")
+            axs1[1].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 5] * 1000, 'r--',
+                         label='EE desired traj')
+            axs1[1].plot(self.plot_data_buffer[:, 0] * 1000, self.plot_data_buffer[:, 2] * 1000, 'k',
                          label='EE position - PID only controller')
-            axs1[1].set_xlabel("x")
-            axs1[1].set_ylabel("z")
-            axs1[2].plot(self.plot_data_buffer[:, 4], self.plot_data_buffer[:, 5], 'r--', label='EE desired traj')
-            axs1[2].plot(self.plot_data_buffer[:, 1], self.plot_data_buffer[:, 2], 'k',
+            axs1[1].set_xlabel("x[mm]")
+            axs1[1].set_ylabel("z[mm]")
+            axs1[2].plot(self.plot_data_buffer[:, 4] * 1000, self.plot_data_buffer[:, 5] * 1000, 'r--',
+                         label='EE desired traj')
+            axs1[2].plot(self.plot_data_buffer[:, 1] * 1000, self.plot_data_buffer[:, 2] * 1000, 'k',
                          label='EE position - PID only controller')
-            axs1[2].set_xlabel("y")
-            axs1[2].set_ylabel("z")
+            axs1[2].set_xlabel("y[mm]")
+            axs1[2].set_ylabel("z[mm]")
             plt.legend()
             plt.savefig(output_dir_rendering + "/position.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
+
+            fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(6, 8))
+            plt.rcParams['font.family'] = 'Serif'
+            axs1[0].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 4] * 1000, 'k--',
+                         label='EE desired traj')
+            axs1[0].plot(self.plot_data_buffer[:, 0] * 1000, self.plot_data_buffer[:, 1] * 1000, 'r')
+            axs1[0].plot(plot_data_buffer_no_SAC[:, 0] * 1000, plot_data_buffer_no_SAC[:, 1] * 1000, 'b')
+            axs1[0].set_xlabel("x[mm]")
+            axs1[0].set_ylabel("y[mm]")
+            axs1[1].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 5] * 1000, 'k--',
+                         label='EE desired traj')
+            axs1[1].plot(self.plot_data_buffer[:, 0] * 1000, self.plot_data_buffer[:, 2] * 1000, 'r')
+            axs1[1].plot(plot_data_buffer_no_SAC[:, 0] * 1000, plot_data_buffer_no_SAC[:, 2] * 1000, 'b')
+            axs1[1].set_xlabel("x[mm]")
+            axs1[1].set_ylabel("z[mm]")
+            axs1[2].plot(self.plot_data_buffer[:, 4] * 1000, self.plot_data_buffer[:, 5] * 1000, 'k--',
+                         label='EE desired traj')
+            axs1[2].plot(self.plot_data_buffer[:, 1] * 1000, self.plot_data_buffer[:, 2] * 1000, 'r', label='with SAC')
+            axs1[2].plot(plot_data_buffer_no_SAC[:, 1] * 1000, plot_data_buffer_no_SAC[:, 2] * 1000, 'b',
+                         label='without SAC')
+            axs1[2].set_xlabel("y[mm]")
+            axs1[2].set_ylabel("z[mm]")
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/position_both.pdf", format="pdf", bbox_inches='tight')
             plt.show()
 
             fig2, axs2 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
@@ -565,8 +628,44 @@ Robotic Manipulation" by Murry et al.
                 label='Euclidean error')
             axs3[3].set_xlabel("t")
             axs3[3].set_ylabel("||r-rd||_2 [mm]")
+            # axs3[3].set_ylim([0, 10])
+            # axs3[3].set_yscale('log')
             plt.legend()
             plt.savefig(output_dir_rendering + "/position_errors.pdf", format="pdf", bbox_inches='tight')
+            plt.show()
+
+            fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 8))
+            plt.rcParams['font.family'] = 'Serif'
+            axs3[0].plot(abs(plot_data_buffer_no_SAC[:, 0] - plot_data_buffer_no_SAC[:, 3]) * 1000, 'b',
+                         label='without SAC')
+            axs3[0].plot(abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, 'r', label='with SAC')
+            axs3[0].set_xlabel("t")
+            axs3[0].set_ylabel("|x-xd| [mm]")
+            plt.legend()
+            axs3[1].plot(abs(plot_data_buffer_no_SAC[:, 1] - plot_data_buffer_no_SAC[:, 4]) * 1000, 'b',
+                         label='without SAC')
+            axs3[1].plot(abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, 'r', label='with SAC')
+            axs3[1].set_xlabel("t")
+            axs3[1].set_ylabel("|y-yd| [mm]")
+            plt.legend()
+            axs3[2].plot(abs(plot_data_buffer_no_SAC[:, 2] - plot_data_buffer_no_SAC[:, 5]) * 1000, 'b',
+                         label='without SAC')
+            axs3[2].plot(abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, 'r', label='with SAC')
+            axs3[2].set_xlabel("t")
+            axs3[2].set_ylabel("|z-zd| [mm]")
+            plt.legend()
+            axs3[3].plot(
+                np.linalg.norm((plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
+                               axis=1) * 1000, 'b', label='without SAC')
+            axs3[3].plot(
+                np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2, axis=1) * 1000,
+                'r', label='with SAC')
+            axs3[3].set_xlabel("t")
+            axs3[3].set_ylabel("||r-rd||_2 [mm]")
+            # axs3[3].set_ylim([0, 10])
+            # axs3[3].set_yscale('log')
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/position_errors_both.pdf", format="pdf", bbox_inches='tight')
             plt.show()
 
             fig4, axs4 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(8, 6))
@@ -631,7 +730,6 @@ Robotic Manipulation" by Murry et al.
             plt.savefig(output_dir_rendering + "/rewards_position.pdf", format="pdf", bbox_inches='tight')
             plt.show()
 
-
             fig5, axs5 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(10, 8))
             axs5[0, 0].plot(self.plot_data_buffer[:, 21], 'b', label='commanded torque 0')
             axs5[0, 0].set_xlabel("t")
@@ -660,7 +758,6 @@ Robotic Manipulation" by Murry et al.
             plt.savefig(output_dir_rendering + "/tau.pdf", format="pdf", bbox_inches='tight')
             plt.show()
 
-        render_training_buffer = True
         if render_training_buffer == True:
             buf_act = np.load(output_dir_rendering + "/buf_act.npy")
             buf_done = np.load(output_dir_rendering + "/buf_done.npy")
