@@ -46,7 +46,7 @@ Robotic Manipulation" by Murry et al.
         np.random.seed(seed)
         self.seed(seed=seed)
         # TODO: reward params
-        self.lp = 130
+        self.lp = 160
         self.lv = 10
         self.lddqc = 1
         self.reward_eta_p = 1
@@ -91,7 +91,7 @@ Robotic Manipulation" by Murry et al.
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
         # Attention: limits of SAC actions
-        high_a = 0.2 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
+        high_a = 0.3 * np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100,
                                  2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
         # high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
@@ -147,7 +147,7 @@ Robotic Manipulation" by Murry et al.
         # self.K_d = 0.1 + np.random.normal(loc=0.0, scale=0.1, size=1)
         # at time t=0
         self.k = 0
-        noisy_target=False
+        noisy_target=True
         if noisy_target==True:
             self.vxd = 0.005+np.random.normal(loc=0.0, scale=0.001, size=1)[0]  # m/s
             self.vyd = 0.05+np.random.normal(loc=0.0, scale=0.005, size=1)[0]  # m/s
