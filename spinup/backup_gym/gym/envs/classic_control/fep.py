@@ -66,15 +66,15 @@ Robotic Manipulation" by Murry et al.
         np.random.seed(seed)
         self.seed(seed=seed)
         # TODO: reward params
-        self.lp = 160
+        self.lp = 400
         self.lv = 10
         self.lddqc = 1
         self.reward_eta_p = 1
         self.reward_eta_v = 0
         self.reward_eta_ddqc = 0
         # TODO: User defined linear position gain
-        self.K_p = 10
-        self.K_i = 2
+        self.K_p = 6
+        self.K_i = 1
         self.K_d = 0.1
         self.korque_noise_max = 0.  # TODO
         self.viewer = None
@@ -185,7 +185,7 @@ Robotic Manipulation" by Murry et al.
         pb.resetBasePositionAndOrientation(
             arm, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]))
         # pb.resetBasePositionAndOrientation(
-        #     arm_biased_kinematics, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]))
+        #     arm_biased_kinematics, [100, 100, 100], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]))
         pb.resetBasePositionAndOrientation(
             target_object, rd_t, pb.getQuaternionFromEuler(
                 np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])))  # orient just for rendering
@@ -324,7 +324,7 @@ Robotic Manipulation" by Murry et al.
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
         # inject SAC action
-        dqc_t = dqc_t + a
+        dqc_t = dqc_t #+ a
         # TODO check
         # command joint speeds (only 6 joints)
         pb.setJointMotorControlArray(
@@ -334,6 +334,14 @@ Robotic Manipulation" by Murry et al.
             targetVelocities=list(dqc_t),
             forces=[87, 87, 87, 87, 12, 12]
         )
+
+        # pb.setJointMotorControlArray(
+        #     arm_biased_kinematics,
+        #     [0, 1, 2, 3, 4, 5],
+        #     controlMode=pb.VELOCITY_CONTROL,
+        #     targetVelocities=list(dqc_t),
+        #     forces=[87, 87, 87, 87, 12, 12]
+        # )
         # default timestep is 1/240 second
         pb.stepSimulation(physicsClientId=physics_client)
         # get measured values at time tp1 denotes t+1 for q and ddq as well as applied torque at time t
@@ -343,7 +351,7 @@ Robotic Manipulation" by Murry et al.
             q_tp1.append(joint_info[0])
             dq_tp1.append(joint_info[1])
             tau_t.append(joint_info[3])
-        # Attention: hard reset for biased kinematics model
+        # # Attention: hard reset for biased kinematics model
         # for i in range(10):
         #     pb.resetJointState(arm_biased_kinematics, i, q_tp1[i])
         q_tp1 = np.array(q_tp1)[:6]
