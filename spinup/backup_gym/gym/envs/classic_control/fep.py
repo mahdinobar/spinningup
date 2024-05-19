@@ -26,9 +26,9 @@ pb.setGravity(0, 0, -9.81, physicsClientId=physics_client)
 pb.setAdditionalSearchPath(pybullet_data.getDataPath())
 arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda.urdf",
                   useFixedBase=True)
-# arm_biased_kinematics = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics.urdf",
-#                   useFixedBase=True)
-
+arm_biased_kinematics = pb.loadURDF(
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics.urdf",
+    useFixedBase=True)
 
 # import os
 # import rospkg
@@ -62,6 +62,7 @@ Robotic Manipulation" by Murry et al.
 
     def __init__(self):
         seed = 1
+        self.n = 0
         # reset seed(here is where seed is reset to count 0)
         np.random.seed(seed)
         self.seed(seed=seed)
@@ -166,11 +167,12 @@ Robotic Manipulation" by Murry et al.
         # self.K_i = 0.5 + np.random.normal(loc=0.0, scale=0.5, size=1)
         # self.K_d = 0.1 + np.random.normal(loc=0.0, scale=0.1, size=1)
         # at time t=0
+        self.n += 1
         self.k = 0
-        noisy_target = False
+        noisy_target = True
         if noisy_target == True:
-            self.vxd = 0.005 + np.random.normal(loc=0.0, scale=0.001, size=1)[0]  # m/s
-            self.vyd = 0.05 + np.random.normal(loc=0.0, scale=0.005, size=1)[0]  # m/s
+            self.vxd = 0.005 + np.random.normal(loc=0.0, scale=0.0010, size=1)[0]  # m/s
+            self.vyd = 0.05 + np.random.normal(loc=0.0, scale=0.010, size=1)[0]  # m/s
             self.vzd = 0  # m/s
             deltax = self.vxd * dt * self.MAX_TIMESTEPS
             deltay = self.vyd * dt * self.MAX_TIMESTEPS
@@ -178,14 +180,14 @@ Robotic Manipulation" by Murry et al.
             self.xd = np.linspace(self.xd_init, self.xd_init + deltax, self.MAX_TIMESTEPS, endpoint=True)
             self.yd = np.linspace(self.yd_init, self.yd_init + deltay, self.MAX_TIMESTEPS, endpoint=True)
             self.zd = np.linspace(self.zd_init, self.zd_init + deltaz, self.MAX_TIMESTEPS,
-                                  endpoint=True) + np.random.normal(loc=0.0, scale=0.001, size=self.MAX_TIMESTEPS)
+                                  endpoint=True)  + np.random.normal(loc=0.0, scale=0.001, size=self.MAX_TIMESTEPS)
         rd_t = np.array([self.xd[self.k], self.yd[self.k], self.zd[self.k]])
         vd_t = np.array([self.vxd, self.vyd, self.vzd])
         # Reset robot at the origin and move the target object to the goal position and orientation
         pb.resetBasePositionAndOrientation(
             arm, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]))
-        # pb.resetBasePositionAndOrientation(
-        #     arm_biased_kinematics, [100, 100, 100], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]))
+        pb.resetBasePositionAndOrientation(
+            arm_biased_kinematics, [100, 100, 100], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]))
         pb.resetBasePositionAndOrientation(
             target_object, rd_t, pb.getQuaternionFromEuler(
                 np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])))  # orient just for rendering
@@ -200,9 +202,10 @@ Robotic Manipulation" by Murry et al.
         q_init_noise = True
         if q_init_noise == True:
             self.q_init = np.array(
-            [-0.44282133, -0.27180934, 0.17985816, -2.65595454, -0.16388257, 2.47417267]) + np.random.normal(loc=0.0,
-                                                                                                           scale=0.02,
-                                                                                                           size=6)
+                [-0.44282133, -0.27180934, 0.17985816, -2.65595454, -0.16388257, 2.47417267]) + np.random.normal(
+                loc=0.0,
+                scale=0.02,
+                size=6)
             # self.q_init = np.array(
             #     [-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466]) + np.random.normal(loc=0.0,
             #                                                                                                     scale=0.02,
@@ -213,11 +216,11 @@ Robotic Manipulation" by Murry et al.
         # Reset joint at initial angles
         for i in range(6):
             pb.resetJointState(arm, i, self.q_init[i])
-            # pb.resetJointState(arm_biased_kinematics, i, self.q_init[i])
+            pb.resetJointState(arm_biased_kinematics, i, self.q_init[i])
         # In Pybullet, gripper halves are controlled separately+we also deactivated the 7th joint too
         for j in range(6, 10):
             pb.resetJointState(arm, j, 0)
-            # pb.resetJointState(arm_biased_kinematics, j, 0)
+            pb.resetJointState(arm_biased_kinematics, j, 0)
         # Get end effector coordinates
         LinkState = pb.getLinkState(arm, 9, computeForwardKinematics=True, computeLinkVelocity=True)
         r_hat_t = np.array(LinkState[0])
@@ -313,18 +316,50 @@ Robotic Manipulation" by Murry et al.
         v_hat_t = np.array(LinkState[6])
         # TODO check objVelocities in jacobian input
         # Attention: use biased kinematics model for jacobian calculation
-        [linearJacobian, angularJacobian] = pb.calculateJacobian(arm,
+        [linearJacobian, angularJacobian] = pb.calculateJacobian(arm_biased_kinematics,
+                                                                 9,
+                                                                 list(LinkState[2]),
+                                                                 list(np.append(self.q[-1, :], [0])),
+                                                                 list(np.append(self.dq[-1, :], [0])),
+                                                                 list(np.zeros(7)))
+        [linearJacobian_TRUE, angularJacobian_TRUE] = pb.calculateJacobian(arm,
                                                                  9,
                                                                  list(LinkState[2]),
                                                                  list(np.append(self.q[-1, :], [0])),
                                                                  list(np.append(self.dq[-1, :], [0])),
                                                                  list(np.zeros(7)))
         J_t = np.asarray(linearJacobian)[:, :6]
-        Jpinv_t = self.pseudoInverseMat(J_t, ld=0.1)  # TODO: check pseudo-inverse damping coefficient
+        Jpinv_t = self.pseudoInverseMat(J_t, ld=0.1)
+
+
+        J_t_TRUE = np.asarray(linearJacobian_TRUE)[:, :6]
+        Jpinv_t_TRUE = self.pseudoInverseMat(J_t_TRUE, ld=0.1)
+        # U, S, Vh = np.linalg.svd(Jpinv_t, full_matrices=True)
+        # v1=np.linalg.svd(J_t, full_matrices=True)[2][0,:]
+        # v1_TRUE = np.linalg.svd(J_t_TRUE, full_matrices=True)[2][0, :]
+        # A=np.multiply(v1_TRUE.reshape(1,6), v1.reshape(6,1))
+        # # I = np.multiply(v1_TRUE.reshape(1, 6), v1_TRUE.reshape(6, 1))
+        # sings=np.linalg.svd(A, full_matrices=True)[1]
+        # print("sings=", sings,"\n")
+        # u1_TRUE=np.linalg.svd(J_t_TRUE, full_matrices=True)[0][:, 0]
+        # u1 = np.linalg.svd(J_t, full_matrices=True)[0][:, 0]
+        # A_u = np.multiply(u1_TRUE.reshape(1, 3), u1.reshape(3, 1))
+        # sings_u = np.linalg.svd(A_u, full_matrices=True)[1]
+        # print("sings_u=", sings_u,"\n")
+        v13=np.linalg.svd(J_t, full_matrices=True)[2][0:3,:]
+        v13_TRUE = np.linalg.svd(J_t_TRUE, full_matrices=True)[2][0:3, :]
+        # C = np.matmul(v13_TRUE.T, v13)
+        # D = np.matmul(v13_TRUE.T, v13_TRUE)
+        div_metric=np.linalg.svd(np.matmul(v13_TRUE, v13.T))
+        check_metric=np.linalg.svd(np.matmul(v13_TRUE, v13_TRUE.T))
+        check_metric_2=np.linalg.svd(np.matmul(v13, v13.T))
+        print("div_metric[1]=", div_metric[1],"\n")
+
+
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
         # inject SAC action
-        dqc_t = dqc_t #+ a
+        dqc_t = dqc_t + a
         # TODO check
         # command joint speeds (only 6 joints)
         pb.setJointMotorControlArray(
@@ -352,8 +387,8 @@ Robotic Manipulation" by Murry et al.
             dq_tp1.append(joint_info[1])
             tau_t.append(joint_info[3])
         # # Attention: hard reset for biased kinematics model
-        # for i in range(10):
-        #     pb.resetJointState(arm_biased_kinematics, i, q_tp1[i])
+        for i in range(10):
+            pb.resetJointState(arm_biased_kinematics, i, q_tp1[i])
         q_tp1 = np.array(q_tp1)[:6]
         dq_tp1 = np.array(dq_tp1)[:6]
         tau_t = np.array(tau_t)[:6]
@@ -462,7 +497,7 @@ Robotic Manipulation" by Murry et al.
         """ Render Pybullet simulation """
         render_video = False  # for fast debuging
         render_test_buffer = True
-        render_training_buffer = True
+        render_training_buffer = False
         if render_video == True:
             pb.disconnect(physics_client)
             # render settings
@@ -471,7 +506,7 @@ Robotic Manipulation" by Murry et al.
             _height = 224
             _cam_dist = 1.3
             _cam_yaw = 15
-            _cam_pitch = -40
+            _cam_pitch = -30
             _cam_roll = 0
             camera_target_pos = [0.2, 0, 0.]
             _screen_width = 3840  # 1920
@@ -491,8 +526,9 @@ Robotic Manipulation" by Murry et al.
                                  output_dir_rendering + "/simulation.mp4")  # added by Pierre
             arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda.urdf",
                               useFixedBase=True)
-            # arm_biased_kinematics = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics.urdf",
-            #                   useFixedBase=True)
+            # arm_biased_kinematics = pb.loadURDF(
+            #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics.urdf",
+            #     useFixedBase=True)
             target_object = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
                                         useFixedBase=True)
             conveyor_object = pb.loadURDF(
@@ -552,10 +588,15 @@ Robotic Manipulation" by Murry et al.
                 # default timestep is 1/240 second
                 pb.stepSimulation(physicsClientId=physics_client)
                 time.sleep(0.01)
-
+        # np.save(
+        #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_" + str(
+        #         self.n) + ".npy", self.plot_data_buffer)
+        # render_test_buffer=False
         if render_test_buffer == True:
-            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep3v0_16/plot_data_buffer.npy", self.plot_data_buffer)
-            plot_data_buffer_no_SAC = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep3v0_16/plot_data_buffer.npy")
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
+            plot_data_buffer_no_SAC = np.load(
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_" + str(
+                            self.n) + ".npy")
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
             axs1[0].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 4] * 1000, 'r--',
                          label='EE desired traj')
@@ -576,10 +617,10 @@ Robotic Manipulation" by Murry et al.
             axs1[2].set_xlabel("y[mm]")
             axs1[2].set_ylabel("z[mm]")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/position.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/position_" + str(self.n) + ".pdf", format="pdf", bbox_inches='tight')
             plt.show()
 
-            fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(6, 8))
+            fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(8, 12))
             plt.rcParams['font.family'] = 'Serif'
             axs1[0].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 4] * 1000, 'k--',
                          label='EE desired traj')
@@ -601,7 +642,8 @@ Robotic Manipulation" by Murry et al.
             axs1[2].set_xlabel("y[mm]")
             axs1[2].set_ylabel("z[mm]")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/position_both.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/position_both_" + str(self.n) + ".pdf", format="pdf",
+                        bbox_inches='tight')
             plt.show()
 
             fig2, axs2 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
@@ -627,7 +669,7 @@ Robotic Manipulation" by Murry et al.
             axs2[2].set_xlabel("vy")
             axs2[2].set_ylabel("vz")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/velocity.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/velocity_" + str(self.n) + ".pdf", format="pdf", bbox_inches='tight')
             plt.show()
 
             fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 8))
@@ -652,10 +694,11 @@ Robotic Manipulation" by Murry et al.
             # axs3[3].set_ylim([0, 10])
             # axs3[3].set_yscale('log')
             plt.legend()
-            plt.savefig(output_dir_rendering + "/position_errors.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/position_errors_" + str(self.n) + ".pdf", format="pdf",
+                        bbox_inches='tight')
             plt.show()
 
-            fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 8))
+            fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(8, 12))
             plt.rcParams['font.family'] = 'Serif'
             axs3[0].plot(abs(plot_data_buffer_no_SAC[:, 0] - plot_data_buffer_no_SAC[:, 3]) * 1000, 'b',
                          label='without SAC')
@@ -686,7 +729,8 @@ Robotic Manipulation" by Murry et al.
             # axs3[3].set_ylim([0, 10])
             # axs3[3].set_yscale('log')
             plt.legend()
-            plt.savefig(output_dir_rendering + "/position_errors_both.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/position_errors_both_" + str(self.n) + ".pdf", format="pdf",
+                        bbox_inches='tight')
             plt.show()
 
             fig4, axs4 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(8, 6))
@@ -714,7 +758,7 @@ Robotic Manipulation" by Murry et al.
             axs4[2, 1].set_xlabel("t")
             axs4[2, 1].set_ylabel("dqc_5")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/dqc.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/dqc_" + str(self.n) + ".pdf", format="pdf", bbox_inches='tight')
             plt.show()
 
             fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
@@ -731,7 +775,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("eta3*ddqc")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/rewards.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/rewards_" + str(self.n) + ".pdf", format="pdf", bbox_inches='tight')
             plt.show()
 
             fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(5, 10))
@@ -748,10 +792,11 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("reward_pz_t")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/rewards_position.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/rewards_position_" + str(self.n) + ".pdf", format="pdf",
+                        bbox_inches='tight')
             plt.show()
 
-            fig5, axs5 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(10, 8))
+            fig5, axs5 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(10, 12))
             axs5[0, 0].plot(self.plot_data_buffer[:, 21], 'b', label='commanded torque 0')
             axs5[0, 0].set_xlabel("t")
             axs5[0, 0].set_ylabel("tau_0")
@@ -776,7 +821,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2, 1].set_xlabel("t")
             axs5[2, 1].set_ylabel("tau_5")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/tau.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/tau_" + str(self.n) + ".pdf", format="pdf", bbox_inches='tight')
             plt.show()
 
         if render_training_buffer == True:
