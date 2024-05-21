@@ -320,7 +320,7 @@ Robotic Manipulation" by Murry et al.
                                                                  list(np.append(self.dq[-1, :], [0])),
                                                                  list(np.zeros(7)))
         J_t = np.asarray(linearJacobian)[:, :6]
-        Jpinv_t = self.pseudoInverseMat(J_t, ld=0.1)  # TODO: check pseudo-inverse damping coefficient
+        Jpinv_t = self.pseudoInverseMat(J_t, ld=0.01)  # TODO: check pseudo-inverse damping coefficient
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
         # inject SAC action
