@@ -10,4 +10,5 @@ data/
 .DS_Store
 _build/
 spinup/examples/pytorch/logs/
-spinup/examples/pytorch/spinup/examples/pytorch/logs/
+spinup/examples/pytorch/logs
+.gitattributes
