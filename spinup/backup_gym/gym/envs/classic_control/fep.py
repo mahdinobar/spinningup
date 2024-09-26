@@ -354,8 +354,6 @@ Robotic Manipulation" by Murry et al.
         check_metric=np.linalg.svd(np.matmul(v13_TRUE, v13_TRUE.T))
         check_metric_2=np.linalg.svd(np.matmul(v13, v13.T))
         print("div_metric[1]=", div_metric[1],"\n")
-
-
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
         # inject SAC action
@@ -381,11 +379,13 @@ Robotic Manipulation" by Murry et al.
         pb.stepSimulation(physicsClientId=physics_client)
         # get measured values at time tp1 denotes t+1 for q and ddq as well as applied torque at time t
         info = pb.getJointStates(arm, range(10))
+
         q_tp1, dq_tp1, tau_t = [], [], []
         for joint_info in info:
             q_tp1.append(joint_info[0])
             dq_tp1.append(joint_info[1])
             tau_t.append(joint_info[3])
+
         # # Attention: hard reset for biased kinematics model
         for i in range(10):
             pb.resetJointState(arm_biased_kinematics, i, q_tp1[i])
@@ -823,7 +823,6 @@ Robotic Manipulation" by Murry et al.
             plt.legend()
             plt.savefig(output_dir_rendering + "/tau_" + str(self.n) + ".pdf", format="pdf", bbox_inches='tight')
             plt.show()
-
         if render_training_buffer == True:
             buf_act = np.load(output_dir_rendering + "/buf_act.npy")
             buf_done = np.load(output_dir_rendering + "/buf_done.npy")

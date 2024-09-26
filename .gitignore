@@ -9,6 +9,6 @@ data/
 .vscode/
 .DS_Store
 _build/
-spinup/examples/pytorch/logs/
 spinup/examples/pytorch/logs
 .gitattributes
+refs/remotes/origin/master
