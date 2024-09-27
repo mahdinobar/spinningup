@@ -16,7 +16,8 @@ __author__ = "Mahdi Nobar from ETH Zurich <mnobar@ethz.ch>"
 
 physics_client = pb.connect(pb.DIRECT)
 # Connect to physics client
-dt = 1 / 10  # sec
+# TDOO ATTENTION how you choose dt
+dt = 100e-3 # sec
 pb.setTimeStep(timeStep=dt, physicsClientId=physics_client)
 # physics_client = p.connect(p.GUI,options="--mp4fps=3 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d" % (screen_width, screen_height))
 # # Set gravity
@@ -74,9 +75,9 @@ Robotic Manipulation" by Murry et al.
         self.reward_eta_v = 0
         self.reward_eta_ddqc = 0
         # TODO: User defined linear position gain
-        self.K_p = 6
-        self.K_i = 1
-        self.K_d = 0.1
+        self.K_p = 10
+        self.K_i = 10
+        self.K_d = 0
         self.korque_noise_max = 0.  # TODO
         self.viewer = None
         self.state = None
@@ -86,14 +87,15 @@ Robotic Manipulation" by Murry et al.
         # self.yd_init = -0.07530
         # self.zd_init = 0.17432
         # Attention: update init locations to alway match with q_init
-        self.xd_init = 0.45039319
-        self.yd_init = -0.09860044
-        self.zd_init = 0.17521834
+        self.xd_init = 534e-3
+        self.yd_init = -246.5e-3
+        self.zd_init = 154.2e-3
         # TODO correct q_init
         # self.q_init = np.deg2rad(np.array([-23.1218, 3.6854, 13.0462, -148.512, -8.7462, 150.2532]))
-        self.MAX_TIMESTEPS = 100  # maximum timesteps per episode
-        self.vxd = 0.005  # m/s
-        self.vyd = 0.05  # m/s
+        # TDOO ATTENTION how you choose MAX_TIMESTEPS
+        self.MAX_TIMESTEPS = 136  # maximum timesteps per episode
+        self.vxd = 0  # m/s
+        self.vyd = 34.9028e-3  # m/s
         self.vzd = 0  # m/s
         deltax = self.vxd * dt * self.MAX_TIMESTEPS
         deltay = self.vyd * dt * self.MAX_TIMESTEPS
@@ -169,10 +171,11 @@ Robotic Manipulation" by Murry et al.
         # at time t=0
         self.n += 1
         self.k = 0
-        noisy_target = True
+        # TODO pay attention
+        noisy_target = False
         if noisy_target == True:
-            self.vxd = 0.005 + np.random.normal(loc=0.0, scale=0.0010, size=1)[0]  # m/s
-            self.vyd = 0.05 + np.random.normal(loc=0.0, scale=0.010, size=1)[0]  # m/s
+            self.vxd = 0 + np.random.normal(loc=0.0, scale=0.0010, size=1)[0]  # m/s
+            self.vyd = 34.9028e-3 + np.random.normal(loc=0.0, scale=0.010, size=1)[0]  # m/s
             self.vzd = 0  # m/s
             deltax = self.vxd * dt * self.MAX_TIMESTEPS
             deltay = self.vyd * dt * self.MAX_TIMESTEPS
@@ -201,17 +204,24 @@ Robotic Manipulation" by Murry et al.
         #     0:6])
         q_init_noise = True
         if q_init_noise == True:
+            # we add random normal noise with std of 0.5 degrees and zero mean on all 6 joints
             self.q_init = np.array(
-                [-0.44282133, -0.27180934, 0.17985816, -2.65595454, -0.16388257, 2.47417267]) + np.random.normal(
+                [-0.38198187, 1.32720032, -0.17534288, -0.3604967, -0.16008594, 0.4936846]) + np.random.normal(
                 loc=0.0,
-                scale=0.02,
+                scale=0.0087266,
                 size=6)
+            # self.q_init = np.array(
+            #     [-0.44282133, -0.27180934, 0.17985816, -2.65595454, -0.16388257, 2.47417267]) + np.random.normal(
+            #     loc=0.0,
+            #     scale=0.02,
+            #     size=6)
             # self.q_init = np.array(
             #     [-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466]) + np.random.normal(loc=0.0,
             #                                                                                                     scale=0.02,
             #                                                                                                     size=6)
         else:
-            self.q_init = np.array([-0.44282133, -0.27180934, 0.17985816, -2.65595454, -0.16388257, 2.47417267])
+            self.q_init = np.array([-0.38198187, 1.32720032, -0.17534288, -0.3604967, -0.16008594, 0.4936846])
+            # self.q_init = np.array([-0.44282133, -0.27180934, 0.17985816, -2.65595454, -0.16388257, 2.47417267])
             # self.q_init = np.array([-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466])
         # Reset joint at initial angles
         for i in range(6):
@@ -334,7 +344,6 @@ Robotic Manipulation" by Murry et al.
         J_t = np.asarray(linearJacobian)[:, :6]
         Jpinv_t = self.pseudoInverseMat(J_t, ld=0.1)
 
-
         J_t_TRUE = np.asarray(linearJacobian_TRUE)[:, :6]
         Jpinv_t_TRUE = self.pseudoInverseMat(J_t_TRUE, ld=0.1)
         # U, S, Vh = np.linalg.svd(Jpinv_t, full_matrices=True)
@@ -351,21 +360,20 @@ Robotic Manipulation" by Murry et al.
         # A_u = np.multiply(u1_TRUE.reshape(1, 3), u1.reshape(3, 1))
         # sings_u = np.linalg.svd(A_u, full_matrices=True)[1]
         # print("sings_u=", sings_u,"\n")
-        v13=np.linalg.svd(J_t, full_matrices=True)[2][0:3,:]
-        v13_TRUE = np.linalg.svd(J_t_TRUE, full_matrices=True)[2][0:3, :]
+        # v13=np.linalg.svd(J_t, full_matrices=True)[2][0:3,:]
+        # v13_TRUE = np.linalg.svd(J_t_TRUE, full_matrices=True)[2][0:3, :]
         # C = np.matmul(v13_TRUE.T, v13)
         # D = np.matmul(v13_TRUE.T, v13_TRUE)
-        div_metric=np.linalg.svd(np.matmul(v13_TRUE, v13.T))
-        check_metric=np.linalg.svd(np.matmul(v13_TRUE, v13_TRUE.T))
-        check_metric_2=np.linalg.svd(np.matmul(v13, v13.T))
+        # div_metric=np.linalg.svd(np.matmul(v13_TRUE, v13.T))
+        # check_metric=np.linalg.svd(np.matmul(v13_TRUE, v13_TRUE.T))
+        # check_metric_2=np.linalg.svd(np.matmul(v13, v13.T))
         # print("div_metric[1]=", div_metric[1],"\n")
-
 
         rd_t_error = np.matmul(J_t_TRUE, self.pseudoInverseMat(J_t, ld=0.01)) @ rd_t-rd_t
 
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
-        # inject SAC action
+        # ATTENTION: here apply SAC action
         dqc_t = dqc_t + a
         # TODO check
         # command joint speeds (only 6 joints)
