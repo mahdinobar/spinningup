@@ -298,6 +298,9 @@ Robotic Manipulation" by Murry et al.
                        tau_t[5],
                        0,
                        0,
+                       0,
+                       0,
+                       0,
                        0]
         self.plot_data_buffer = plot_data_t
         return self._get_ob()
@@ -335,6 +338,8 @@ Robotic Manipulation" by Murry et al.
         J_t_TRUE = np.asarray(linearJacobian_TRUE)[:, :6]
         Jpinv_t_TRUE = self.pseudoInverseMat(J_t_TRUE, ld=0.1)
         # U, S, Vh = np.linalg.svd(Jpinv_t, full_matrices=True)
+        # TODO: do you need to monitor this during training to avoid singularity??
+        # rel_sing= S.max() / S.min()
         # v1=np.linalg.svd(J_t, full_matrices=True)[2][0,:]
         # v1_TRUE = np.linalg.svd(J_t_TRUE, full_matrices=True)[2][0, :]
         # A=np.multiply(v1_TRUE.reshape(1,6), v1.reshape(6,1))
@@ -353,7 +358,11 @@ Robotic Manipulation" by Murry et al.
         div_metric=np.linalg.svd(np.matmul(v13_TRUE, v13.T))
         check_metric=np.linalg.svd(np.matmul(v13_TRUE, v13_TRUE.T))
         check_metric_2=np.linalg.svd(np.matmul(v13, v13.T))
-        print("div_metric[1]=", div_metric[1],"\n")
+        # print("div_metric[1]=", div_metric[1],"\n")
+
+
+        rd_t_error = np.matmul(J_t_TRUE, self.pseudoInverseMat(J_t, ld=0.01)) @ rd_t-rd_t
+
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
         # inject SAC action
@@ -379,13 +388,11 @@ Robotic Manipulation" by Murry et al.
         pb.stepSimulation(physicsClientId=physics_client)
         # get measured values at time tp1 denotes t+1 for q and ddq as well as applied torque at time t
         info = pb.getJointStates(arm, range(10))
-
         q_tp1, dq_tp1, tau_t = [], [], []
         for joint_info in info:
             q_tp1.append(joint_info[0])
             dq_tp1.append(joint_info[1])
             tau_t.append(joint_info[3])
-
         # # Attention: hard reset for biased kinematics model
         for i in range(10):
             pb.resetJointState(arm_biased_kinematics, i, q_tp1[i])
@@ -480,7 +487,10 @@ Robotic Manipulation" by Murry et al.
                        tau_t[5],
                        reward_px_t,
                        reward_py_t,
-                       reward_pz_t]
+                       reward_pz_t,
+                       rd_t_error[0],
+                       rd_t_error[1],
+                       rd_t_error[2]]
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
 
         # given action it returns 4-tuple (observation, reward, done, info)
@@ -600,18 +610,35 @@ Robotic Manipulation" by Murry et al.
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
             axs1[0].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 4] * 1000, 'r--',
                          label='EE desired traj')
+            axs1[0].plot((self.plot_data_buffer[:, 3]-abs(self.plot_data_buffer[:, 30])) * 1000, (self.plot_data_buffer[:, 4]-abs(self.plot_data_buffer[:, 31])) * 1000, 'm:',
+                         label='jacobian uncertainty')
+
+            axs1[0].plot((self.plot_data_buffer[:, 3]+abs(self.plot_data_buffer[:, 30])) * 1000, (self.plot_data_buffer[:, 4]+abs(self.plot_data_buffer[:, 31])) * 1000, 'm:',
+                         label='jacobian uncertainty')
             axs1[0].plot(self.plot_data_buffer[:, 0] * 1000, self.plot_data_buffer[:, 1] * 1000, 'k',
                          label='EE position - PID only controller')
             axs1[0].set_xlabel("x[mm]")
             axs1[0].set_ylabel("y[mm]")
             axs1[1].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 5] * 1000, 'r--',
                          label='EE desired traj')
+            axs1[1].plot((self.plot_data_buffer[:, 3] - abs(self.plot_data_buffer[:, 30])) * 1000,
+                         (self.plot_data_buffer[:, 5] - abs(self.plot_data_buffer[:, 32])) * 1000, 'm:',
+                         label='jacobian uncertainty')
+            axs1[1].plot((self.plot_data_buffer[:, 3] + abs(self.plot_data_buffer[:, 30])) * 1000,
+                         (self.plot_data_buffer[:, 5] + abs(self.plot_data_buffer[:, 32])) * 1000, 'm:',
+                         label='jacobian uncertainty')
             axs1[1].plot(self.plot_data_buffer[:, 0] * 1000, self.plot_data_buffer[:, 2] * 1000, 'k',
                          label='EE position - PID only controller')
             axs1[1].set_xlabel("x[mm]")
             axs1[1].set_ylabel("z[mm]")
             axs1[2].plot(self.plot_data_buffer[:, 4] * 1000, self.plot_data_buffer[:, 5] * 1000, 'r--',
                          label='EE desired traj')
+            axs1[2].plot((self.plot_data_buffer[:, 4] - abs(self.plot_data_buffer[:, 31])) * 1000,
+                         (self.plot_data_buffer[:, 5] - abs(self.plot_data_buffer[:, 32])) * 1000, 'm:',
+                         label='jacobian uncertainty')
+            axs1[2].plot((self.plot_data_buffer[:, 4] + abs(self.plot_data_buffer[:, 31])) * 1000,
+                         (self.plot_data_buffer[:, 5] + abs(self.plot_data_buffer[:, 32])) * 1000, 'm:',
+                         label='jacobian uncertainty')
             axs1[2].plot(self.plot_data_buffer[:, 1] * 1000, self.plot_data_buffer[:, 2] * 1000, 'k',
                          label='EE position - PID only controller')
             axs1[2].set_xlabel("y[mm]")
@@ -624,18 +651,36 @@ Robotic Manipulation" by Murry et al.
             plt.rcParams['font.family'] = 'Serif'
             axs1[0].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 4] * 1000, 'k--',
                          label='EE desired traj')
+            axs1[0].plot((self.plot_data_buffer[:, 3] - abs(self.plot_data_buffer[:, 30])) * 1000,
+                         (self.plot_data_buffer[:, 4] - abs(self.plot_data_buffer[:, 31])) * 1000, 'm:',
+                         label='jacobian uncertainty')
+            axs1[0].plot((self.plot_data_buffer[:, 3] + abs(self.plot_data_buffer[:, 30])) * 1000,
+                         (self.plot_data_buffer[:, 4] + abs(self.plot_data_buffer[:, 31])) * 1000, 'm:',
+                         label='jacobian uncertainty')
             axs1[0].plot(self.plot_data_buffer[:, 0] * 1000, self.plot_data_buffer[:, 1] * 1000, 'r')
             axs1[0].plot(plot_data_buffer_no_SAC[:, 0] * 1000, plot_data_buffer_no_SAC[:, 1] * 1000, 'b')
             axs1[0].set_xlabel("x[mm]")
             axs1[0].set_ylabel("y[mm]")
             axs1[1].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 5] * 1000, 'k--',
                          label='EE desired traj')
+            axs1[1].plot((self.plot_data_buffer[:, 3] - abs(self.plot_data_buffer[:, 30])) * 1000,
+                         (self.plot_data_buffer[:, 5] - abs(self.plot_data_buffer[:, 32])) * 1000, 'm:',
+                         label='jacobian uncertainty')
+            axs1[1].plot((self.plot_data_buffer[:, 3] + abs(self.plot_data_buffer[:, 30])) * 1000,
+                         (self.plot_data_buffer[:, 5] + abs(self.plot_data_buffer[:, 32])) * 1000, 'm:',
+                         label='jacobian uncertainty')
             axs1[1].plot(self.plot_data_buffer[:, 0] * 1000, self.plot_data_buffer[:, 2] * 1000, 'r')
             axs1[1].plot(plot_data_buffer_no_SAC[:, 0] * 1000, plot_data_buffer_no_SAC[:, 2] * 1000, 'b')
             axs1[1].set_xlabel("x[mm]")
             axs1[1].set_ylabel("z[mm]")
             axs1[2].plot(self.plot_data_buffer[:, 4] * 1000, self.plot_data_buffer[:, 5] * 1000, 'k--',
                          label='EE desired traj')
+            axs1[2].plot((self.plot_data_buffer[:, 4] - abs(self.plot_data_buffer[:, 31])) * 1000,
+                         (self.plot_data_buffer[:, 5] - abs(self.plot_data_buffer[:, 32])) * 1000, 'm:',
+                         label='jacobian uncertainty')
+            axs1[2].plot((self.plot_data_buffer[:, 4] + abs(self.plot_data_buffer[:, 31])) * 1000,
+                         (self.plot_data_buffer[:, 5] + abs(self.plot_data_buffer[:, 32])) * 1000, 'm:',
+                         label='jacobian uncertainty')
             axs1[2].plot(self.plot_data_buffer[:, 1] * 1000, self.plot_data_buffer[:, 2] * 1000, 'r', label='with SAC')
             axs1[2].plot(plot_data_buffer_no_SAC[:, 1] * 1000, plot_data_buffer_no_SAC[:, 2] * 1000, 'b',
                          label='without SAC')
@@ -703,18 +748,21 @@ Robotic Manipulation" by Murry et al.
             axs3[0].plot(abs(plot_data_buffer_no_SAC[:, 0] - plot_data_buffer_no_SAC[:, 3]) * 1000, 'b',
                          label='without SAC')
             axs3[0].plot(abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, 'r', label='with SAC')
+            axs3[0].plot(abs(self.plot_data_buffer[:, 30]) * 1000, 'm:', label='with SAC')
             axs3[0].set_xlabel("t")
             axs3[0].set_ylabel("|x-xd| [mm]")
             plt.legend()
             axs3[1].plot(abs(plot_data_buffer_no_SAC[:, 1] - plot_data_buffer_no_SAC[:, 4]) * 1000, 'b',
                          label='without SAC')
             axs3[1].plot(abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, 'r', label='with SAC')
+            axs3[1].plot(abs(self.plot_data_buffer[:, 31]) * 1000, 'm:', label='error bound')
             axs3[1].set_xlabel("t")
             axs3[1].set_ylabel("|y-yd| [mm]")
             plt.legend()
             axs3[2].plot(abs(plot_data_buffer_no_SAC[:, 2] - plot_data_buffer_no_SAC[:, 5]) * 1000, 'b',
                          label='without SAC')
             axs3[2].plot(abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, 'r', label='with SAC')
+            axs3[2].plot(abs(self.plot_data_buffer[:, 32]) * 1000, 'm:', label='error bound')
             axs3[2].set_xlabel("t")
             axs3[2].set_ylabel("|z-zd| [mm]")
             plt.legend()
@@ -724,6 +772,9 @@ Robotic Manipulation" by Murry et al.
             axs3[3].plot(
                 np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2, axis=1) * 1000,
                 'r', label='with SAC')
+            axs3[3].plot(
+                np.linalg.norm(self.plot_data_buffer[:, 30:32], ord=2, axis=1) * 1000,
+                'm:', label='error bound')
             axs3[3].set_xlabel("t")
             axs3[3].set_ylabel("||r-rd||_2 [mm]")
             # axs3[3].set_ylim([0, 10])
@@ -823,6 +874,7 @@ Robotic Manipulation" by Murry et al.
             plt.legend()
             plt.savefig(output_dir_rendering + "/tau_" + str(self.n) + ".pdf", format="pdf", bbox_inches='tight')
             plt.show()
+
         if render_training_buffer == True:
             buf_act = np.load(output_dir_rendering + "/buf_act.npy")
             buf_done = np.load(output_dir_rendering + "/buf_done.npy")
