@@ -93,7 +93,7 @@
       <material name="panda_white"/>
     </collision>
     <inertial>
-      <origin rpy="0 0 0" xyz="2.7518e-02 3.9252e-02 -6.6502e-02"/>
+      <origin rpy="0 0 0" xyz="2.75180e-02 3.9252e-02 -6.6502e-02"/>
       <mass value="3.228604"/>
       <inertia ixx="3.7242e-02" ixy="-4.7610e-03" ixz="-1.1396e-02" iyy="3.6155e-02" iyz="-1.2805e-02" izz="1.0830e-02"/>
     </inertial>
