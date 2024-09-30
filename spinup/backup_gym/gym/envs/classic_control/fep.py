@@ -25,33 +25,33 @@ pb.setGravity(0, 0, -9.81, physicsClientId=physics_client)
 # Load URDFs
 # Load robot, target object and plane urdf
 pb.setAdditionalSearchPath(pybullet_data.getDataPath())
-arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda.urdf",
+arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda.urdf",
                   useFixedBase=True)
 arm_biased_kinematics = pb.loadURDF(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics.urdf",
+    "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics.urdf",
     useFixedBase=True)
 
 # import os
 # import rospkg
 # import subprocess
 # rospack = rospkg.RosPack()
-# xacro_filename = os.path.join("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro")
-# urdf_filename = os.path.join("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf")
+# xacro_filename = os.path.join("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro")
+# urdf_filename = os.path.join("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf")
 # urdf = open(urdf_filename, "w")
 #
 # # Recompile the URDF to make sure it's up to date
 # subprocess.call(['rosrun', 'xacro', 'xacro.py', xacro_filename], stdout=urdf)
 #
 #
-# arm2 = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro",
+# arm2 = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro",
 #                   useFixedBase=True)
-target_object = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
+target_object = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
                             useFixedBase=True)
-pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf")
+pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf")
 conveyor_object = pb.loadURDF(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
+    "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
     useFixedBase=True)
-plane = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
+plane = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
                     useFixedBase=True)
 
 
@@ -119,7 +119,7 @@ Robotic Manipulation" by Murry et al.
         # high_a = 0.05 * np.array([2.1750, 2.1750, 2.1750])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
-        # output_dir_rendering = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/"
+        # output_dir_rendering = "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/"
 
     def pseudoInverseMat(self, A, ld):
         # Input: Any m-by-n matrix, and a damping factor.
@@ -369,7 +369,7 @@ Robotic Manipulation" by Murry et al.
         # check_metric_2=np.linalg.svd(np.matmul(v13, v13.T))
         # print("div_metric[1]=", div_metric[1],"\n")
 
-        rd_t_error = np.matmul(J_t_TRUE, self.pseudoInverseMat(J_t, ld=0.01)) @ rd_t-rd_t
+        rd_t_error = np.matmul(J_t_TRUE, self.pseudoInverseMat(J_t, ld=0.001)) @ rd_t-rd_t
 
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
@@ -500,7 +500,8 @@ Robotic Manipulation" by Murry et al.
                        rd_t_error[1],
                        rd_t_error[2]]
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
-
+        # no_SAC_plot_data_buffer=self.plot_data_buffer
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_1_NO_SAC/no_SAC_plot_data_buffer.npy",no_SAC_plot_data_buffer)
         # given action it returns 4-tuple (observation, reward, done, info)
         return (self._get_ob(), reward_t, terminal, {})
 
@@ -542,17 +543,17 @@ Robotic Manipulation" by Murry et al.
             pb.setAdditionalSearchPath(pybullet_data.getDataPath())
             pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
                                  output_dir_rendering + "/simulation.mp4")  # added by Pierre
-            arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda.urdf",
+            arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda.urdf",
                               useFixedBase=True)
             # arm_biased_kinematics = pb.loadURDF(
-            #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics.urdf",
+            #     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics.urdf",
             #     useFixedBase=True)
-            target_object = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
+            target_object = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
                                         useFixedBase=True)
             conveyor_object = pb.loadURDF(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
+                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
                 useFixedBase=True)
-            plane = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
+            plane = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
                                 useFixedBase=True)
             # Initialise debug camera angle
             pb.resetDebugVisualizerCamera(
@@ -607,13 +608,13 @@ Robotic Manipulation" by Murry et al.
                 pb.stepSimulation(physicsClientId=physics_client)
                 time.sleep(0.01)
         # np.save(
-        #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_" + str(
+        #     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_" + str(
         #         self.n) + ".npy", self.plot_data_buffer)
         # render_test_buffer=False
         if render_test_buffer == True:
-            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
+            # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
             plot_data_buffer_no_SAC = np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_" + str(
+                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_" + str(
                             self.n) + ".npy")
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
             axs1[0].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 4] * 1000, 'r--',
