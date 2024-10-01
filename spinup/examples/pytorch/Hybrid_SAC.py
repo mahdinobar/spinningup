@@ -10,7 +10,7 @@ import os
 
 TRAIN=0
 env_fn = lambda: gym.make('Fep-v0')
-exp_name = "Fep_HW_5"
+exp_name = "Fep_HW_6"
 Euler_server=False
 XPS_laptop=True
 if __name__ == '__main__':
