@@ -276,7 +276,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         if automatic_entropy_tuning is True:
             o = data['obs']
             pi, logp_pi = ac.pi(o)
-            alpha_loss = -(log_alpha * (logp_pi + target_entropy).detach()).mean()
+            alpha_loss = -(log_alpha * (logp_pi + target_entropy).detach()).mean() #equation 17 of SAC paper
             alpha_optim.zero_grad()
             alpha_loss.backward()
             alpha_optim.step()

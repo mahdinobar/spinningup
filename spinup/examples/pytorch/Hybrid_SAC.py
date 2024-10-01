@@ -1,6 +1,7 @@
 
 import gym
 import numpy as np
+from tensorflow_core.python.ops.metrics_impl import false_negatives
 
 from spinup import sac_pytorch as sac
 import spinup.algos.pytorch.sac.core as core
@@ -9,11 +10,16 @@ import os
 
 TRAIN=0
 env_fn = lambda: gym.make('Fep-v0')
-exp_name = "Fep_HW_1"
+exp_name = "Fep_HW_2"
+Euler_server=False
+XPS_laptop=True
 if __name__ == '__main__':
+    if Euler_server==True:
+        output_dir='/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/'+exp_name
+    elif XPS_laptop==True:
+        output_dir='/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/'+exp_name
     if TRAIN:
         # train
-        output_dir='/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/'+exp_name
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         logger_kwargs = dict(output_dir=output_dir, exp_name=exp_name)
@@ -21,7 +27,6 @@ if __name__ == '__main__':
             lr=0.001, alpha_init=0.001, batch_size=136, start_steps=13600, update_after=13600, update_every=136, num_test_episodes=2,
             max_ep_len=np.inf, logger_kwargs=logger_kwargs, save_freq=1, initial_actions="random", save_buffer=True, sample_mode = 1, automatic_entropy_tuning=True)
     else:
-        output_dir='/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/'+exp_name
         env_loaded, get_action = load_policy_and_env(output_dir, deterministic=True)
         env=env_fn()
         run_policy(env, get_action,num_episodes=1, output_dir=output_dir)
