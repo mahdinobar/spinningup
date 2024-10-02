@@ -10,7 +10,7 @@ import os
 
 TRAIN=1
 env_fn = lambda: gym.make('Fep-v0')
-exp_name = "draft_NOSAC_Fep" #this must include Fep, correct code in e.g. test_policy.py line 131
+exp_name = "draft_HW_3_NOSAC" #this must include Fep, correct code in e.g. test_policy.py line 131
 Euler_server=False
 XPS_laptop=True
 if __name__ == '__main__':
