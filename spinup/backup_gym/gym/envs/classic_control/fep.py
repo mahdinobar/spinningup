@@ -68,15 +68,15 @@ Robotic Manipulation" by Murry et al.
         np.random.seed(seed)
         self.seed(seed=seed)
         # TODO: reward params
-        self.lp = 800
+        self.lp = 1200
         self.lv = 10
         self.lddqc = 1
         self.reward_eta_p = 1
         self.reward_eta_v = 0
         self.reward_eta_ddqc = 0
         # TODO: User defined linear position gain
-        self.K_p = 1
-        self.K_i = 1
+        self.K_p = 10
+        self.K_i = 10
         self.K_d = 0
         self.korque_noise_max = 0.  # TODO
         self.viewer = None
