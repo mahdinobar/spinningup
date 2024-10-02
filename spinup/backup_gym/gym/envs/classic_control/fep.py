@@ -75,8 +75,8 @@ Robotic Manipulation" by Murry et al.
         self.reward_eta_v = 0
         self.reward_eta_ddqc = 0
         # TODO: User defined linear position gain
-        self.K_p = 1
-        self.K_i = 1
+        self.K_p = 10
+        self.K_i = 10
         self.K_d = 0
         self.korque_noise_max = 0.  # TODO
         self.viewer = None
@@ -172,7 +172,7 @@ Robotic Manipulation" by Murry et al.
         self.n += 1
         self.k = 0
         # TODO pay attention
-        noisy_target = True
+        noisy_target = False
         if noisy_target == True:
             self.vxd = 0 #+ np.random.normal(loc=0.0, scale=0.001, size=1)[0]  # m/s
             self.vyd = 34.9028e-3 #+ np.random.normal(loc=0.0, scale=0.002, size=1)[0]  # m/s
