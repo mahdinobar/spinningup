@@ -8,9 +8,10 @@ import spinup.algos.pytorch.sac.core as core
 from spinup.utils.test_policy import load_policy_and_env, run_policy
 import os
 
-TRAIN=1
+TRAIN=0
 env_fn = lambda: gym.make('Fep-v0')
-exp_name = "draft_HW_3_NOSAC" #this must include Fep, correct code in e.g. test_policy.py line 131
+# exp_name = "draft_HW_3_NOSAC" #this must include Fep, correct code in e.g. test_policy.py line 131
+exp_name = "Fep_HW_3" #this must include Fep, correct code in e.g. test_policy.py line 131
 Euler_server=False
 XPS_laptop=True
 if __name__ == '__main__':
