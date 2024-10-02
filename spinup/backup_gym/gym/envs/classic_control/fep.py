@@ -374,7 +374,7 @@ Robotic Manipulation" by Murry et al.
         dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
         # ATTENTION: here apply SAC action
-        dqc_t = dqc_t #+ a
+        dqc_t = dqc_t + a
         # TODO check
         # command joint speeds (only 6 joints)
         pb.setJointMotorControlArray(
@@ -501,8 +501,8 @@ Robotic Manipulation" by Murry et al.
                        rd_t_error[2]]
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
         # # TODO uncomment when NOSAC for plots
-        plot_data_buffer_no_SAC=self.plot_data_buffer
-        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/draft_HW_4_NOSAC/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
+        # plot_data_buffer_no_SAC=self.plot_data_buffer
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/draft_HW_4_NOSAC/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
         # given action it returns 4-tuple (observation, reward, done, info)
         return (self._get_ob(), reward_t, terminal, {})
 
