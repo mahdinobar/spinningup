@@ -500,8 +500,8 @@ Robotic Manipulation" by Murry et al.
                        rd_t_error[1],
                        rd_t_error[2]]
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
-        plot_data_buffer_no_SAC=self.plot_data_buffer
-        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/draft_HW_3_NOSAC/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
+        # plot_data_buffer_no_SAC=self.plot_data_buffer
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/draft_HW_3_NOSAC/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
         # given action it returns 4-tuple (observation, reward, done, info)
         return (self._get_ob(), reward_t, terminal, {})
 
