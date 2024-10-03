@@ -208,13 +208,8 @@ Robotic Manipulation" by Murry et al.
             self.q_init = np.array(
                 [-0.38198187, 1.32720032, -0.17534288, -0.3604967, -0.16008594, 0.4936846]) + np.random.normal(
                 loc=0.0,
-                scale=0.02,
+                scale=0.0087266,
                 size=6)
-            # self.q_init = np.array(
-            #     [-0.38198187, 1.32720032, -0.17534288, -0.3604967, -0.16008594, 0.4936846]) + np.random.normal(
-            #     loc=0.0,
-            #     scale=0.0087266,
-            #     size=6)
             # self.q_init = np.array(
             #     [-0.44282133, -0.27180934, 0.17985816, -2.65595454, -0.16388257, 2.47417267]) + np.random.normal(
             #     loc=0.0,
@@ -507,7 +502,7 @@ Robotic Manipulation" by Murry et al.
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
         # # TODO uncomment when NOSAC for plots
         # plot_data_buffer_no_SAC=self.plot_data_buffer
-        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/draft_HW_8_NOSAC/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/draft_HW_7_NOSAC/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
         # given action it returns 4-tuple (observation, reward, done, info)
         return (self._get_ob(), reward_t, terminal, {})
 
@@ -620,7 +615,7 @@ Robotic Manipulation" by Murry et al.
         if render_test_buffer == True:
             # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
             plot_data_buffer_no_SAC = np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/draft_HW_8_NOSAC/plot_data_buffer_no_SAC.npy")
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/draft_HW_3_NOSAC/plot_data_buffer_no_SAC.npy")
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
             axs1[0].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 4] * 1000, 'r--',
                          label='EE desired traj')
