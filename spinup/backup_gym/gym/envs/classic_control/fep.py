@@ -68,15 +68,15 @@ Robotic Manipulation" by Murry et al.
         np.random.seed(seed)
         self.seed(seed=seed)
         # TODO: reward params
-        self.lp = 1200
+        self.lp = 800
         self.lv = 10
         self.lddqc = 1
         self.reward_eta_p = 1
         self.reward_eta_v = 0
         self.reward_eta_ddqc = 0
         # TODO: User defined linear position gain
-        self.K_p = 10
-        self.K_i = 10
+        self.K_p = 5
+        self.K_i = 5
         self.K_d = 0
         self.korque_noise_max = 0.  # TODO
         self.viewer = None
@@ -208,8 +208,13 @@ Robotic Manipulation" by Murry et al.
             self.q_init = np.array(
                 [-0.38198187, 1.32720032, -0.17534288, -0.3604967, -0.16008594, 0.4936846]) + np.random.normal(
                 loc=0.0,
-                scale=0.0087266,
+                scale=0.02,
                 size=6)
+            # self.q_init = np.array(
+            #     [-0.38198187, 1.32720032, -0.17534288, -0.3604967, -0.16008594, 0.4936846]) + np.random.normal(
+            #     loc=0.0,
+            #     scale=0.0087266,
+            #     size=6)
             # self.q_init = np.array(
             #     [-0.44282133, -0.27180934, 0.17985816, -2.65595454, -0.16388257, 2.47417267]) + np.random.normal(
             #     loc=0.0,
@@ -371,10 +376,10 @@ Robotic Manipulation" by Murry et al.
 
         rd_t_error = np.matmul(J_t_TRUE, self.pseudoInverseMat(J_t, ld=0.001)) @ rd_t-rd_t
 
-        dqc_t, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
+        dqc_t_PID, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
         # ATTENTION: here apply SAC action
-        dqc_t = dqc_t + a
+        dqc_t = dqc_t_PID + a
         # TODO check
         # command joint speeds (only 6 joints)
         pb.setJointMotorControlArray(
@@ -457,12 +462,12 @@ Robotic Manipulation" by Murry et al.
                tau_t[3],
                tau_t[4],
                tau_t[5],
-               dqc_t[0],
-               dqc_t[1],
-               dqc_t[2],
-               dqc_t[3],
-               dqc_t[4],
-               dqc_t[5]]
+               dqc_t_PID[0],
+               dqc_t_PID[1],
+               dqc_t_PID[2],
+               dqc_t_PID[3],
+               dqc_t_PID[4],
+               dqc_t_PID[5]]
         # update states
         self.state = obs
         self.state_buffer = np.vstack((self.state_buffer, self.state))
@@ -502,7 +507,7 @@ Robotic Manipulation" by Murry et al.
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
         # # TODO uncomment when NOSAC for plots
         # plot_data_buffer_no_SAC=self.plot_data_buffer
-        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/draft_HW_7_NOSAC/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/draft_HW_8_NOSAC/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
         # given action it returns 4-tuple (observation, reward, done, info)
         return (self._get_ob(), reward_t, terminal, {})
 
@@ -517,7 +522,7 @@ Robotic Manipulation" by Murry et al.
         """ Render Pybullet simulation """
         render_video = False  # for fast debuging
         render_test_buffer = True
-        render_training_buffer = False
+        render_training_buffer = True
         if render_video == True:
             pb.disconnect(physics_client)
             # render settings
@@ -615,7 +620,7 @@ Robotic Manipulation" by Murry et al.
         if render_test_buffer == True:
             # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
             plot_data_buffer_no_SAC = np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/draft_HW_7_NOSAC/plot_data_buffer_no_SAC.npy")
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/draft_HW_8_NOSAC/plot_data_buffer_no_SAC.npy")
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
             axs1[0].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 4] * 1000, 'r--',
                          label='EE desired traj')
@@ -625,7 +630,7 @@ Robotic Manipulation" by Murry et al.
             axs1[0].plot((self.plot_data_buffer[:, 3]+abs(self.plot_data_buffer[:, 30])) * 1000, (self.plot_data_buffer[:, 4]+abs(self.plot_data_buffer[:, 31])) * 1000, 'm:',
                          label='jacobian uncertainty')
             axs1[0].plot(self.plot_data_buffer[:, 0] * 1000, self.plot_data_buffer[:, 1] * 1000, 'k',
-                         label='EE position - PID only controller')
+                         label='EE position - with SAC')
             axs1[0].set_xlabel("x[mm]")
             axs1[0].set_ylabel("y[mm]")
             axs1[1].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 5] * 1000, 'r--',
@@ -637,7 +642,7 @@ Robotic Manipulation" by Murry et al.
                          (self.plot_data_buffer[:, 5] + abs(self.plot_data_buffer[:, 32])) * 1000, 'm:',
                          label='jacobian uncertainty')
             axs1[1].plot(self.plot_data_buffer[:, 0] * 1000, self.plot_data_buffer[:, 2] * 1000, 'k',
-                         label='EE position - PID only controller')
+                         label='EE position - with SAC')
             axs1[1].set_xlabel("x[mm]")
             axs1[1].set_ylabel("z[mm]")
             axs1[2].plot(self.plot_data_buffer[:, 4] * 1000, self.plot_data_buffer[:, 5] * 1000, 'r--',
@@ -649,7 +654,7 @@ Robotic Manipulation" by Murry et al.
                          (self.plot_data_buffer[:, 5] + abs(self.plot_data_buffer[:, 32])) * 1000, 'm:',
                          label='jacobian uncertainty')
             axs1[2].plot(self.plot_data_buffer[:, 1] * 1000, self.plot_data_buffer[:, 2] * 1000, 'k',
-                         label='EE position - PID only controller')
+                         label='EE position - with SAC')
             axs1[2].set_xlabel("y[mm]")
             axs1[2].set_ylabel("z[mm]")
             plt.legend()
