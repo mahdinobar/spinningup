@@ -247,7 +247,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         target_entropy = 0.1*(-ac.pi.mu_layer.out_features)
         # log_alpha=torch.zeros(1, requires_grad=True, device=device)
         log_alpha = torch.tensor([np.exp(alpha_init)], requires_grad=True, device=device)
-        alpha_optim = Adam([log_alpha], lr=lr)
+        alpha_optimizer = Adam([log_alpha], lr=lr)
 
     # Set up model saving
     logger.setup_pytorch_saver(ac)
@@ -276,10 +276,10 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         if automatic_entropy_tuning is True:
             o = data['obs']
             pi, logp_pi = ac.pi(o)
-            alpha_loss = -(log_alpha * (logp_pi + target_entropy).detach()).mean() #equation 17 of SAC paper
-            alpha_optim.zero_grad()
+            alpha_loss = -(log_alpha * (logp_pi + target_entropy).detach()).mean() #equation 18 of SAC paper
+            alpha_optimizer.zero_grad()
             alpha_loss.backward()
-            alpha_optim.step()
+            alpha_optimizer.step()
             alpha = log_alpha.exp()
             # alpha_info = dict(Alpha=alpha.detach().numpy())
             # logger.store(LossAlpha=alpha_loss.item(), **alpha_info)
