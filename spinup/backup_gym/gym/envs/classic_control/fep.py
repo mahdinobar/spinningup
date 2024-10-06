@@ -174,8 +174,10 @@ Robotic Manipulation" by Murry et al.
         # TODO pay attention
         noisy_target = True
         if noisy_target == True:
-            self.vxd = 0 #+ np.random.normal(loc=0.0, scale=0.001, size=1)[0]  # m/s
-            self.vyd = 34.9028e-3 #+ np.random.normal(loc=0.0, scale=0.002, size=1)[0]  # m/s
+            self.vxd = 0 + np.random.normal(loc=0.0, scale=0.0001, size=1)[0]  # m/s
+            self.vyd = 34.9028e-3 + np.random.normal(loc=0.0, scale=0.001, size=1)[0]  # m/s
+            print("self.vxd=",self.vxd)
+            print("self.vyd=",self.vyd)
             self.vzd = 0  # m/s
             deltax = self.vxd * dt * self.MAX_TIMESTEPS
             deltay = self.vyd * dt * self.MAX_TIMESTEPS
@@ -208,8 +210,14 @@ Robotic Manipulation" by Murry et al.
             self.q_init = np.array(
                 [-0.38198187, 1.32720032, -0.17534288, -0.3604967, -0.16008594, 0.4936846]) + np.random.normal(
                 loc=0.0,
-                scale=0.0087266,
+                scale=0.01745,
                 size=6)
+            print("self.q_init=",self.q_init)
+            # self.q_init = np.array(
+            #     [-0.38198187, 1.32720032, -0.17534288, -0.3604967, -0.16008594, 0.4936846]) + np.random.normal(
+            #     loc=0.0,
+            #     scale=0.0087266,
+            #     size=6)
             # self.q_init = np.array(
             #     [-0.44282133, -0.27180934, 0.17985816, -2.65595454, -0.16388257, 2.47417267]) + np.random.normal(
             #     loc=0.0,
@@ -369,12 +377,12 @@ Robotic Manipulation" by Murry et al.
         # check_metric_2=np.linalg.svd(np.matmul(v13, v13.T))
         # print("div_metric[1]=", div_metric[1],"\n")
 
-        rd_t_error = np.matmul(J_t_TRUE, self.pseudoInverseMat(J_t, ld=0.001)) @ rd_t-rd_t
+        rd_t_error = np.matmul(J_t_TRUE, self.pseudoInverseMat(J_t, ld=0.0000001)) @ rd_t-rd_t
 
         dqc_t_PID, self.e = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t, e=self.e,
                                        dt=dt)
         # ATTENTION: here apply SAC action
-        dqc_t = dqc_t_PID + a
+        dqc_t = dqc_t_PID  + a
         # TODO check
         # command joint speeds (only 6 joints)
         pb.setJointMotorControlArray(
@@ -500,9 +508,9 @@ Robotic Manipulation" by Murry et al.
                        rd_t_error[1],
                        rd_t_error[2]]
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
-        # # TODO uncomment when NOSAC for plots
+        # # # TODO: so dirty code: uncomment when NOSAC for plots -- you need to take care of which random values you call by break points after first done in sac.py ... and cmment a too ...
         # plot_data_buffer_no_SAC=self.plot_data_buffer
-        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/draft_HW_7_NOSAC/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/draft_HW_13_NOSAC/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
         # given action it returns 4-tuple (observation, reward, done, info)
         return (self._get_ob(), reward_t, terminal, {})
 
@@ -517,7 +525,7 @@ Robotic Manipulation" by Murry et al.
         """ Render Pybullet simulation """
         render_video = False  # for fast debuging
         render_test_buffer = True
-        render_training_buffer = True
+        render_training_buffer = False
         if render_video == True:
             pb.disconnect(physics_client)
             # render settings
@@ -615,7 +623,7 @@ Robotic Manipulation" by Murry et al.
         if render_test_buffer == True:
             # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
             plot_data_buffer_no_SAC = np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/draft_HW_3_NOSAC/plot_data_buffer_no_SAC.npy")
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/draft_HW_13_NOSAC/plot_data_buffer_no_SAC.npy")
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
             axs1[0].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 4] * 1000, 'r--',
                          label='EE desired traj')
