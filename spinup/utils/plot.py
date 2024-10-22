@@ -151,7 +151,7 @@ def get_all_datasets(all_logdirs, legend=None, select=None, exclude=None):
     return data
 
 
-def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,  
+def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
                font_scale=1.5, smooth=1, select=None, exclude=None, estimator='mean'):
     data = get_all_datasets(all_logdirs, legend, select, exclude)
     values = values if isinstance(values, list) else [values]
@@ -159,14 +159,30 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
     estimator = getattr(np, estimator)      # choose what to show on main curve: mean? max? min?
     for value in values:
         plt.figure()
-        plot_data(data, xaxis=xaxis, value=value, condition=condition, smooth=smooth, estimator=estimator)
+        plot_data(data, xaxis=xaxis, value=value, condition=condition, smooth=smooth, estimator=estimator,zorder=1)
     # plt.hlines(44.47124, 0, 10e4, 'k', linestyles="dashed", label='PID only')
     # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
-    plt.hlines( 83.93309, 0, 10e5, 'k', linestyles="dashed", label='PI only')
+    plt.hlines( 97, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
-    plt.savefig(all_logdirs[-1]+"_learning_curve", format="pdf", bbox_inches='tight')
+    plt.savefig(all_logdirs[-1]+"/learning_curve", format="pdf", bbox_inches='tight',zorder=2)
     plt.show()
 
+def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=False,
+               font_scale=1.5, smooth=1, select=None, exclude=None, estimator='mean'):
+    data = get_all_datasets(all_logdirs, legend, select, exclude)
+    values = values if isinstance(values, list) else [values]
+    condition = 'Condition2' if count else 'Condition1'
+    estimator = getattr(np, estimator)      # choose what to show on main curve: mean? max? min?
+    for value in values:
+        plt.figure()
+        plot_data(data, xaxis=xaxis, value="Alpha", condition=condition, smooth=smooth, estimator=estimator,zorder=1)
+    # plt.hlines(44.47124, 0, 10e4, 'k', linestyles="dashed", label='PID only')
+    # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
+    # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
+    plt.legend()
+    plt.ylim([0,0.1])
+    plt.savefig(all_logdirs[-1]+"/alpha", format="pdf", bbox_inches='tight',zorder=2)
+    plt.show()
 
 def main():
     import argparse
@@ -230,6 +246,10 @@ def main():
     """
 
     make_plots(args.logdir, args.legend, args.xaxis, args.value, args.count, 
+               smooth=args.smooth, select=args.select, exclude=args.exclude,
+               estimator=args.est)
+
+    make_plots_alpha(args.logdir, args.legend, args.xaxis, args.value, args.count,
                smooth=args.smooth, select=args.select, exclude=args.exclude,
                estimator=args.est)
 

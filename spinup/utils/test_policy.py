@@ -98,13 +98,22 @@ def load_pytorch_policy(fpath, itr, deterministic=False):
     print('\n\nLoading from %s.\n\n' % fname)
 
     model = torch.load(fname)
-
     # make function for producing an action given a single state
     def get_action(x):
+        start_time = time.time()
         with torch.no_grad():
             x = torch.as_tensor(x, dtype=torch.float32)
             # action = model.act(x)
             action = model.act(x, deterministic=True)
+            end_time=time.time()
+            print("dt=", (end_time - start_time)*1000 , " [ms]\n")
+
+            # trace_script_module = torch.jit.trace(model, x)
+            # trace_script_module.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_37/pyt_save/tracedModel.pt")
+            # model2=torch.jit.script(model.pi)
+            # # uncommend to save model of actor for libtorch
+            # traced_model_Cpp=torch.jit.trace(model.pi, x.reshape(1,27))
+            # traced_model_Cpp.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_0/pyt_save/traced_model_Cpp.pt")
         return action
 
     # ac.act(torch.as_tensor(o, dtype=torch.float32),

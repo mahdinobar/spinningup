@@ -105,6 +105,13 @@ register(
     max_episode_steps=100,
 )
 
+register(
+    id='Fep-v1',
+    entry_point='gym.envs.classic_control:FepEnv',
+    reward_threshold=-100.0,
+    max_episode_steps=100, #TODO: create new Gym env; but for the moment I disabled this parameter effect by commenting the if condition in file /home/mahdi/miniconda3/envs/spinningup/lib/python3.6/site-packages/gym/wrappers/time_limit.py + DONT forget to change in backup ym too
+)
+
 # Box2d
 # ----------------------------------------
 

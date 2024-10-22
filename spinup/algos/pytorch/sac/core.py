@@ -23,8 +23,8 @@ def count_vars(module):
     return sum([np.prod(p.shape) for p in module.parameters()])
 
 
-LOG_STD_MAX = 2
-LOG_STD_MIN = -20
+# LOG_STD_MAX = torch.tensor(2.0)
+# LOG_STD_MIN = torch.tensor(-20.0)
 
 class SquashedGaussianMLPActor(nn.Module):
 
@@ -36,10 +36,11 @@ class SquashedGaussianMLPActor(nn.Module):
         self.act_limit = act_limit
 
     def forward(self, obs, deterministic=False, with_logprob=True):
+    # def forward(self, obs, deterministic=True, with_logprob=False):
         net_out = self.net(obs)
         mu = self.mu_layer(net_out)
         log_std = self.log_std_layer(net_out)
-        log_std = torch.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
+        log_std = torch.clamp(log_std, -2, 20)
         std = torch.exp(log_std)
 
         # Pre-squash distribution and sample
@@ -60,6 +61,7 @@ class SquashedGaussianMLPActor(nn.Module):
             logp_pi -= (2*(np.log(2) - pi_action - F.softplus(-2*pi_action))).sum(axis=1)
         else:
             logp_pi = None
+            # logp_pi = torch.tensor(0)
 
         pi_action = torch.tanh(pi_action)
         pi_action = self.act_limit * pi_action
