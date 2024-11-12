@@ -12,12 +12,14 @@ def combined_shape(length, shape=None):
         return (length,)
     return (length, shape) if np.isscalar(shape) else (length, *shape)
 
+
 def mlp(sizes, activation, output_activation=nn.Identity):
     layers = []
-    for j in range(len(sizes)-1):
-        act = activation if j < len(sizes)-2 else output_activation
-        layers += [nn.Linear(sizes[j], sizes[j+1]), act()]
+    for j in range(len(sizes) - 1):
+        act = activation if j < len(sizes) - 2 else output_activation
+        layers += [nn.Linear(sizes[j], sizes[j + 1]), act()]
     return nn.Sequential(*layers)
+
 
 def count_vars(module):
     return sum([np.prod(p.shape) for p in module.parameters()])
@@ -36,8 +38,11 @@ class SquashedGaussianMLPActor(nn.Module):
         self.act_limit = act_limit
 
     def forward(self, obs, deterministic=False, with_logprob=True):
+    # # uncommend to save model of actor for libtorch
     # def forward(self, obs, deterministic=True, with_logprob=False):
         net_out = self.net(obs)
+        # # uncommend to save model of actor for libtorch
+        # net_out = self.net(obs.float())
         mu = self.mu_layer(net_out)
         log_std = self.log_std_layer(net_out)
         log_std = torch.clamp(log_std, -2, 20)
@@ -58,15 +63,18 @@ class SquashedGaussianMLPActor(nn.Module):
             # and look in appendix C. This is a more numerically-stable equivalent to Eq 21.
             # Try deriving it yourself as a (very difficult) exercise. :)
             logp_pi = pi_distribution.log_prob(pi_action).sum(axis=-1)
-            logp_pi -= (2*(np.log(2) - pi_action - F.softplus(-2*pi_action))).sum(axis=1)
+            logp_pi -= (2 * (np.log(2) - pi_action - F.softplus(-2 * pi_action))).sum(axis=1)
         else:
             logp_pi = None
+            # # uncommend to save model of actor for libtorch
             # logp_pi = torch.tensor(0)
 
         pi_action = torch.tanh(pi_action)
         pi_action = self.act_limit * pi_action
 
         return pi_action, logp_pi
+        # # uncommend to save model of actor for libtorch
+        # return pi_action.double(), logp_pi.double()
 
 
 class MLPQFunction(nn.Module):
@@ -77,11 +85,12 @@ class MLPQFunction(nn.Module):
 
     def forward(self, obs, act):
         q = self.q(torch.cat([obs, act], dim=-1))
-        return torch.squeeze(q, -1) # Critical to ensure q has right shape.
+        return torch.squeeze(q, -1)  # Critical to ensure q has right shape.
+
 
 class MLPActorCritic(nn.Module):
 
-    def __init__(self, observation_space, action_space, hidden_sizes=(256,256),
+    def __init__(self, observation_space, action_space, hidden_sizes=(256, 256),
                  activation=nn.ReLU):
         super().__init__()
 

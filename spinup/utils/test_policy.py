@@ -102,7 +102,9 @@ def load_pytorch_policy(fpath, itr, deterministic=False):
     def get_action(x):
         start_time = time.time()
         with torch.no_grad():
-            x = torch.as_tensor(x, dtype=torch.float32)
+            # # uncomment for libtorch Cpp save
+            # x = torch.as_tensor(x, dtype=torch.double)
+            x = torch.as_tensor(x)
             # action = model.act(x)
             action = model.act(x, deterministic=True)
             end_time=time.time()
@@ -111,9 +113,9 @@ def load_pytorch_policy(fpath, itr, deterministic=False):
             # trace_script_module = torch.jit.trace(model, x)
             # trace_script_module.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_37/pyt_save/tracedModel.pt")
             # model2=torch.jit.script(model.pi)
-            # # uncommend to save model of actor for libtorch
+            # # # uncommend to save model of actor for libtorch
             # traced_model_Cpp=torch.jit.trace(model.pi, x.reshape(1,27))
-            # traced_model_Cpp.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_101/pyt_save/traced_model_Cpp.pt")
+            # traced_model_Cpp.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_102/traced_model_Cpp_Fep_HW_102_double.pt")
         return action
 
     # ac.act(torch.as_tensor(o, dtype=torch.float32),
