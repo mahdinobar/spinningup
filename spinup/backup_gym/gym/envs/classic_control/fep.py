@@ -18,10 +18,10 @@ __author__ = "Mahdi Nobar from ETH Zurich <mnobar@ethz.ch>"
 physics_client = pb.connect(pb.DIRECT)
 
 # TDOO ATTENTION how you choose dt
-dt = 10e-3  # sec
+dt = 1e-3  # sec
 
 # TODO: improve code for STARTUP_exist
-STARTUP_exist = True
+STARTUP_exist = False
 # renderer = pb.ER_TINY_RENDERER  # p.ER_BULLET_HARDWARE_OPENGL
 # _width = 224
 # _height = 224
@@ -123,7 +123,7 @@ Robotic Manipulation" by Murry et al.
         # TODO correct q_init
         # self.q_init = np.deg2rad(np.array([-23.1218, 3.6854, 13.0462, -148.512, -8.7462, 150.2532]))
         # TDOO ATTENTION how you choose MAX_TIMESTEPS
-        self.MAX_TIMESTEPS = 1360  # maximum timesteps per episode
+        self.MAX_TIMESTEPS = 13600  # maximum timesteps per episode
         self.vxd = 0  # m/s
         self.vyd = 34.9028e-3  # m/s
         self.vzd = 0  # m/s
