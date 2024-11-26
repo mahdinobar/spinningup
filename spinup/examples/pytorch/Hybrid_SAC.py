@@ -11,7 +11,7 @@ import os
 TRAIN=0
 env_fn = lambda: gym.make('Fep-v0')
 # exp_name = "Fep_HW_0" #this must include Fep, correct code in e.g. test_policy.py line 131
-exp_name = "Fep_HW_203"
+exp_name = "Fep_HW_0"
 # exp_name = "Fep3v0_17_biased_1_ldpinv_001"
 Euler_server=False
 XPS_laptop=True
