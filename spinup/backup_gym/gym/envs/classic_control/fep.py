@@ -10,7 +10,7 @@ import pybullet_data
 import matplotlib.pyplot as plt
 import time
 
-# /cluster/home/mnobar/code/spinningup/spinup
+# /home/mahdi/ETHZ/codes/spinningup/spinup
 __copyright__ = "Copyright 2024, IfA https://control.ee.ethz.ch/"
 __credits__ = ["Mahdi Nobar"]
 __author__ = "Mahdi Nobar from ETH Zurich <mnobar@ethz.ch>"
@@ -37,7 +37,7 @@ dt_pb_sim = 1 / 240
 #                             options='--mp4fps=10 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d' % (
 #                                 _screen_width, _screen_height))
 # # pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
-# #                      "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/simulation.mp4")
+# #                      "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/simulation.mp4")
 # # Initialise debug camera angle
 # pb.resetDebugVisualizerCamera(
 #     cameraDistance=1.2,
@@ -56,7 +56,7 @@ pb.setAdditionalSearchPath(pybullet_data.getDataPath())
 
 # pb.setPhysicsEngineParameter(numSolverIterations=50)  # Increase for better accuracy
 
-arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf",
+arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf",
                   useFixedBase=True, physicsClientId=physics_client)
 
 # # Create the second physics client
@@ -64,7 +64,7 @@ arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/
 # pb.setAdditionalSearchPath(pybullet_data.getDataPath(), physicsClientId=client_auxilary)
 # pb.loadURDF("plane.urdf", physicsClientId=client_auxilary)
 # arm_auxilary = pb.loadURDF(
-#     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf",
+#     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf",
 #     useFixedBase=True, physicsClientId=client_auxilary)
 # # # default timestep is 1/240 second (search fixedTimeStep)
 # pb.setTimeStep(timeStep=dt_pb_sim, physicsClientId=client_auxilary)
@@ -72,32 +72,32 @@ arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/
 # pb.setGravity(0, 0, -9.81, physicsClientId=client_auxilary)
 
 arm_biased_kinematics = pb.loadURDF(
-    "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc_biased_1.urdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc_biased_1.urdf",
     useFixedBase=True, physicsClientId=physics_client)
 # arm_biased_kinematics = pb.loadURDF(
-#     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics_3.urdf",
+#     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics_3.urdf",
 #     useFixedBase=True)
 
 # import os
 # import rospkg
 # import subprocess
 # rospack = rospkg.RosPack()
-# xacro_filename = os.path.join("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro")
-# urdf_filename = os.path.join("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf")
+# xacro_filename = os.path.join("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro")
+# urdf_filename = os.path.join("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf")
 # urdf = open(urdf_filename, "w")
 #
 # # Recompile the URDF to make sure it's up to date
 # subprocess.call(['rosrun', 'xacro', 'xacro.py', xacro_filename], stdout=urdf)
 #
 #
-# arm2 = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro",
+# arm2 = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro",
 #                   useFixedBase=True)
-target_object = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
+target_object = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
                             useFixedBase=True, physicsClientId=physics_client)
 conveyor_object = pb.loadURDF(
-    "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
     useFixedBase=True, physicsClientId=physics_client)
-plane = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
+plane = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
                     useFixedBase=True, physicsClientId=physics_client)
 
 
@@ -114,15 +114,15 @@ Robotic Manipulation" by Murry et al.
         np.random.seed(seed)
         self.seed(seed=seed)
         # TODO: reward params
-        self.lp = 800
+        self.lp = 1800
         self.lv = 10
         self.lddqc = 1
         self.reward_eta_p = 1
         self.reward_eta_v = 0
         self.reward_eta_ddqc = 0
         # TODO: User defined linear position gain
-        self.K_p = 5
-        self.K_i = 0.5
+        self.K_p = 1
+        self.K_i = 0.1
         self.K_d = 0
         self.korque_noise_max = 0.  # TODO
         self.viewer = None
@@ -247,7 +247,6 @@ Robotic Manipulation" by Murry et al.
         yd_startup = r_hat_t[1]
         zd_startup = r_hat_t[2]
         while np.linalg.norm(r_hat_t - np.array([self.xd_init, self.yd_init, self.zd_init])) > 0.001:
-            r_hat_t = r_hat_t
             v_star_dir_length = 34.9028 / (1 + np.exp(-0.04 * (k_startup - 250))) / 1000 - 34.9028 / (
                     1 + np.exp(-0.04 * (0 - 250))) / 1000;
             v_star = v_star_dir_length * (v_star_dir / norm_v_star_dir)
@@ -317,6 +316,8 @@ Robotic Manipulation" by Murry et al.
             if k_startup > 5000:
                 raise ValueError("took too long for startup phase!")
 
+        r_hat_tfp1_startup = r_hat_t
+        rd_tf_startup = rd_t
 
         # ATTENTION: here we do to keep self.dqc_PID for next step
         v_star_dir_length = 34.9028 / (1 + np.exp(-0.04 * (k_startup - 250))) / 1000 - 34.9028 / (
@@ -350,13 +351,8 @@ Robotic Manipulation" by Murry et al.
         Jpinv_t = self.pseudoInverseMat(J_t, ld=0.01)
         # ATTENTION: here we calculate the self.dqc_PID ready but we do not step simulation, and keep it for "step" to set with a
         self.dqc_PID, self.edt = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t,
-                                             edt=self.edt,
-                                             deltaT=dt_startup)
-
-
-
-
-
+                                                edt=self.edt,
+                                                deltaT=dt_startup)
 
         q_t = np.array(q_t)[:6]
         dq_t = np.array(dq_t)[:6]
@@ -373,12 +369,11 @@ Robotic Manipulation" by Murry et al.
             np.array([self.xd_init, self.yd_init, self.zd_init]) + np.array([-0.002, -0.18, -0.15]),
             pb.getQuaternionFromEuler([0, 0, np.pi / 2 - 0.244978663]), physicsClientId=physics_client)
 
-        self.state = [0,
+        self.state = [r_hat_tfp1_startup[0] - rd_tf_startup[0],
                       # ATTENTION: because of assumption that on real system we start Kalman filter with final position of EE at startup phase
-                      0,
+                      r_hat_tfp1_startup[1] - rd_tf_startup[1],
                       # ATTENTION: because of assumption that on real system we start Kalman filter with final position of EE at startup phase
-                      0,
-                      # ATTENTION: because of assumption that on real system we start Kalman filter with final position of EE at startup phase
+                      r_hat_tfp1_startup[2] - rd_tf_startup[2],
                       q_t[0],
                       q_t[1],
                       q_t[2],
@@ -405,21 +400,49 @@ Robotic Manipulation" by Murry et al.
                       dqc_t_PID[5]]
         self.state_buffer = self.state
 
-        # Add noise to target speed
-        self.vxd = 0 + np.random.normal(loc=0.0, scale=0.000367647, size=1)[
+        # # Add noise to target speed
+        # self.vxd = 0 + np.random.normal(loc=0.0, scale=0.000367647, size=1)[
+        #     0]  # [m/s] for 0.5 [cm] drift given std error after 13.6 [s]
+        # self.vyd = 34.9028e-3 + np.random.normal(loc=0.0, scale=0.002205882, size=1)[
+        #     0]  # [m/s] for 3 [cm] drift given std error after 13.6 [s]
+        # self.vzd = 0  # m/s
+        # print("INFO: added noise to target speed in x and y directions!")
+        # deltax = self.vxd * dt * self.MAX_TIMESTEPS
+        # deltay = self.vyd * dt * self.MAX_TIMESTEPS
+        # deltaz = self.vzd * dt * self.MAX_TIMESTEPS
+        # self.xd = np.linspace(self.xd_init, self.xd_init + deltax, self.MAX_TIMESTEPS, endpoint=True)
+        # self.yd = np.linspace(self.yd_init, self.yd_init + deltay, self.MAX_TIMESTEPS, endpoint=True)
+        # # Add noise to target z position
+        # self.zd = np.linspace(self.zd_init, self.zd_init + deltaz, self.MAX_TIMESTEPS,
+        #                       endpoint=True) + np.random.normal(loc=0.0, scale=0.0005, size=self.MAX_TIMESTEPS)
+
+        self.vxd = np.zeros((self.MAX_TIMESTEPS)) + np.random.normal(loc=0.0, scale=0.000367647, size=1)[
             0]  # [m/s] for 0.5 [cm] drift given std error after 13.6 [s]
-        self.vyd = 34.9028e-3 + np.random.normal(loc=0.0, scale=0.002205882, size=1)[
+        self.vyd = np.zeros((self.MAX_TIMESTEPS)) + np.random.normal(loc=0.0, scale=0.002205882, size=1)[
             0]  # [m/s] for 3 [cm] drift given std error after 13.6 [s]
-        self.vzd = 0  # m/s
-        print("INFO: added noise to target speed in x and y directions!")
-        deltax = self.vxd * dt * self.MAX_TIMESTEPS
-        deltay = self.vyd * dt * self.MAX_TIMESTEPS
-        deltaz = self.vzd * dt * self.MAX_TIMESTEPS
-        self.xd = np.linspace(self.xd_init, self.xd_init + deltax, self.MAX_TIMESTEPS, endpoint=True)
-        self.yd = np.linspace(self.yd_init, self.yd_init + deltay, self.MAX_TIMESTEPS, endpoint=True)
-        # Add noise to target z position
-        self.zd = np.linspace(self.zd_init, self.zd_init + deltaz, self.MAX_TIMESTEPS,
-                              endpoint=True) + np.random.normal(loc=0.0, scale=0.001, size=self.MAX_TIMESTEPS)
+        self.vzd = np.zeros((self.MAX_TIMESTEPS))
+        self.xd = np.zeros((self.MAX_TIMESTEPS))
+        self.yd = np.zeros((self.MAX_TIMESTEPS))
+        self.zd = np.zeros((self.MAX_TIMESTEPS))
+        self.xd[0] = self.xd_init
+        self.yd[0] = self.yd_init
+        self.zd[0] = self.zd_init
+        self.vxd[0] = 0 + np.random.normal(loc=0.0, scale=0.00289, size=1)[0]
+        self.vyd[0] = 34.9028e-3 + np.random.normal(loc=0.0, scale=0.000376, size=1)[0]
+        self.vzd[0] = 0 + np.random.normal(loc=0.0, scale=0.000174, size=1)[0]  # m/s
+        rand_idx=np.random.randint(0,self.MAX_TIMESTEPS,size=50)
+        for i in range(0, self.MAX_TIMESTEPS-1):
+            if i in rand_idx:
+                self.vxd[i+1] = 0 + np.random.normal(loc=0.0, scale=0.0032, size=1)[0]
+                self.vyd[i+1] = 34.9028e-3 + np.random.normal(loc=0.0, scale=0.000376, size=1)[0]
+                self.vzd[i+1] = 0 + np.random.normal(loc=0.0, scale=0.000174, size=1)[0]  # m/s
+            else:
+                self.vxd[i+1] = 0
+                self.vyd[i+1] = 34.9028e-3
+                self.vzd[i+1] = 0  # m/s
+            self.xd[i+1] = self.xd[i] + self.vxd[i] * dt# + np.random.normal(loc=0.0, scale=0.0001, size=1)
+            self.yd[i+1] = self.yd[i] + self.vyd[i] * dt# + np.random.normal(loc=0.0, scale=0.0001, size=1)
+            self.zd[i+1] = self.zd[i] + self.vzd[i] * dt + np.random.normal(loc=0.0, scale=0.00025, size=1)
 
         # ATTENTION set back simulation frequency after startup phase
         pb.setTimeStep(timeStep=dt_pb_sim, physicsClientId=physics_client)
@@ -496,7 +519,7 @@ Robotic Manipulation" by Murry et al.
         self.k += 1  # Attention doublecheck
         rd_tp1 = np.array(
             [self.xd[self.k], self.yd[self.k], self.zd[self.k]])  # attention: index desired starts from t=-1
-        vd_tp1 = np.array([self.vxd, self.vyd, self.vzd])
+        vd_tp1 = np.array([self.vxd[self.k], self.vyd[self.k], self.vzd[self.k]])
         pb.resetBasePositionAndOrientation(
             target_object, rd_tp1, pb.getQuaternionFromEuler(
                 np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])), physicsClientId=physics_client)
@@ -530,8 +553,8 @@ Robotic Manipulation" by Murry et al.
         error_ddqc_t = sum(abs(dqc_t - self.dq[-2, :]))
         # reward_p_t = self.f_logistic(error_p_t, self.lp)
         reward_px_t = self.f_logistic(abs(r_hat_tp1[0] - rd_tp1[0]), self.lp)
-        reward_py_t = self.f_logistic(abs(r_hat_tp1[1] - rd_tp1[1]), self.lp)
-        reward_pz_t = self.f_logistic(abs(r_hat_tp1[2] - rd_tp1[2]), 400)
+        reward_py_t = self.f_logistic(abs(r_hat_tp1[1] - rd_tp1[1]), 1200)
+        reward_pz_t = self.f_logistic(abs(r_hat_tp1[2] - rd_tp1[2]), 600)
         reward_p_t = (reward_px_t + reward_py_t + reward_pz_t) / 3
         # reward_v_t = self.f_logistic(error_v_t, self.lv)
         reward_ddqc_t = self.f_logistic(error_ddqc_t, self.lddqc)
@@ -564,7 +587,7 @@ Robotic Manipulation" by Murry et al.
         dqc_tp1_PID, self.edt = self.q_command(r_ee=r_hat_tp1, v_ee=v_hat_tp1, Jpinv=Jpinv_tp1, rd=rd_tp1, vd=vd_tp1,
                                                edt=self.edt,
                                                deltaT=dt)
-        self.dqc_PID=dqc_tp1_PID
+        self.dqc_PID = dqc_tp1_PID
         # observations after applying the action a
         obs = [r_hat_tp1[0] - rd_tp1[0],
                r_hat_tp1[1] - rd_tp1[1],
@@ -642,9 +665,9 @@ Robotic Manipulation" by Murry et al.
                        a[4],
                        a[5]]
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
-        # # # # # TODO: so dirty code: uncomment when NOSAC for plots -- you need to take care of which random values you call by break points after first done in sac.py ... and cmment a too ...
+        # # TODO: so dirty code: uncomment when NOSAC for plots -- you need to take care of which random values you call by break points after first done in sac.py ... and cmment a too ...
         # plot_data_buffer_no_SAC=self.plot_data_buffer
-        # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_204/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_211/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
         # given action it returns 4-tuple (observation, reward, done, info)
         return (obs, reward_t, terminal, {})
 
@@ -684,12 +707,12 @@ Robotic Manipulation" by Murry et al.
             pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
                                  output_dir_rendering + "/simulation.mp4")  # added by Pierre
             target_object = pb.loadURDF(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
                 useFixedBase=True, physicsClientId=physics_client)
             conveyor_object = pb.loadURDF(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
                 useFixedBase=True, physicsClientId=physics_client)
-            plane = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
+            plane = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
                                 useFixedBase=True, physicsClientId=physics_client)
             # Initialise debug camera angle
             pb.resetDebugVisualizerCamera(
@@ -706,7 +729,7 @@ Robotic Manipulation" by Murry et al.
             #     physicsClientId=physics_client_rendering)
             t = 0
             rd_t = np.array([self.xd[t], self.yd[t], self.zd[t]])
-            vd_t = np.array([self.vxd, self.vyd, self.vzd])
+            vd_t = np.array([self.vxd[t], self.vyd[t], self.vzd[t]])
             # Reset robot at the origin and move the target object to the goal position and orientation
             pb.resetBasePositionAndOrientation(
                 arm, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]), physicsClientId=physics_client)
@@ -746,13 +769,13 @@ Robotic Manipulation" by Murry et al.
                 pb.stepSimulation(physicsClientId=physics_client)
                 time.sleep(0.01)
         # np.save(
-        #     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_" + str(
+        #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_" + str(
         #         self.n) + ".npy", self.plot_data_buffer)
         # render_test_buffer=False
         if render_test_buffer == True:
-            # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
             plot_data_buffer_no_SAC = np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_204/plot_data_buffer_no_SAC.npy")
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_211/plot_data_buffer_no_SAC.npy")
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
             axs1[0].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 4] * 1000, 'r--',
                          label='EE desired traj')
