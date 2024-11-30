@@ -8,6 +8,8 @@ import time
 import spinup.algos.pytorch.sac.core as core
 from spinup.utils.logx import EpochLogger
 
+import matplotlib.pyplot as plt
+
 
 class ReplayBuffer:
     """
@@ -357,6 +359,83 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
         # End of trajectory handling
         if d or (ep_len == max_ep_len):
+            # uncomment for debugging plots#############################################################################
+            if (False):
+                fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
+                axs1[0].plot(env.env.plot_data_buffer[:, 3] * 1000, env.env.plot_data_buffer[:, 4] * 1000, 'r--',
+                             label='EE desired traj')
+                axs1[0].plot((env.env.plot_data_buffer[:, 3] - abs(env.env.plot_data_buffer[:, 30])) * 1000,
+                             (env.env.plot_data_buffer[:, 4] - abs(env.env.plot_data_buffer[:, 31])) * 1000, 'm:',
+                             label='jacobian uncertainty')
+
+                axs1[0].plot((env.env.plot_data_buffer[:, 3] + abs(env.env.plot_data_buffer[:, 30])) * 1000,
+                             (env.env.plot_data_buffer[:, 4] + abs(env.env.plot_data_buffer[:, 31])) * 1000, 'm:',
+                             label='jacobian uncertainty')
+                axs1[0].plot(env.env.plot_data_buffer[:, 0] * 1000, env.env.plot_data_buffer[:, 1] * 1000, 'k',
+                             label='EE position - with SAC')
+                axs1[0].set_xlabel("x[mm]")
+                axs1[0].set_ylabel("y[mm]")
+                axs1[1].plot(env.env.plot_data_buffer[:, 3] * 1000, env.env.plot_data_buffer[:, 5] * 1000, 'r--',
+                             label='EE desired traj')
+                axs1[1].plot((env.env.plot_data_buffer[:, 3] - abs(env.env.plot_data_buffer[:, 30])) * 1000,
+                             (env.env.plot_data_buffer[:, 5] - abs(env.env.plot_data_buffer[:, 32])) * 1000, 'm:',
+                             label='jacobian uncertainty')
+                axs1[1].plot((env.env.plot_data_buffer[:, 3] + abs(env.env.plot_data_buffer[:, 30])) * 1000,
+                             (env.env.plot_data_buffer[:, 5] + abs(env.env.plot_data_buffer[:, 32])) * 1000, 'm:',
+                             label='jacobian uncertainty')
+                axs1[1].plot(env.env.plot_data_buffer[:, 0] * 1000, env.env.plot_data_buffer[:, 2] * 1000, 'k',
+                             label='EE position - with SAC')
+                axs1[1].set_xlabel("x[mm]")
+                axs1[1].set_ylabel("z[mm]")
+                axs1[2].plot(env.env.plot_data_buffer[:, 4] * 1000, env.env.plot_data_buffer[:, 5] * 1000, 'r--',
+                             label='EE desired traj')
+                axs1[2].plot((env.env.plot_data_buffer[:, 4] - abs(env.env.plot_data_buffer[:, 31])) * 1000,
+                             (env.env.plot_data_buffer[:, 5] - abs(env.env.plot_data_buffer[:, 32])) * 1000, 'm:',
+                             label='jacobian uncertainty')
+                axs1[2].plot((env.env.plot_data_buffer[:, 4] + abs(env.env.plot_data_buffer[:, 31])) * 1000,
+                             (env.env.plot_data_buffer[:, 5] + abs(env.env.plot_data_buffer[:, 32])) * 1000, 'm:',
+                             label='jacobian uncertainty')
+                axs1[2].plot(env.env.plot_data_buffer[:, 1] * 1000, env.env.plot_data_buffer[:, 2] * 1000, 'k',
+                             label='EE position - with SAC')
+                axs1[2].set_xlabel("y[mm]")
+                axs1[2].set_ylabel("z[mm]")
+                plt.legend()
+                plt.show()
+
+                fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 8))
+                axs3[0].plot(abs(env.env.plot_data_buffer[:, 0] - env.env.plot_data_buffer[:, 3]) * 1000, 'b',
+                             label='x error')
+                axs3[0].plot(abs(env.env.plot_data_buffer[:, 30]) * 1000, 'm:', label='error bound')
+                axs3[0].set_xlabel("t")
+                axs3[0].set_ylabel("|x-xd| [mm]")
+                plt.legend()
+                axs3[1].plot(abs(env.env.plot_data_buffer[:, 1] - env.env.plot_data_buffer[:, 4]) * 1000, 'b',
+                             label='y error')
+                axs3[1].plot(abs(env.env.plot_data_buffer[:, 31]) * 1000, 'm:', label='error bound')
+                axs3[1].set_xlabel("t")
+                axs3[1].set_ylabel("|y-yd| [mm]")
+                plt.legend()
+                axs3[2].plot(abs(env.env.plot_data_buffer[:, 2] - env.env.plot_data_buffer[:, 5]) * 1000, 'b',
+                             label='z error')
+                axs3[2].plot(abs(env.env.plot_data_buffer[:, 32]) * 1000, 'm:', label='error bound')
+                axs3[2].set_xlabel("t")
+                axs3[2].set_ylabel("|z-zd| [mm]")
+                plt.legend()
+                axs3[3].plot(
+                    np.linalg.norm((env.env.plot_data_buffer[:, 0:3] - env.env.plot_data_buffer[:, 3:6]), ord=2,
+                                   axis=1) * 1000,
+                    'b',
+                    label='Euclidean error')
+                axs3[3].plot(
+                    np.linalg.norm(env.env.plot_data_buffer[:, 30:33], ord=2, axis=1) * 1000,
+                    'm:', label='error bound')
+                axs3[3].set_xlabel("t")
+                axs3[3].set_ylabel("||r-rd||_2 [mm]")
+                plt.legend()
+                plt.show()
+            ################################################################################################
+
+            env.env.plot_data_buffer
             logger.store(EpRet=ep_ret, EpLen=ep_len)
             o, ep_ret, ep_len = env.reset(), 0, 0
 

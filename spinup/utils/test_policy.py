@@ -102,11 +102,14 @@ def load_pytorch_policy(fpath, itr, deterministic=False):
     def get_action(x):
         start_time = time.time()
         with torch.no_grad():
+            # comment for libtorch Cpp save
+            x = torch.as_tensor(x)
+            action = model.act(x)
+
             # # uncomment for libtorch Cpp save
             # x = torch.as_tensor(x, dtype=torch.double)
-            x = torch.as_tensor(x)
-            # action = model.act(x)
-            action = model.act(x, deterministic=True)
+            # action = model.act(x, deterministic=True)
+
             end_time=time.time()
             print("dt=", (end_time - start_time)*1000 , " [ms]\n")
 
@@ -115,7 +118,7 @@ def load_pytorch_policy(fpath, itr, deterministic=False):
             # model2=torch.jit.script(model.pi)
             # # # uncommend to save model of actor for libtorch
             # traced_model_Cpp=torch.jit.trace(model.pi, x.reshape(1,27))
-            # traced_model_Cpp.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_102/traced_model_Cpp_Fep_HW_102_double.pt")
+            # traced_model_Cpp.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_207/traced_model_Cpp_Fep_HW_207_double.pt")
         return action
 
     # ac.act(torch.as_tensor(o, dtype=torch.float32),
