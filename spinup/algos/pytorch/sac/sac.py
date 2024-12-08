@@ -248,8 +248,9 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         device = torch.device("cpu")
         target_entropy = -0.1*(ac.pi.mu_layer.out_features)
         # log_alpha=torch.zeros(1, requires_grad=True, device=device)
-        log_alpha = torch.tensor([np.exp(alpha_init)], requires_grad=True, device=device)
-        alpha_optimizer = Adam([log_alpha], lr=lr)
+        log_alpha = torch.tensor([np.log(alpha_init)], requires_grad=True, device=device)
+        alpha_optimizer = Adam([log_alpha], lr=0.0005)
+        alpha = log_alpha.exp()
 
     # Set up model saving
     logger.setup_pytorch_saver(ac)
@@ -278,9 +279,13 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         if automatic_entropy_tuning is True:
             o = data['obs']
             pi, logp_pi = ac.pi(o)
-            alpha_loss = -(log_alpha * (logp_pi + target_entropy).detach()).mean() #equation 18 of SAC paper
             alpha_optimizer.zero_grad()
+            alpha_loss = -(log_alpha * (logp_pi + target_entropy).detach()).mean() #equation 18 of SAC paper
+            # print("entropy_actor_estimate=",logp_pi.mean().item())
             alpha_loss.backward()
+            # Check the gradient of log_alpha
+            # if log_alpha.grad is not None:
+            #     print(f"Gradient of log_alpha: {log_alpha.grad.mean().item()}")
             alpha_optimizer.step()
             alpha = log_alpha.exp()
             # alpha_info = dict(Alpha=alpha.detach().numpy())
@@ -433,8 +438,8 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
                 axs3[3].set_ylabel("||r-rd||_2 [mm]")
                 plt.legend()
                 plt.show()
+                print("---ERROR=",np.mean(np.linalg.norm(env.env.plot_data_buffer[:, 30:33], ord=2, axis=1))*1000)
             ################################################################################################
-
             env.env.plot_data_buffer
             logger.store(EpRet=ep_ret, EpLen=ep_len)
             o, ep_ret, ep_len = env.reset(), 0, 0
