@@ -162,7 +162,7 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
         plot_data(data, xaxis=xaxis, value=value, condition=condition, smooth=smooth, estimator=estimator,zorder=1)
     # plt.hlines(44.47124, 0, 10e4, 'k', linestyles="dashed", label='PID only')
     # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
-    plt.hlines( 109, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
+    plt.hlines( 106, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
     plt.savefig(all_logdirs[-1]+"/learning_curve", format="pdf", bbox_inches='tight',zorder=2)
     plt.show()
@@ -180,8 +180,52 @@ def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=Fa
     # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
     # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
-    plt.ylim([0,0.1])
-    plt.savefig(all_logdirs[-1]+"/alpha", format="pdf", bbox_inches='tight',zorder=2)
+    plt.ylim([0,3])
+    plt.savefig(all_logdirs[-1]+"/Alpha", format="pdf", bbox_inches='tight',zorder=2)
+    plt.show()
+
+    for value in values:
+        plt.figure()
+        plot_data(data, xaxis=xaxis, value="AverageLogPi", condition=condition, smooth=smooth, estimator=estimator,zorder=1)
+    # plt.hlines(44.47124, 0, 10e4, 'k', linestyles="dashed", label='PID only')
+    # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
+    # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
+    plt.legend()
+    plt.ylim([-5,10])
+    plt.savefig(all_logdirs[-1]+"/AverageLogPi", format="pdf", bbox_inches='tight',zorder=2)
+    plt.show()
+
+    for value in values:
+        plt.figure()
+        plot_data(data, xaxis=xaxis, value="LossAlpha", condition=condition, smooth=smooth, estimator=estimator,zorder=1)
+    # plt.hlines(44.47124, 0, 10e4, 'k', linestyles="dashed", label='PID only')
+    # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
+    # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
+    plt.legend()
+    plt.ylim([-10,6])
+    plt.savefig(all_logdirs[-1]+"/LossAlpha", format="pdf", bbox_inches='tight',zorder=2)
+    plt.show()
+
+    for value in values:
+        plt.figure()
+        plot_data(data, xaxis=xaxis, value="LossQ", condition=condition, smooth=smooth, estimator=estimator,zorder=1)
+    # plt.hlines(44.47124, 0, 10e4, 'k', linestyles="dashed", label='PID only')
+    # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
+    # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
+    plt.legend()
+    plt.ylim([0,50])
+    plt.savefig(all_logdirs[-1]+"/LossQ", format="pdf", bbox_inches='tight',zorder=2)
+    plt.show()
+
+    for value in values:
+        plt.figure()
+        plot_data(data, xaxis=xaxis, value="AverageQ1Vals", condition=condition, smooth=smooth, estimator=estimator,zorder=1)
+    # plt.hlines(44.47124, 0, 10e4, 'k', linestyles="dashed", label='PID only')
+    # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
+    # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
+    plt.legend()
+    plt.ylim([0,40])
+    plt.savefig(all_logdirs[-1]+"/AverageQ1Vals", format="pdf", bbox_inches='tight',zorder=2)
     plt.show()
 
 def main():

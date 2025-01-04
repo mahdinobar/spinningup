@@ -246,10 +246,11 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
     if automatic_entropy_tuning is True:
         device = torch.device("cpu")
-        target_entropy = -0.1*(ac.pi.mu_layer.out_features)
+        target_entropy = -0.6 #-0.1*(ac.pi.mu_layer.out_features)
         # log_alpha=torch.zeros(1, requires_grad=True, device=device)
         log_alpha = torch.tensor([np.log(alpha_init)], requires_grad=True, device=device)
-        alpha_optimizer = Adam([log_alpha], lr=0.0005)
+        alpha_optimizer = Adam([log_alpha], lr=0.0001)
+        # alpha_min=0.05
         alpha = log_alpha.exp()
 
     # Set up model saving
@@ -287,14 +288,17 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             # if log_alpha.grad is not None:
             #     print(f"Gradient of log_alpha: {log_alpha.grad.mean().item()}")
             alpha_optimizer.step()
+            # # Clip alpha to ensure it doesn't go below alpha_min
+            # with torch.no_grad():
+            #     log_alpha.data = torch.clamp(log_alpha.data, min=np.log(alpha_min))
             alpha = log_alpha.exp()
             # alpha_info = dict(Alpha=alpha.detach().numpy())
             # logger.store(LossAlpha=alpha_loss.item(), **alpha_info)
-            logger.store(LossAlpha=alpha_loss.item(), Alpha=alpha.detach().numpy())
+            logger.store(LossAlpha=alpha_loss.item(), Alpha=alpha.detach().numpy(), GradientlogAlpha=log_alpha.grad.item())
         else:
             # alpha_info = dict(Alpha=alpha.detach().numpy())
             # logger.store(LossAlpha=alpha_loss.item(), **alpha_info)
-            logger.store(LossAlpha=0, Alpha=alpha_init)
+            logger.store(LossAlpha=0, Alpha=alpha_init, GradientlogAlpha=0)
         # Unfreeze Q-networks so you can optimize it at next (DDPG, SAC, ...) step.
         for p in q_params:
             p.requires_grad = True
@@ -365,7 +369,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         # End of trajectory handling
         if d or (ep_len == max_ep_len):
             # uncomment for debugging plots#############################################################################
-            if (False):
+            if (True):
                 fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
                 axs1[0].plot(env.env.plot_data_buffer[:, 3] * 1000, env.env.plot_data_buffer[:, 4] * 1000, 'r--',
                              label='EE desired traj')
@@ -476,13 +480,14 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             logger.log_tabular('TotalEnvInteracts', t)
             if not (t >= update_after and (t + 1) % update_every == 0):
                 q_info = dict(Q1Vals=np.zeros(1), Q2Vals=np.zeros(1))
-                logger.store(**q_info, LogPi=0, LossPi=0, LossQ=0, LossAlpha=0, Alpha=0)
+                logger.store(**q_info, LogPi=0, LossPi=0, LossQ=0, LossAlpha=0, Alpha=0, GradientlogAlpha=0)
             logger.log_tabular('Q1Vals', with_min_and_max=True)
             logger.log_tabular('Q2Vals', with_min_and_max=True)
             logger.log_tabular('LogPi', with_min_and_max=True)
             logger.log_tabular('LossPi', average_only=True)
             logger.log_tabular('Alpha', average_only=True)
             logger.log_tabular('LossAlpha', average_only=True)
+            logger.log_tabular('GradientlogAlpha', average_only=True)
             logger.log_tabular('LossQ', average_only=True)
             logger.log_tabular('Time', time.time() - start_time)
             logger.dump_tabular()
