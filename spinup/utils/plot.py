@@ -88,8 +88,9 @@ def get_datasets(logdir, condition=None):
 
             try:
                 exp_data = pd.read_table(os.path.join(root,'progress.txt'))
-            except:
+            except Exception as error:
                 print('Could not read from %s'%os.path.join(root,'progress.txt'))
+                print(error)
                 continue
             performance = 'AverageTestEpRet' if 'AverageTestEpRet' in exp_data else 'AverageEpRet'
             exp_data.insert(len(exp_data.columns),'Unit',unit)
@@ -162,7 +163,7 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
         plot_data(data, xaxis=xaxis, value=value, condition=condition, smooth=smooth, estimator=estimator,zorder=1)
     # plt.hlines(44.47124, 0, 10e4, 'k', linestyles="dashed", label='PID only')
     # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
-    plt.hlines( 106, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
+    plt.hlines( 117, 0, 1.632e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
     plt.savefig(all_logdirs[-1]+"/learning_curve", format="pdf", bbox_inches='tight',zorder=2)
     plt.show()
@@ -180,7 +181,7 @@ def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=Fa
     # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
     # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
-    plt.ylim([0,3])
+    # plt.ylim([0,3])
     plt.savefig(all_logdirs[-1]+"/Alpha", format="pdf", bbox_inches='tight',zorder=2)
     plt.show()
 
@@ -191,7 +192,7 @@ def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=Fa
     # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
     # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
-    plt.ylim([-5,10])
+    # plt.ylim([-5,10])
     plt.savefig(all_logdirs[-1]+"/AverageLogPi", format="pdf", bbox_inches='tight',zorder=2)
     plt.show()
 
@@ -202,7 +203,7 @@ def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=Fa
     # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
     # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
-    plt.ylim([-10,6])
+    # plt.ylim([-10,6])
     plt.savefig(all_logdirs[-1]+"/LossAlpha", format="pdf", bbox_inches='tight',zorder=2)
     plt.show()
 
@@ -213,7 +214,7 @@ def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=Fa
     # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
     # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
-    plt.ylim([0,50])
+    # plt.ylim([0,50])
     plt.savefig(all_logdirs[-1]+"/LossQ", format="pdf", bbox_inches='tight',zorder=2)
     plt.show()
 
@@ -224,7 +225,7 @@ def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=Fa
     # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
     # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
-    plt.ylim([0,40])
+    # plt.ylim([0,40])
     plt.savefig(all_logdirs[-1]+"/AverageQ1Vals", format="pdf", bbox_inches='tight',zorder=2)
     plt.show()
 

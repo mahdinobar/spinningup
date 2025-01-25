@@ -246,7 +246,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
     if automatic_entropy_tuning is True:
         device = torch.device("cpu")
-        target_entropy = -0.6 #-0.1*(ac.pi.mu_layer.out_features)
+        target_entropy = -6 #-0.1*(ac.pi.mu_layer.out_features)
         # log_alpha=torch.zeros(1, requires_grad=True, device=device)
         log_alpha = torch.tensor([np.log(alpha_init)], requires_grad=True, device=device)
         alpha_optimizer = Adam([log_alpha], lr=0.0001)
@@ -256,7 +256,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
     # Set up model saving
     logger.setup_pytorch_saver(ac)
 
-    def update(data):
+    def update(data, t):
         # First run one gradient descent step for Q1 and Q2
         q_optimizer.zero_grad()
         loss_q, q_info = compute_loss_q(data)
@@ -280,6 +280,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         if automatic_entropy_tuning is True:
             o = data['obs']
             pi, logp_pi = ac.pi(o)
+            # if t >= 68000:
             alpha_optimizer.zero_grad()
             alpha_loss = -(log_alpha * (logp_pi + target_entropy).detach()).mean() #equation 18 of SAC paper
             # print("entropy_actor_estimate=",logp_pi.mean().item())
@@ -292,9 +293,11 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             # with torch.no_grad():
             #     log_alpha.data = torch.clamp(log_alpha.data, min=np.log(alpha_min))
             alpha = log_alpha.exp()
-            # alpha_info = dict(Alpha=alpha.detach().numpy())
-            # logger.store(LossAlpha=alpha_loss.item(), **alpha_info)
-            logger.store(LossAlpha=alpha_loss.item(), Alpha=alpha.detach().numpy(), GradientlogAlpha=log_alpha.grad.item())
+            logger.store(LossAlpha=alpha_loss.item(), Alpha=alpha.detach().numpy(),
+                         GradientlogAlpha=log_alpha.grad.item())
+            # else:
+            #     alpha = log_alpha.exp()
+            #     logger.store(LossAlpha=0, Alpha=alpha_init, GradientlogAlpha=0)
         else:
             # alpha_info = dict(Alpha=alpha.detach().numpy())
             # logger.store(LossAlpha=alpha_loss.item(), **alpha_info)
@@ -369,7 +372,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         # End of trajectory handling
         if d or (ep_len == max_ep_len):
             # uncomment for debugging plots#############################################################################
-            if (True):
+            if (False):
                 fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
                 axs1[0].plot(env.env.plot_data_buffer[:, 3] * 1000, env.env.plot_data_buffer[:, 4] * 1000, 'r--',
                              label='EE desired traj')
@@ -453,12 +456,12 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             if sample_mode == 1:
                 for j in range(update_every):
                     batch = replay_buffer.sample_batch(batch_size, sample_mode)
-                    update(data=batch)
+                    update(data=batch, t=t)
             elif sample_mode == 2:
                 sequence_length = 20
                 for j in range(update_every):
                     batch = replay_buffer.sample_batch(batch_size, sample_mode, sequence_length)
-                    update(data=batch)
+                    update(data=batch, t=t)
 
         # End of epoch handling
         if (t + 1) % steps_per_epoch == 0:

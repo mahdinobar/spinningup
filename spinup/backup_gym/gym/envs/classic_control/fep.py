@@ -1,14 +1,13 @@
 """Two-link RR Planar Manipulator Tracking Task"""
-import numpy as np
-from numpy import sin, cos, pi
-from gym import core, spaces
-from gym.utils import seeding
-from scipy.integrate import solve_ivp
 import math
+import time
+
+import matplotlib.pyplot as plt
+import numpy as np
 import pybullet as pb
 import pybullet_data
-import matplotlib.pyplot as plt
-import time
+from gym import core, spaces
+from gym.utils import seeding
 
 # /home/mahdi/ETHZ/codes/spinningup/spinup
 __copyright__ = "Copyright 2024, IfA https://control.ee.ethz.ch/"
@@ -114,7 +113,7 @@ Robotic Manipulation" by Murry et al.
         np.random.seed(seed)
         self.seed(seed=seed)
         # TODO: reward params
-        self.lp = 1800
+        self.lp = 600
         self.lv = 10
         self.lddqc = 1
         self.reward_eta_p = 1
@@ -140,7 +139,6 @@ Robotic Manipulation" by Murry et al.
         high_s = np.array([0.2, 0.2, 0.2,
                            1.5, 1.5, 1.5, 1.5, 1.5, 1.5,
                            2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
-                           87, 87, 87, 87, 12, 12,
                            2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])
         low_s = -high_s
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
@@ -211,11 +209,14 @@ Robotic Manipulation" by Murry et al.
             loc=0.0,
             scale=0.004363323,
             size=6)
-        print("INFO: added noise to initial joint angles at begining of startup phase!")
+        self.q_init_bias = 0.01 * np.random.normal(loc=0.0, scale=1, size=6) * np.array(
+            [-0.22683544711236076, 0.4152892646837951, -0.2240776697835826, -2.029656763049754,
+             -0.1323494169192162, 2.433754967707292])
         # Reset joint at initial angles
         for i in range(6):
             pb.resetJointState(arm, i, self.q_init[i], physicsClientId=physics_client)
-            pb.resetJointState(arm_biased_kinematics, i, self.q_init[i], physicsClientId=physics_client)
+            pb.resetJointState(arm_biased_kinematics, i, self.q_init[i] + self.q_init_bias[i],
+                               physicsClientId=physics_client)
         # In Pybullet, gripper halves are controlled separately+we also deactivated the 7th joint too
         pb.resetJointState(arm, 7, 1.939142517407308, physicsClientId=physics_client)
         pb.resetJointState(arm_biased_kinematics, 7, 1.939142517407308, physicsClientId=physics_client)
@@ -233,10 +234,9 @@ Robotic Manipulation" by Murry et al.
             q_t.append(joint_info[0])
             dq_t.append(joint_info[1])
             tau_t.append(joint_info[3])
-        # q_t = np.array(q_t)[:6]
-        # dq_t = np.array(dq_t)[:6]
         if abs(sum(self.q_init - q_t[:6])) > 1e-6:
             raise ValueError('shouldn\'t q_init be equal to q_t?!')
+        # q_t[0:6]=q_t[0:6] + np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.5]) * 3.14 / 180
         # STARTUP PHASE Simulatiob
         # ATTENTION: startup phase should be at 1 [ms]
         pb.setTimeStep(timeStep=dt_startup, physicsClientId=physics_client)
@@ -270,6 +270,7 @@ Robotic Manipulation" by Murry et al.
                 q_t.append(joint_info[0])
                 dq_t.append(joint_info[1])
                 tau_t.append(joint_info[3])
+            # q_t[0:6] = q_t[0:6] + np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.5]) * 3.14 / 180
             [linearJacobian, angularJacobian] = pb.calculateJacobian(arm,
                                                                      10,
                                                                      list(LinkState[2]),
@@ -340,6 +341,7 @@ Robotic Manipulation" by Murry et al.
             q_t.append(joint_info[0])
             dq_t.append(joint_info[1])
             tau_t.append(joint_info[3])
+        # q_t[0:6]=q_t[0:6] + np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.5]) * 3.14 / 180
         [linearJacobian, angularJacobian] = pb.calculateJacobian(arm,
                                                                  10,
                                                                  list(LinkState[2]),
@@ -355,8 +357,11 @@ Robotic Manipulation" by Murry et al.
                                                 deltaT=dt_startup)
 
         q_t = np.array(q_t)[:6]
-        dq_t = np.array(dq_t)[:6]
-        tau_t = np.array(tau_t)[:6]
+        # add dq measurement noise
+        dq_t = np.array(dq_t)[:6] + np.random.normal(loc=0.0, scale=0.004, size=6)
+        # add tau measurement noise and bias
+        tau_t = np.array(tau_t)[:6]# + np.random.normal(loc=0.0, scale=0.08, size=6) #+ np.array(
+            # [0.31, 9.53, 1.76, -9.54, 0.89, -2.69])
         self.q = q_t.reshape(1, 6)
         self.dq = dq_t.reshape(1, 6)
         pb.resetBasePositionAndOrientation(
@@ -386,12 +391,6 @@ Robotic Manipulation" by Murry et al.
                       dq_t[3],
                       dq_t[4],
                       dq_t[5],
-                      tau_t[0],
-                      tau_t[1],
-                      tau_t[2],
-                      tau_t[3],
-                      tau_t[4],
-                      tau_t[5],
                       dqc_t_PID[0],
                       dqc_t_PID[1],
                       dqc_t_PID[2],
@@ -417,9 +416,9 @@ Robotic Manipulation" by Murry et al.
         #                       endpoint=True) + np.random.normal(loc=0.0, scale=0.0005, size=self.MAX_TIMESTEPS)
 
         self.vxd = np.zeros((self.MAX_TIMESTEPS)) + np.random.normal(loc=0.0, scale=0.000367647, size=1)[
-            0]  # [m/s] for 0.5 [cm] drift given std error after 13.6 [s]
-        self.vyd = np.zeros((self.MAX_TIMESTEPS)) + np.random.normal(loc=0.0, scale=0.002205882, size=1)[
-            0]  # [m/s] for 3 [cm] drift given std error after 13.6 [s]
+            0]  # [m/s] for 2 [cm] drift given std error after 13.6 [s]
+        self.vyd = 34.9028e-3 + np.zeros((self.MAX_TIMESTEPS)) + np.random.normal(loc=0.0, scale=0.002205882, size=1)[
+            0]  # [m/s] for 5 [cm] drift given std error after 13.6 [s]
         self.vzd = np.zeros((self.MAX_TIMESTEPS))
         self.xd = np.zeros((self.MAX_TIMESTEPS))
         self.yd = np.zeros((self.MAX_TIMESTEPS))
@@ -427,22 +426,26 @@ Robotic Manipulation" by Murry et al.
         self.xd[0] = self.xd_init
         self.yd[0] = self.yd_init
         self.zd[0] = self.zd_init
+
+        # TODO: improve
+        # add artificial uncertainty to resemble the KF camera data uncertainty on real system
         self.vxd[0] = 0 + np.random.normal(loc=0.0, scale=0.00289, size=1)[0]
         self.vyd[0] = 34.9028e-3 + np.random.normal(loc=0.0, scale=0.000376, size=1)[0]
         self.vzd[0] = 0 + np.random.normal(loc=0.0, scale=0.000174, size=1)[0]  # m/s
-        rand_idx=np.random.randint(0,self.MAX_TIMESTEPS,size=50)
-        for i in range(0, self.MAX_TIMESTEPS-1):
+        rand_idx = np.random.randint(0, self.MAX_TIMESTEPS, size=50)
+        for i in range(0, self.MAX_TIMESTEPS - 1):
             if i in rand_idx:
-                self.vxd[i+1] = 0 + np.random.normal(loc=0.0, scale=0.0032, size=1)[0]
-                self.vyd[i+1] = 34.9028e-3 + np.random.normal(loc=0.0, scale=0.000376, size=1)[0]
-                self.vzd[i+1] = 0 + np.random.normal(loc=0.0, scale=0.000174, size=1)[0]  # m/s
+                self.vxd[i + 1] = 0 + np.random.normal(loc=0.0, scale=0.0032, size=1)[0]
+                self.vyd[i + 1] = 34.9028e-3 + np.random.normal(loc=0.0, scale=0.000376, size=1)[0]
+                self.vzd[i + 1] = 0 + np.random.normal(loc=0.0, scale=0.000174, size=1)[0]  # m/s
             else:
-                self.vxd[i+1] = 0
-                self.vyd[i+1] = 34.9028e-3
-                self.vzd[i+1] = 0  # m/s
-            self.xd[i+1] = self.xd[i] + self.vxd[i] * dt# + np.random.normal(loc=0.0, scale=0.0001, size=1)
-            self.yd[i+1] = self.yd[i] + self.vyd[i] * dt# + np.random.normal(loc=0.0, scale=0.0001, size=1)
-            self.zd[i+1] = self.zd[i] + self.vzd[i] * dt + np.random.normal(loc=0.0, scale=0.00025, size=1)
+                self.vxd[i + 1] = 0
+                self.vyd[i + 1] = 34.9028e-3
+                self.vzd[i + 1] = 0  # m/s
+            # TODO: check and improve
+            self.xd[i + 1] = self.xd[i] + self.vxd[i] * dt  # + np.random.normal(loc=0.0, scale=0.0005, size=1)
+            self.yd[i + 1] = self.yd[i] + self.vyd[i] * dt  # + np.random.normal(loc=0.0, scale=0.0005, size=1)
+            self.zd[i + 1] = self.zd[i] + self.vzd[i] * dt + np.random.normal(loc=0.0, scale=0.0005, size=1)
 
         # ATTENTION set back simulation frequency after startup phase
         pb.setTimeStep(timeStep=dt_pb_sim, physicsClientId=physics_client)
@@ -530,12 +533,21 @@ Robotic Manipulation" by Murry et al.
             q_tp1.append(joint_info[0])
             dq_tp1.append(joint_info[1])
             tau_tp1.append(joint_info[3])
-        # # Attention: hard reset for biased kinematics model
+
+            # # Attention: hard reset for biased kinematics model
         for i in range(12):
-            pb.resetJointState(arm_biased_kinematics, i, q_tp1[i], physicsClientId=physics_client)
+            if i < 6:
+                pb.resetJointState(arm_biased_kinematics, i, q_tp1[i] + self.q_init_bias[i],
+                                   physicsClientId=physics_client)
+            else:
+                pb.resetJointState(arm_biased_kinematics, i, q_tp1[i], physicsClientId=physics_client)
+
         q_tp1 = np.array(q_tp1)[:6]
-        dq_tp1 = np.array(dq_tp1)[:6]
-        tau_tp1 = np.array(tau_tp1)[:6]
+        # add dq measurement noise
+        dq_tp1 = np.array(dq_tp1)[:6] + np.random.normal(loc=0.0, scale=0.004, size=6)
+        # add tau measurement noise and bias
+        tau_tp1 = np.array(tau_tp1)[:6] #+ np.random.normal(loc=0.0, scale=0.08, size=6) #+ np.array(
+             # [0.31, 9.53, 1.76, -9.54, 0.89, -2.69])
         self.q = np.vstack((self.q, q_tp1))  # Attention
         self.dq = np.vstack((self.dq, dq_tp1))  # Attention
         # check done episode
@@ -550,14 +562,14 @@ Robotic Manipulation" by Murry et al.
         v_hat_tp1 = np.array(LinkState_tp1[6])
         # error_p_t = sum(abs(r_hat_tp1 - rd_t))
         # error_v_t = sum(abs(v_hat_tp1 - vd_t))
-        error_ddqc_t = sum(abs(dqc_t - self.dq[-2, :]))
+        # error_ddqc_t = sum(abs(dqc_t - self.dq[-2, :]))
         # reward_p_t = self.f_logistic(error_p_t, self.lp)
         reward_px_t = self.f_logistic(abs(r_hat_tp1[0] - rd_tp1[0]), self.lp)
-        reward_py_t = self.f_logistic(abs(r_hat_tp1[1] - rd_tp1[1]), 1200)
-        reward_pz_t = self.f_logistic(abs(r_hat_tp1[2] - rd_tp1[2]), 600)
+        reward_py_t = self.f_logistic(abs(r_hat_tp1[1] - rd_tp1[1]), self.lp)
+        reward_pz_t = self.f_logistic(abs(r_hat_tp1[2] - rd_tp1[2]), 400)
         reward_p_t = (reward_px_t + reward_py_t + reward_pz_t) / 3
         # reward_v_t = self.f_logistic(error_v_t, self.lv)
-        reward_ddqc_t = self.f_logistic(error_ddqc_t, self.lddqc)
+        # reward_ddqc_t = self.f_logistic(error_ddqc_t, self.lddqc)
         # reward_t = self.reward_eta_p * reward_p_t + self.reward_eta_v * reward_v_t + self.reward_eta_ddqc * reward_ddqc_t
         reward_t = self.reward_eta_p * reward_p_t  # + self.reward_eta_v * reward_v_t + self.reward_eta_ddqc * reward_ddqc_t
 
@@ -565,7 +577,9 @@ Robotic Manipulation" by Murry et al.
         [linearJacobian_tp1, angularJacobian_tp1] = pb.calculateJacobian(arm_biased_kinematics,
                                                                          10,
                                                                          list(LinkState_tp1[2]),
-                                                                         list(np.append(self.q[-1, :], [0, 0, 0])),
+                                                                         list(
+                                                                             np.append(self.q[-1, :] + self.q_init_bias,
+                                                                                       [0, 0, 0])),
                                                                          list(np.append(self.dq[-1, :], [0, 0, 0])),
                                                                          list(np.zeros(9)),
                                                                          physicsClientId=physics_client)
@@ -604,12 +618,6 @@ Robotic Manipulation" by Murry et al.
                dq_tp1[3],
                dq_tp1[4],
                dq_tp1[5],
-               tau_tp1[0],
-               tau_tp1[1],
-               tau_tp1[2],
-               tau_tp1[3],
-               tau_tp1[4],
-               tau_tp1[5],
                dqc_tp1_PID[0],
                dqc_tp1_PID[1],
                dqc_tp1_PID[2],
@@ -639,7 +647,7 @@ Robotic Manipulation" by Murry et al.
                        dqc_t[5],
                        self.reward_eta_p * reward_p_t,
                        0,
-                       self.reward_eta_ddqc * reward_ddqc_t,
+                       0,
                        tau_tp1[0],
                        tau_tp1[1],
                        tau_tp1[2],
@@ -665,9 +673,9 @@ Robotic Manipulation" by Murry et al.
                        a[4],
                        a[5]]
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
-        # # TODO: so dirty code: uncomment when NOSAC for plots -- you need to take care of which random values you call by break points after first done in sac.py ... and cmment a too ...
+        # # # # TODO: so dirty code: uncomment when NOSAC for plots -- you need to take care of which random values you call by break points after first done in sac.py ... and cmment a too ...
         # plot_data_buffer_no_SAC=self.plot_data_buffer
-        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_211/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_265/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
         # given action it returns 4-tuple (observation, reward, done, info)
         return (obs, reward_t, terminal, {})
 
@@ -775,7 +783,7 @@ Robotic Manipulation" by Murry et al.
         if render_test_buffer == True:
             # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
             plot_data_buffer_no_SAC = np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_211/plot_data_buffer_no_SAC.npy")
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_265/plot_data_buffer_no_SAC.npy")
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
             axs1[0].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 4] * 1000, 'r--',
                          label='EE desired traj')
@@ -889,15 +897,15 @@ Robotic Manipulation" by Murry et al.
             plt.show()
 
             fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 8))
-            axs3[0].plot(abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, 'b', label='x error')
-            axs3[0].set_xlabel("t")
+            axs3[0].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, 'b', label='x error')
+            axs3[0].set_xlabel("t [ms]")
             axs3[0].set_ylabel("|x-xd| [mm]")
             plt.legend()
-            axs3[1].plot(abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, 'b', label='y error')
-            axs3[1].set_xlabel("t")
+            axs3[1].plot(np.arange(self.MAX_TIMESTEPS)*100,abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, 'b', label='y error')
+            axs3[1].set_xlabel("t [ms]")
             axs3[1].set_ylabel("|y-yd| [mm]")
             plt.legend()
-            axs3[2].plot(abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, 'b', label='z error')
+            axs3[2].plot(np.arange(self.MAX_TIMESTEPS)*100,abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, 'b', label='z error')
             axs3[2].set_xlabel("t")
             axs3[2].set_ylabel("|z-zd| [mm]")
             plt.legend()
@@ -905,8 +913,9 @@ Robotic Manipulation" by Murry et al.
                 np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2, axis=1) * 1000,
                 'b',
                 label='Euclidean error')
-            axs3[3].set_xlabel("t")
+            axs3[3].set_xlabel("t [ms]")
             axs3[3].set_ylabel("||r-rd||_2 [mm]")
+            axs3[3].set_xlim([0, self.MAX_TIMESTEPS*100])
             # axs3[3].set_ylim([0, 10])
             # axs3[3].set_yscale('log')
             plt.legend()
@@ -916,37 +925,44 @@ Robotic Manipulation" by Murry et al.
 
             fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(8, 12))
             plt.rcParams['font.family'] = 'Serif'
-            axs3[0].plot(abs(plot_data_buffer_no_SAC[:, 0] - plot_data_buffer_no_SAC[:, 3]) * 1000, 'b',
+            axs3[0].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(plot_data_buffer_no_SAC[:, 0] - plot_data_buffer_no_SAC[:, 3]) * 1000, 'b',
                          label='without SAC')
-            axs3[0].plot(abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, 'r', label='with SAC')
-            axs3[0].plot(abs(self.plot_data_buffer[:, 30]) * 1000, 'm:', label='with SAC')
-            axs3[0].set_xlabel("t")
+            axs3[0].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, 'r', label='with SAC')
+            axs3[0].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(self.plot_data_buffer[:, 30]) * 1000, 'r:', label='error bound with SAC')
+            axs3[0].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(plot_data_buffer_no_SAC[:, 30]) * 1000, 'b:', label='error bound without SAC')
+            axs3[0].set_xlabel("t [ms]")
             axs3[0].set_ylabel("|x-xd| [mm]")
             plt.legend()
-            axs3[1].plot(abs(plot_data_buffer_no_SAC[:, 1] - plot_data_buffer_no_SAC[:, 4]) * 1000, 'b',
+            axs3[1].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(plot_data_buffer_no_SAC[:, 1] - plot_data_buffer_no_SAC[:, 4]) * 1000, 'b',
                          label='without SAC')
-            axs3[1].plot(abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, 'r', label='with SAC')
-            axs3[1].plot(abs(self.plot_data_buffer[:, 31]) * 1000, 'm:', label='error bound')
-            axs3[1].set_xlabel("t")
+            axs3[1].plot(np.arange(self.MAX_TIMESTEPS)*100,abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, 'r', label='with SAC')
+            axs3[1].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(self.plot_data_buffer[:, 31]) * 1000, 'r:', label='error bound on with SAC')
+            axs3[1].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(plot_data_buffer_no_SAC[:, 31]) * 1000, 'b:', label='error bound on without SAC')
+            axs3[1].set_xlabel("t [ms]")
             axs3[1].set_ylabel("|y-yd| [mm]")
             plt.legend()
-            axs3[2].plot(abs(plot_data_buffer_no_SAC[:, 2] - plot_data_buffer_no_SAC[:, 5]) * 1000, 'b',
+            axs3[2].plot(np.arange(self.MAX_TIMESTEPS)*100,abs(plot_data_buffer_no_SAC[:, 2] - plot_data_buffer_no_SAC[:, 5]) * 1000, 'b',
                          label='without SAC')
-            axs3[2].plot(abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, 'r', label='with SAC')
-            axs3[2].plot(abs(self.plot_data_buffer[:, 32]) * 1000, 'm:', label='error bound')
-            axs3[2].set_xlabel("t")
+            axs3[2].plot(np.arange(self.MAX_TIMESTEPS)*100,abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, 'r', label='with SAC')
+            axs3[2].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(self.plot_data_buffer[:, 32]) * 1000, 'r:', label='error bound on with SAC')
+            axs3[2].plot(np.arange(self.MAX_TIMESTEPS)*100,abs(plot_data_buffer_no_SAC[:, 32]) * 1000, 'b:', label='error bound on without SAC')
+            axs3[2].set_xlabel("t [ms]")
             axs3[2].set_ylabel("|z-zd| [mm]")
             plt.legend()
-            axs3[3].plot(
-                np.linalg.norm((plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
+            axs3[3].plot(np.arange(self.MAX_TIMESTEPS)*100,
+                np.linalg.norm(np.arange(self.MAX_TIMESTEPS)*100,(plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
                                axis=1) * 1000, 'b', label='without SAC')
-            axs3[3].plot(
+            axs3[3].plot(np.arange(self.MAX_TIMESTEPS)*100,
                 np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2, axis=1) * 1000,
                 'r', label='with SAC')
-            axs3[3].plot(
+            axs3[3].plot(np.arange(self.MAX_TIMESTEPS)*100,
                 np.linalg.norm(self.plot_data_buffer[:, 30:33], ord=2, axis=1) * 1000,
-                'm:', label='error bound')
-            axs3[3].set_xlabel("t")
+                'r:', label='error bound on with SAC')
+            axs3[3].plot(np.arange(self.MAX_TIMESTEPS)*100,
+                np.linalg.norm(plot_data_buffer_no_SAC[:, 30:33], ord=2, axis=1) * 1000,
+                'b:', label='error bound on without SAC')
+
+            axs3[3].set_xlabel("t [ms]")
             axs3[3].set_ylabel("||r-rd||_2 [mm]")
             # axs3[3].set_ylim([0, 10])
             # axs3[3].set_yscale('log')
