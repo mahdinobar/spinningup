@@ -12,3 +12,5 @@ _build/
 spinup/examples/pytorch/logs
 .gitattributes
 refs/remotes/origin/master
+*.png
+

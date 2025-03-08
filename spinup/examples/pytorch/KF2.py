@@ -43,26 +43,26 @@ def  main_model_2(log_dir):
     vyd = 34.9028e-3 + np.random.normal(loc=0.0, scale=0.002205882, size=1)[
         0]  # [m/s] for 5 [cm] drift given std error after 13.6 [s]
     vzd = 0
-    x_camera = np.zeros((MAX_TIMESTEPS))
-    y_camera = np.zeros((MAX_TIMESTEPS))
-    z_camera = np.zeros((MAX_TIMESTEPS))
+    x_camera = np.zeros((MAX_TIMESTEPS+2))
+    y_camera = np.zeros((MAX_TIMESTEPS+2))
+    z_camera = np.zeros((MAX_TIMESTEPS+2))
 
     x_camera[0] = xd_init
     y_camera[0] = yd_init
     z_camera[0] = zd_init
     dt_camera = np.hstack((tVec_camera[0], np.diff(tVec_camera)))
-    for i in range(0, MAX_TIMESTEPS - 1):
+    for i in range(0, MAX_TIMESTEPS+1):
         x_camera[i + 1] = x_camera[i] + vxd * dt_camera[i] + np.random.normal(loc=0.0, scale=0.0005, size=1)
         y_camera[i + 1] = y_camera[i] + vyd * dt_camera[i] + np.random.normal(loc=0.0, scale=0.001, size=1)
         z_camera[i + 1] = z_camera[i] + vzd * dt_camera[i] + np.random.normal(loc=0.0, scale=0.0005, size=1)
-    X_camera = np.array([x_camera,y_camera,z_camera])
+    X_camera = np.array([x_camera[1:],y_camera[1:],z_camera[1:]])
 
 
     # create a Kalman filter object
     KalmanFilterObject = KalmanFilter(x0, P0, A, B, C, Q, R)
     u = np.array([vxd,vyd,vzd])
     # simulate online prediction
-    for k_measured in range(0, np.size(tVec_camera)-1):  # np.arange(np.size(tVec_camera)):
+    for k_measured in range(0, np.size(tVec_camera)):  # np.arange(np.size(tVec_camera)):
         print(k_measured)
         # TODO correct for the online application where dt is varying and be know the moment we receive the measurement
         dt = dt_camera[k_measured]
@@ -84,53 +84,53 @@ def  main_model_2(log_dir):
         z_hat.append(KalmanFilterObject.estimates_aposteriori[2, j])
 
 
-    tVec = np.linspace(0, (int(tVec_camera[-2]) - 1), int(tVec_camera[-2]))
+    tVec = np.linspace(0, (int(tVec_camera[-2])), int(tVec_camera[-2])+1)
 
 
     td=np.linspace(0, 13600, 137)
     xd=np.asarray(KalmanFilterObject.X_prediction_ahead[0, :]).squeeze()
-    xd=xd[td[:-2].astype(int)]
+    xd=xd[td[:-1].astype(int)]
     yd=np.asarray(KalmanFilterObject.X_prediction_ahead[1, :]).squeeze()
-    yd=yd[td[:-2].astype(int)]
+    yd=yd[td[:-1].astype(int)]
     zd=np.asarray(KalmanFilterObject.X_prediction_ahead[2, :]).squeeze()
-    zd=zd[td[:-2].astype(int)]
+    zd=zd[td[:-1].astype(int)]
 
 
-        fig, ax = plt.subplots(3, 1, figsize=(12, 8))
-        ax[0].plot(tVec_camera[0:-1], X_camera[0, :], '-or', linewidth=1, markersize=5, label='measured')
-        ax[0].plot(tVec_camera[0:-1], x_hat[1:], 'ob', linewidth=1, markersize=5, label='aposteriori estimated')
-        # ax[0].plot(tVec_camera, x_hat_cpp, 'om', linewidth=1, markersize=5, label='aposteriori estimated Cpp')
-        # ax[0].plot(tVec, x_pred_cpp, '^y', linewidth=1, markersize=5, label='predictions ahead Cpp')
-        ax[0].plot(tVec, np.asarray(KalmanFilterObject.X_prediction_ahead[0, :]).squeeze(), '-Dk', linewidth=1,
-                   markersize=1, label='prediction ahead Python')
-        ax[0].plot(td[:-2], xd, '-*g', linewidth=1,
-                   markersize=7, label='PREDICTION FOR SIMULATION - 100 [ms]')
-        ax[0].set_ylabel("x [mm]", fontsize=14)
-        ax[0].legend()
-        ax[1].plot(tVec_camera[0:-1], X_camera[1, :], '-or', linewidth=1, markersize=5, label='measured')
-        ax[1].plot(tVec_camera[0:-1], y_hat[1:], '-ob', linewidth=1, markersize=5, label='aposteriori estimated')
-        # ax[1].plot(tVec_camera, y_hat_cpp, '-om', linewidth=1, markersize=5, label='aposteriori estimated Cpp')
-        # ax[1].plot(tVec, y_pred_cpp, '^y', linewidth=1, markersize=5, label='predictions ahead Cpp')
-        ax[1].plot(tVec, np.asarray(KalmanFilterObject.X_prediction_ahead[1, :]).squeeze(), '-Dk', linewidth=1,
-                   markersize=1, label='prediction ahead')
-        ax[1].plot(td[:-2], yd, '-*g', linewidth=1,
-                   markersize=7, label='PREDICTION FOR SIMULATION - 100 [ms]')
-        ax[1].set_ylabel("y [mm]", fontsize=14)
-        ax[1].legend()
-        ax[2].plot(tVec_camera[0:-1], X_camera[2, :], '-or', linewidth=1, markersize=5, label='measured')
-        ax[2].plot(tVec_camera[0:-1], z_hat[1:], '-ob', linewidth=1, markersize=5, label='aposteriori estimated')
-        # ax[2].plot(tVec_camera, z_hat_cpp, '-om', linewidth=1, markersize=5, label='aposteriori estimated Cpp')
-        # ax[2].plot(tVec, z_pred_cpp, '^y', linewidth=1, markersize=5, label='predictions ahead Cpp')
-        ax[2].plot(tVec, np.asarray(KalmanFilterObject.X_prediction_ahead[2, :]).squeeze(), '-Dk', linewidth=1,
-                   markersize=1, label='prediction ahead')
-        ax[2].plot(td[:-2], zd, '-*g', linewidth=1,
-                   markersize=7, label='PREDICTION FOR SIMULATION - 100 [ms]')
-        ax[2].set_xlabel("$t_{k}$ [ms]", fontsize=14)
-        ax[2].set_ylabel("z [mm]", fontsize=14)
-        ax[2].legend()
-        plt.tight_layout()
-        fig.savefig('results.png', dpi=600)
-        plt.show()
+    fig, ax = plt.subplots(3, 1, figsize=(12, 8))
+    ax[0].plot(tVec_camera[:], X_camera[0, :], '-or', linewidth=1, markersize=5, label='measured')
+    ax[0].plot(tVec_camera[0:-1], x_hat[1:], 'ob', linewidth=1, markersize=5, label='aposteriori estimated')
+    # ax[0].plot(tVec_camera, x_hat_cpp, 'om', linewidth=1, markersize=5, label='aposteriori estimated Cpp')
+    # ax[0].plot(tVec, x_pred_cpp, '^y', linewidth=1, markersize=5, label='predictions ahead Cpp')
+    ax[0].plot(tVec[:13400], np.asarray(KalmanFilterObject.X_prediction_ahead[0, :13400]).squeeze(), '-Dk', linewidth=1,
+               markersize=1, label='prediction ahead Python')
+    ax[0].plot(td[:-1], xd, '-*g', linewidth=1,
+               markersize=7, label='PREDICTION FOR SIMULATION - 100 [ms]')
+    ax[0].set_ylabel("x [mm]", fontsize=14)
+    ax[0].legend()
+    ax[1].plot(tVec_camera[:], X_camera[1, :], '-or', linewidth=1, markersize=5, label='measured')
+    ax[1].plot(tVec_camera[0:-1], y_hat[1:], '-ob', linewidth=1, markersize=5, label='aposteriori estimated')
+    # ax[1].plot(tVec_camera, y_hat_cpp, '-om', linewidth=1, markersize=5, label='aposteriori estimated Cpp')
+    # ax[1].plot(tVec, y_pred_cpp, '^y', linewidth=1, markersize=5, label='predictions ahead Cpp')
+    ax[1].plot(tVec[:13400], np.asarray(KalmanFilterObject.X_prediction_ahead[1, :13400]).squeeze(), '-Dk', linewidth=1,
+               markersize=1, label='prediction ahead')
+    ax[1].plot(td[:-1], yd, '-*g', linewidth=1,
+               markersize=7, label='PREDICTION FOR SIMULATION - 100 [ms]')
+    ax[1].set_ylabel("y [mm]", fontsize=14)
+    ax[1].legend()
+    ax[2].plot(tVec_camera[:], X_camera[2, :], '-or', linewidth=1, markersize=5, label='measured')
+    ax[2].plot(tVec_camera[0:-1], z_hat[1:], '-ob', linewidth=1, markersize=5, label='aposteriori estimated')
+    # ax[2].plot(tVec_camera, z_hat_cpp, '-om', linewidth=1, markersize=5, label='aposteriori estimated Cpp')
+    # ax[2].plot(tVec, z_pred_cpp, '^y', linewidth=1, markersize=5, label='predictions ahead Cpp')
+    ax[2].plot(tVec[:13400], np.asarray(KalmanFilterObject.X_prediction_ahead[2, :13400]).squeeze(), '-Dk', linewidth=1,
+               markersize=1, label='prediction ahead')
+    ax[2].plot(td[:-1], zd, '-*g', linewidth=1,
+               markersize=7, label='PREDICTION FOR SIMULATION - 100 [ms]')
+    ax[2].set_xlabel("$t_{k}$ [ms]", fontsize=14)
+    ax[2].set_ylabel("z [mm]", fontsize=14)
+    ax[2].legend()
+    plt.tight_layout()
+    fig.savefig('results.png', dpi=600)
+    plt.show()
 
 
     np.save(log_dir + "/r_star_model_2.npy", np.asarray(KalmanFilterObject.X_prediction_ahead))

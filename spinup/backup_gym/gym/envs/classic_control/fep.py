@@ -9,6 +9,11 @@ import pybullet_data
 from gym import core, spaces
 from gym.utils import seeding
 
+import sys
+
+sys.path.append('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch')
+from myKalmanFilter import KalmanFilter
+
 # /home/mahdi/ETHZ/codes/spinningup/spinup
 __copyright__ = "Copyright 2024, IfA https://control.ee.ethz.ch/"
 __credits__ = ["Mahdi Nobar"]
@@ -322,7 +327,7 @@ Robotic Manipulation" by Murry et al.
 
         # ATTENTION: here we do to keep self.dqc_PID for next step
         v_star_dir_length = 34.9028 / (1 + np.exp(-0.04 * (k_startup - 250))) / 1000 - 34.9028 / (
-                1 + np.exp(-0.04 * (0 - 250))) / 1000;
+                1 + np.exp(-0.04 * (0 - 250))) / 1000; #[m/s]
         v_star = v_star_dir_length * (v_star_dir / norm_v_star_dir)
         vxd = v_star[0]
         vyd = v_star[1]
@@ -360,8 +365,8 @@ Robotic Manipulation" by Murry et al.
         # add dq measurement noise
         dq_t = np.array(dq_t)[:6] + np.random.normal(loc=0.0, scale=0.004, size=6)
         # add tau measurement noise and bias
-        tau_t = np.array(tau_t)[:6]# + np.random.normal(loc=0.0, scale=0.08, size=6) #+ np.array(
-            # [0.31, 9.53, 1.76, -9.54, 0.89, -2.69])
+        tau_t = np.array(tau_t)[:6]  # + np.random.normal(loc=0.0, scale=0.08, size=6) #+ np.array(
+        # [0.31, 9.53, 1.76, -9.54, 0.89, -2.69])
         self.q = q_t.reshape(1, 6)
         self.dq = dq_t.reshape(1, 6)
         pb.resetBasePositionAndOrientation(
@@ -415,37 +420,113 @@ Robotic Manipulation" by Murry et al.
         # self.zd = np.linspace(self.zd_init, self.zd_init + deltaz, self.MAX_TIMESTEPS,
         #                       endpoint=True) + np.random.normal(loc=0.0, scale=0.0005, size=self.MAX_TIMESTEPS)
 
-        self.vxd = np.zeros((self.MAX_TIMESTEPS)) + np.random.normal(loc=0.0, scale=0.000367647, size=1)[
-            0]  # [m/s] for 2 [cm] drift given std error after 13.6 [s]
-        self.vyd = 34.9028e-3 + np.zeros((self.MAX_TIMESTEPS)) + np.random.normal(loc=0.0, scale=0.002205882, size=1)[
-            0]  # [m/s] for 5 [cm] drift given std error after 13.6 [s]
-        self.vzd = np.zeros((self.MAX_TIMESTEPS))
-        self.xd = np.zeros((self.MAX_TIMESTEPS))
-        self.yd = np.zeros((self.MAX_TIMESTEPS))
-        self.zd = np.zeros((self.MAX_TIMESTEPS))
-        self.xd[0] = self.xd_init
-        self.yd[0] = self.yd_init
-        self.zd[0] = self.zd_init
+        # self.vxd = np.zeros((self.MAX_TIMESTEPS)) + np.random.normal(loc=0.0, scale=0.000367647, size=1)[
+        #     0]  # [m/s] for 2 [cm] drift given std error after 13.6 [s]
+        # self.vyd = 34.9028e-3 + np.zeros((self.MAX_TIMESTEPS)) + np.random.normal(loc=0.0, scale=0.002205882, size=1)[
+        #     0]  # [m/s] for 5 [cm] drift given std error after 13.6 [s]
+        # self.vzd = np.zeros((self.MAX_TIMESTEPS))
+        # self.xd = np.zeros((self.MAX_TIMESTEPS))
+        # self.yd = np.zeros((self.MAX_TIMESTEPS))
+        # self.zd = np.zeros((self.MAX_TIMESTEPS))
+        # self.xd[0] = self.xd_init
+        # self.yd[0] = self.yd_init
+        # self.zd[0] = self.zd_init
+        #
+        # # TODO: improve
+        # # add artificial uncertainty to resemble the KF camera data uncertainty on real system
+        # self.vxd[0] = 0 + np.random.normal(loc=0.0, scale=0.00289, size=1)[0]
+        # self.vyd[0] = 34.9028e-3 + np.random.normal(loc=0.0, scale=0.000376, size=1)[0]
+        # self.vzd[0] = 0 + np.random.normal(loc=0.0, scale=0.000174, size=1)[0]  # m/s
+        # rand_idx = np.random.randint(0, self.MAX_TIMESTEPS, size=50)
+        # for i in range(0, self.MAX_TIMESTEPS - 1):
+        #     if i in rand_idx:
+        #         self.vxd[i + 1] = 0 + np.random.normal(loc=0.0, scale=0.0032, size=1)[0]
+        #         self.vyd[i + 1] = 34.9028e-3 + np.random.normal(loc=0.0, scale=0.000376, size=1)[0]
+        #         self.vzd[i + 1] = 0 + np.random.normal(loc=0.0, scale=0.000174, size=1)[0]  # m/s
+        #     else:
+        #         self.vxd[i + 1] = 0
+        #         self.vyd[i + 1] = 34.9028e-3
+        #         self.vzd[i + 1] = 0  # m/s
+        #     # TODO: check and improve
+        #     self.xd[i + 1] = self.xd[i] + self.vxd[i] * dt  # + np.random.normal(loc=0.0, scale=0.0005, size=1)
+        #     self.yd[i + 1] = self.yd[i] + self.vyd[i] * dt  # + np.random.normal(loc=0.0, scale=0.0005, size=1)
+        #     self.zd[i + 1] = self.zd[i] + self.vzd[i] * dt + np.random.normal(loc=0.0, scale=0.0005, size=1)
 
-        # TODO: improve
-        # add artificial uncertainty to resemble the KF camera data uncertainty on real system
-        self.vxd[0] = 0 + np.random.normal(loc=0.0, scale=0.00289, size=1)[0]
-        self.vyd[0] = 34.9028e-3 + np.random.normal(loc=0.0, scale=0.000376, size=1)[0]
-        self.vzd[0] = 0 + np.random.normal(loc=0.0, scale=0.000174, size=1)[0]  # m/s
-        rand_idx = np.random.randint(0, self.MAX_TIMESTEPS, size=50)
-        for i in range(0, self.MAX_TIMESTEPS - 1):
-            if i in rand_idx:
-                self.vxd[i + 1] = 0 + np.random.normal(loc=0.0, scale=0.0032, size=1)[0]
-                self.vyd[i + 1] = 34.9028e-3 + np.random.normal(loc=0.0, scale=0.000376, size=1)[0]
-                self.vzd[i + 1] = 0 + np.random.normal(loc=0.0, scale=0.000174, size=1)[0]  # m/s
-            else:
-                self.vxd[i + 1] = 0
-                self.vyd[i + 1] = 34.9028e-3
-                self.vzd[i + 1] = 0  # m/s
-            # TODO: check and improve
-            self.xd[i + 1] = self.xd[i] + self.vxd[i] * dt  # + np.random.normal(loc=0.0, scale=0.0005, size=1)
-            self.yd[i + 1] = self.yd[i] + self.vyd[i] * dt  # + np.random.normal(loc=0.0, scale=0.0005, size=1)
-            self.zd[i + 1] = self.zd[i] + self.vzd[i] * dt + np.random.normal(loc=0.0, scale=0.0005, size=1)
+        # xd_init = 0.5345
+        # yd_init = -0.2455
+        # zd_init = 0.1392
+        x0 = np.array([self.xd_init, self.yd_init, self.zd_init])  # [m]
+
+        # define the system matrices - Newtonian system
+        # system matrices and covariances
+        A = np.matrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+        B = np.array([[0], [1], [0]])
+        C = np.matrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+
+        # measurement noise covariance
+        R = np.array([[2 ** 2, 0, 0], [0, 5 ** 2, 0], [0, 0, 2 ** 2]])
+        # process uncertainty covariance
+        Q = np.array([[1 ** 2, 0, 0], [0, 2 ** 2, 0], [0, 0, 1 ** 2]])  # np.matrix(np.zeros((3, 3)))
+
+        # initial covariance matrix
+        P0 = np.asmatrix(np.diag([1, 4, 1]))
+
+        # Generate time stamp randomness of camera measurements
+        time_randomness = np.random.normal(0, 32, 137).astype(int)
+        time_randomness = np.clip(time_randomness, -49, 49)
+        time_randomness[0] = np.clip(time_randomness[0], 1, 49)
+        tVec_camera = np.linspace(0, 13600, 137) + time_randomness  # [ms]
+        self.vxd = (np.random.normal(loc=0.0, scale=0.000367647, size=1)[
+            0])/1000  # [m/ms] for 2 [cm] drift given std error after 13.6 [s]
+        self.vyd = (34.9028e-3 + np.random.normal(loc=0.0, scale=0.002205882, size=1)[
+            0])/1000  # [m/ms] for 5 [cm] drift given std error after 13.6 [s]
+        self.vzd = 0
+        x_camera = np.zeros((self.MAX_TIMESTEPS + 1))
+        y_camera = np.zeros((self.MAX_TIMESTEPS + 1))
+        z_camera = np.zeros((self.MAX_TIMESTEPS + 1))
+
+        dt_camera = np.hstack((tVec_camera[0], np.diff(tVec_camera))) #[ms]
+        x_camera[0] = self.xd_init + self.vxd * dt_camera[0] + np.random.normal(loc=0.0, scale=0.0005, size=1) #[m]
+        y_camera[0] = self.yd_init + self.vyd * dt_camera[0] + np.random.normal(loc=0.0, scale=0.001, size=1)  #[m]
+        z_camera[0] = self.zd_init + self.vzd * dt_camera[0] + np.random.normal(loc=0.0, scale=0.0005, size=1) #[m]
+        for i in range(0, self.MAX_TIMESTEPS):
+            x_camera[i + 1] = x_camera[i] + self.vxd * dt_camera[i + 1] + np.random.normal(loc=0.0, scale=0.0005, size=1) #[m]
+            y_camera[i + 1] = y_camera[i] + self.vyd * dt_camera[i + 1] + np.random.normal(loc=0.0, scale=0.001, size=1) #[m]
+            z_camera[i + 1] = z_camera[i] + self.vzd * dt_camera[i + 1] + np.random.normal(loc=0.0, scale=0.0005, size=1) #[m]
+        X_camera = np.array([x_camera, y_camera, z_camera])
+
+        # create a Kalman filter object
+        KalmanFilterObject = KalmanFilter(x0, P0, A, B, C, Q, R)
+        u = np.array([self.vxd, self.vyd, self.vzd])
+        # simulate online prediction
+        for k_measured in range(0, np.size(tVec_camera)):  # np.arange(np.size(tVec_camera)):
+            # print(k_measured)
+            # TODO correct for the online application where dt is varying and be know the moment we receive the measurement
+            dt = dt_camera[k_measured]
+            KalmanFilterObject.B = np.array([[dt], [dt], [dt]])
+            KalmanFilterObject.propagateDynamics(u)
+            KalmanFilterObject.B = np.array([[1], [1], [1]])
+            KalmanFilterObject.prediction_aheads(u, dt)
+            KalmanFilterObject.computeAposterioriEstimate(X_camera[:, k_measured])
+
+        # extract the state estimates in order to plot the results
+        x_hat = []
+        y_hat = []
+        z_hat = []
+
+        for j in range(0, np.size(tVec_camera)):
+            # python estimates
+            x_hat.append(KalmanFilterObject.estimates_aposteriori[0, j])
+            y_hat.append(KalmanFilterObject.estimates_aposteriori[1, j])
+            z_hat.append(KalmanFilterObject.estimates_aposteriori[2, j])
+
+        td = np.linspace(0, 13600, 137)
+        xd = np.asarray(KalmanFilterObject.X_prediction_ahead[0, :]).squeeze()
+        self.xd = xd[td[:-1].astype(int)]
+        yd = np.asarray(KalmanFilterObject.X_prediction_ahead[1, :]).squeeze()
+        self.yd = yd[td[:-1].astype(int)]
+        zd = np.asarray(KalmanFilterObject.X_prediction_ahead[2, :]).squeeze()
+        self.zd = zd[td[:-1].astype(int)]
 
         # ATTENTION set back simulation frequency after startup phase
         pb.setTimeStep(timeStep=dt_pb_sim, physicsClientId=physics_client)
@@ -521,8 +602,8 @@ Robotic Manipulation" by Murry et al.
         # update time index
         self.k += 1  # Attention doublecheck
         rd_tp1 = np.array(
-            [self.xd[self.k], self.yd[self.k], self.zd[self.k]])  # attention: index desired starts from t=-1
-        vd_tp1 = np.array([self.vxd[self.k], self.vyd[self.k], self.vzd[self.k]])
+            [self.xd[self.k], self.yd[self.k], self.zd[self.k]])  # [m] attention: index desired starts from t=-1
+        vd_tp1 = np.array([self.vxd, self.vyd, self.vzd])*1000 #[m/s]
         pb.resetBasePositionAndOrientation(
             target_object, rd_tp1, pb.getQuaternionFromEuler(
                 np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])), physicsClientId=physics_client)
@@ -546,8 +627,8 @@ Robotic Manipulation" by Murry et al.
         # add dq measurement noise
         dq_tp1 = np.array(dq_tp1)[:6] + np.random.normal(loc=0.0, scale=0.004, size=6)
         # add tau measurement noise and bias
-        tau_tp1 = np.array(tau_tp1)[:6] #+ np.random.normal(loc=0.0, scale=0.08, size=6) #+ np.array(
-             # [0.31, 9.53, 1.76, -9.54, 0.89, -2.69])
+        tau_tp1 = np.array(tau_tp1)[:6]  # + np.random.normal(loc=0.0, scale=0.08, size=6) #+ np.array(
+        # [0.31, 9.53, 1.76, -9.54, 0.89, -2.69])
         self.q = np.vstack((self.q, q_tp1))  # Attention
         self.dq = np.vstack((self.dq, dq_tp1))  # Attention
         # check done episode
@@ -737,7 +818,7 @@ Robotic Manipulation" by Murry et al.
             #     physicsClientId=physics_client_rendering)
             t = 0
             rd_t = np.array([self.xd[t], self.yd[t], self.zd[t]])
-            vd_t = np.array([self.vxd[t], self.vyd[t], self.vzd[t]])
+            vd_t = np.array([self.vxd[t], self.vyd[t], self.vzd[t]])*1000 #[m/s]
             # Reset robot at the origin and move the target object to the goal position and orientation
             pb.resetBasePositionAndOrientation(
                 arm, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]), physicsClientId=physics_client)
@@ -897,15 +978,18 @@ Robotic Manipulation" by Murry et al.
             plt.show()
 
             fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 8))
-            axs3[0].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, 'b', label='x error')
+            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, 'b', label='x error')
             axs3[0].set_xlabel("t [ms]")
             axs3[0].set_ylabel("|x-xd| [mm]")
             plt.legend()
-            axs3[1].plot(np.arange(self.MAX_TIMESTEPS)*100,abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, 'b', label='y error')
+            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, 'b', label='y error')
             axs3[1].set_xlabel("t [ms]")
             axs3[1].set_ylabel("|y-yd| [mm]")
             plt.legend()
-            axs3[2].plot(np.arange(self.MAX_TIMESTEPS)*100,abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, 'b', label='z error')
+            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, 'b', label='z error')
             axs3[2].set_xlabel("t")
             axs3[2].set_ylabel("|z-zd| [mm]")
             plt.legend()
@@ -915,7 +999,7 @@ Robotic Manipulation" by Murry et al.
                 label='Euclidean error')
             axs3[3].set_xlabel("t [ms]")
             axs3[3].set_ylabel("||r-rd||_2 [mm]")
-            axs3[3].set_xlim([0, self.MAX_TIMESTEPS*100])
+            axs3[3].set_xlim([0, self.MAX_TIMESTEPS * 100])
             # axs3[3].set_ylim([0, 10])
             # axs3[3].set_yscale('log')
             plt.legend()
@@ -925,42 +1009,56 @@ Robotic Manipulation" by Murry et al.
 
             fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(8, 12))
             plt.rcParams['font.family'] = 'Serif'
-            axs3[0].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(plot_data_buffer_no_SAC[:, 0] - plot_data_buffer_no_SAC[:, 3]) * 1000, 'b',
+            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         abs(plot_data_buffer_no_SAC[:, 0] - plot_data_buffer_no_SAC[:, 3]) * 1000, 'b',
                          label='without SAC')
-            axs3[0].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, 'r', label='with SAC')
-            axs3[0].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(self.plot_data_buffer[:, 30]) * 1000, 'r:', label='error bound with SAC')
-            axs3[0].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(plot_data_buffer_no_SAC[:, 30]) * 1000, 'b:', label='error bound without SAC')
+            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, 'r', label='with SAC')
+            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(self.plot_data_buffer[:, 30]) * 1000, 'r:',
+                         label='error bound with SAC')
+            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(plot_data_buffer_no_SAC[:, 30]) * 1000, 'b:',
+                         label='error bound without SAC')
             axs3[0].set_xlabel("t [ms]")
             axs3[0].set_ylabel("|x-xd| [mm]")
             plt.legend()
-            axs3[1].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(plot_data_buffer_no_SAC[:, 1] - plot_data_buffer_no_SAC[:, 4]) * 1000, 'b',
+            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         abs(plot_data_buffer_no_SAC[:, 1] - plot_data_buffer_no_SAC[:, 4]) * 1000, 'b',
                          label='without SAC')
-            axs3[1].plot(np.arange(self.MAX_TIMESTEPS)*100,abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, 'r', label='with SAC')
-            axs3[1].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(self.plot_data_buffer[:, 31]) * 1000, 'r:', label='error bound on with SAC')
-            axs3[1].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(plot_data_buffer_no_SAC[:, 31]) * 1000, 'b:', label='error bound on without SAC')
+            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, 'r', label='with SAC')
+            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(self.plot_data_buffer[:, 31]) * 1000, 'r:',
+                         label='error bound on with SAC')
+            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(plot_data_buffer_no_SAC[:, 31]) * 1000, 'b:',
+                         label='error bound on without SAC')
             axs3[1].set_xlabel("t [ms]")
             axs3[1].set_ylabel("|y-yd| [mm]")
             plt.legend()
-            axs3[2].plot(np.arange(self.MAX_TIMESTEPS)*100,abs(plot_data_buffer_no_SAC[:, 2] - plot_data_buffer_no_SAC[:, 5]) * 1000, 'b',
+            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         abs(plot_data_buffer_no_SAC[:, 2] - plot_data_buffer_no_SAC[:, 5]) * 1000, 'b',
                          label='without SAC')
-            axs3[2].plot(np.arange(self.MAX_TIMESTEPS)*100,abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, 'r', label='with SAC')
-            axs3[2].plot(np.arange(self.MAX_TIMESTEPS)*100, abs(self.plot_data_buffer[:, 32]) * 1000, 'r:', label='error bound on with SAC')
-            axs3[2].plot(np.arange(self.MAX_TIMESTEPS)*100,abs(plot_data_buffer_no_SAC[:, 32]) * 1000, 'b:', label='error bound on without SAC')
+            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, 'r', label='with SAC')
+            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(self.plot_data_buffer[:, 32]) * 1000, 'r:',
+                         label='error bound on with SAC')
+            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(plot_data_buffer_no_SAC[:, 32]) * 1000, 'b:',
+                         label='error bound on without SAC')
             axs3[2].set_xlabel("t [ms]")
             axs3[2].set_ylabel("|z-zd| [mm]")
             plt.legend()
-            axs3[3].plot(np.arange(self.MAX_TIMESTEPS)*100,
-                np.linalg.norm(np.arange(self.MAX_TIMESTEPS)*100,(plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
-                               axis=1) * 1000, 'b', label='without SAC')
-            axs3[3].plot(np.arange(self.MAX_TIMESTEPS)*100,
-                np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2, axis=1) * 1000,
-                'r', label='with SAC')
-            axs3[3].plot(np.arange(self.MAX_TIMESTEPS)*100,
-                np.linalg.norm(self.plot_data_buffer[:, 30:33], ord=2, axis=1) * 1000,
-                'r:', label='error bound on with SAC')
-            axs3[3].plot(np.arange(self.MAX_TIMESTEPS)*100,
-                np.linalg.norm(plot_data_buffer_no_SAC[:, 30:33], ord=2, axis=1) * 1000,
-                'b:', label='error bound on without SAC')
+            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         np.linalg.norm(np.arange(self.MAX_TIMESTEPS) * 100,
+                                        (plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
+                                        axis=1) * 1000, 'b', label='without SAC')
+            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2,
+                                        axis=1) * 1000,
+                         'r', label='with SAC')
+            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         np.linalg.norm(self.plot_data_buffer[:, 30:33], ord=2, axis=1) * 1000,
+                         'r:', label='error bound on with SAC')
+            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         np.linalg.norm(plot_data_buffer_no_SAC[:, 30:33], ord=2, axis=1) * 1000,
+                         'b:', label='error bound on without SAC')
 
             axs3[3].set_xlabel("t [ms]")
             axs3[3].set_ylabel("||r-rd||_2 [mm]")
