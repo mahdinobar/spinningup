@@ -37,15 +37,15 @@ class SquashedGaussianMLPActor(nn.Module):
         self.log_std_layer = nn.Linear(hidden_sizes[-1], act_dim)
         self.act_limit = act_limit
 
-    # comment for libtorch Cpp save
-    def forward(self, obs, deterministic=False, with_logprob=True):
-    # # uncomment to save model of actor for libtorch
-    # def forward(self, obs, deterministic=True, with_logprob=False):
-        # comment for libtorch Cpp save
-        net_out = self.net(obs)
+    # # comment for libtorch Cpp save
+    # def forward(self, obs, deterministic=False, with_logprob=True):
+    # uncomment to save model of actor for libtorch
+    def forward(self, obs, deterministic=True, with_logprob=False):
+        # # comment for libtorch Cpp save
+        # net_out = self.net(obs)
 
-        # # uncomment to save model of actor for libtorch
-        # net_out = self.net(obs.float())
+        # uncomment to save model of actor for libtorch
+        net_out = self.net(obs.float())
 
         mu = self.mu_layer(net_out)
         log_std = self.log_std_layer(net_out)
@@ -69,17 +69,17 @@ class SquashedGaussianMLPActor(nn.Module):
             logp_pi = pi_distribution.log_prob(pi_action).sum(axis=-1)
             logp_pi -= (2 * (np.log(2) - pi_action - F.softplus(-2 * pi_action))).sum(axis=1)
         else:
-            # comment for libtorch Cpp save
-            logp_pi = None
-            # # uncomment to save model of actor for libtorch
-            # logp_pi = torch.tensor(0)
+            # # comment for libtorch Cpp save
+            # logp_pi = None
+            # uncomment to save model of actor for libtorch
+            logp_pi = torch.tensor(0)
 
         pi_action = torch.tanh(pi_action)
         pi_action = self.act_limit * pi_action
-        # comment for libtorch Cpp save
-        return pi_action, logp_pi
-        # # uncomment to save model of actor for libtorch
-        # return pi_action.double(), logp_pi.double()
+        # # comment for libtorch Cpp save
+        # return pi_action, logp_pi
+        # uncomment to save model of actor for libtorch
+        return pi_action.double(), logp_pi.double()
 
 
 class MLPQFunction(nn.Module):

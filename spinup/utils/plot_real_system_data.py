@@ -50,7 +50,7 @@ t0_tracking_PIonly=t_PIonly[np.argwhere(t_PIonly>(4.91-3.91))[0]]
 # N=8000
 
 
-fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(8, 12))
+fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(10, 14))
 plt.rcParams['font.family'] = 'Serif'
 axs3[0].plot(t-t0_tracking_PIonly, abs(EEposition_0-r_star_0)*1000,
              '-r', label='with SAC')
@@ -105,14 +105,12 @@ axs3[3].plot(t_PIonly-t0_tracking_PIonly, ((EEposition_0_PIonly-r_star_0_PIonly)
 # axs3[3].plot(np.arange(N) * 100,
 #              np.linalg.norm(plot_data_buffer_no_SAC[:, 30:33], ord=2, axis=1) * 1000,
 #              'b:', label='error bound on PI only')
-
 axs3[3].set_xlabel("t [s]")
 axs3[3].set_ylabel("||r-rd||_2 [mm]")
 # axs3[3].set_ylim([0, 10])
 # axs3[3].set_yscale('log')
 plt.legend()
-plt.savefig("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/real_system_data/real_system_position_errors.pdf", format="pdf",
-            bbox_inches='tight')
+plt.savefig("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/real_system_data/HW272_real_system_position_errors.pdf", format="pdf")
 plt.show()
 
-print("hi")
+print("")
