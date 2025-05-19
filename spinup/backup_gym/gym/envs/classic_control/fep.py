@@ -327,7 +327,7 @@ Robotic Manipulation" by Murry et al.
 
         # ATTENTION: here we do to keep self.dqc_PID for next step
         v_star_dir_length = 34.9028 / (1 + np.exp(-0.04 * (k_startup - 250))) / 1000 - 34.9028 / (
-                1 + np.exp(-0.04 * (0 - 250))) / 1000; #[m/s]
+                1 + np.exp(-0.04 * (0 - 250))) / 1000;  # [m/s]
         v_star = v_star_dir_length * (v_star_dir / norm_v_star_dir)
         vxd = v_star[0]
         vyd = v_star[1]
@@ -477,22 +477,25 @@ Robotic Manipulation" by Murry et al.
         time_randomness[0] = np.clip(time_randomness[0], 1, 49)
         tVec_camera = np.linspace(0, 13600, 137) + time_randomness  # [ms]
         self.vxd = (np.random.normal(loc=0.0, scale=0.000367647, size=1)[
-            0])/1000  # [m/ms] for 2 [cm] drift given std error after 13.6 [s]
+            0]) / 1000  # [m/ms] for 2 [cm] drift given std error after 13.6 [s]
         self.vyd = (34.9028e-3 + np.random.normal(loc=0.0, scale=0.002205882, size=1)[
-            0])/1000  # [m/ms] for 5 [cm] drift given std error after 13.6 [s]
+            0]) / 1000  # [m/ms] for 5 [cm] drift given std error after 13.6 [s]
         self.vzd = 0
         x_camera = np.zeros((self.MAX_TIMESTEPS + 1))
         y_camera = np.zeros((self.MAX_TIMESTEPS + 1))
         z_camera = np.zeros((self.MAX_TIMESTEPS + 1))
 
-        dt_camera = np.hstack((tVec_camera[0], np.diff(tVec_camera))) #[ms]
-        x_camera[0] = self.xd_init + self.vxd * dt_camera[0] + np.random.normal(loc=0.0, scale=0.0005, size=1) #[m]
-        y_camera[0] = self.yd_init + self.vyd * dt_camera[0] + np.random.normal(loc=0.0, scale=0.001, size=1)  #[m]
-        z_camera[0] = self.zd_init + self.vzd * dt_camera[0] + np.random.normal(loc=0.0, scale=0.0005, size=1) #[m]
+        dt_camera = np.hstack((tVec_camera[0], np.diff(tVec_camera)))  # [ms]
+        x_camera[0] = self.xd_init + self.vxd * dt_camera[0] + np.random.normal(loc=0.0, scale=0.0005, size=1)  # [m]
+        y_camera[0] = self.yd_init + self.vyd * dt_camera[0] + np.random.normal(loc=0.0, scale=0.001, size=1)  # [m]
+        z_camera[0] = self.zd_init + self.vzd * dt_camera[0] + np.random.normal(loc=0.0, scale=0.0005, size=1)  # [m]
         for i in range(0, self.MAX_TIMESTEPS):
-            x_camera[i + 1] = x_camera[i] + self.vxd * dt_camera[i + 1] + np.random.normal(loc=0.0, scale=0.0005, size=1) #[m]
-            y_camera[i + 1] = y_camera[i] + self.vyd * dt_camera[i + 1] + np.random.normal(loc=0.0, scale=0.001, size=1) #[m]
-            z_camera[i + 1] = z_camera[i] + self.vzd * dt_camera[i + 1] + np.random.normal(loc=0.0, scale=0.0005, size=1) #[m]
+            x_camera[i + 1] = x_camera[i] + self.vxd * dt_camera[i + 1] + np.random.normal(loc=0.0, scale=0.0005,
+                                                                                           size=1)  # [m]
+            y_camera[i + 1] = y_camera[i] + self.vyd * dt_camera[i + 1] + np.random.normal(loc=0.0, scale=0.001,
+                                                                                           size=1)  # [m]
+            z_camera[i + 1] = z_camera[i] + self.vzd * dt_camera[i + 1] + np.random.normal(loc=0.0, scale=0.0005,
+                                                                                           size=1)  # [m]
         X_camera = np.array([x_camera, y_camera, z_camera])
 
         # create a Kalman filter object
@@ -603,7 +606,7 @@ Robotic Manipulation" by Murry et al.
         self.k += 1  # Attention doublecheck
         rd_tp1 = np.array(
             [self.xd[self.k], self.yd[self.k], self.zd[self.k]])  # [m] attention: index desired starts from t=-1
-        vd_tp1 = np.array([self.vxd, self.vyd, self.vzd])*1000 #[m/s]
+        vd_tp1 = np.array([self.vxd, self.vyd, self.vzd]) * 1000  # [m/s]
         pb.resetBasePositionAndOrientation(
             target_object, rd_tp1, pb.getQuaternionFromEuler(
                 np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])), physicsClientId=physics_client)
@@ -756,7 +759,7 @@ Robotic Manipulation" by Murry et al.
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
         # # # # TODO: so dirty code: uncomment when NOSAC for plots -- you need to take care of which random values you call by break points after first done in sac.py ... and cmment a too ...
         # plot_data_buffer_no_SAC=self.plot_data_buffer
-        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_265/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_274/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
         # given action it returns 4-tuple (observation, reward, done, info)
         return (obs, reward_t, terminal, {})
 
@@ -818,7 +821,7 @@ Robotic Manipulation" by Murry et al.
             #     physicsClientId=physics_client_rendering)
             t = 0
             rd_t = np.array([self.xd[t], self.yd[t], self.zd[t]])
-            vd_t = np.array([self.vxd[t], self.vyd[t], self.vzd[t]])*1000 #[m/s]
+            vd_t = np.array([self.vxd[t], self.vyd[t], self.vzd[t]]) * 1000  # [m/s]
             # Reset robot at the origin and move the target object to the goal position and orientation
             pb.resetBasePositionAndOrientation(
                 arm, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]), physicsClientId=physics_client)
@@ -864,7 +867,7 @@ Robotic Manipulation" by Murry et al.
         if render_test_buffer == True:
             # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
             plot_data_buffer_no_SAC = np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_265/plot_data_buffer_no_SAC.npy")
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_274/plot_data_buffer_no_SAC.npy")
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
             axs1[0].plot(self.plot_data_buffer[:, 3] * 1000, self.plot_data_buffer[:, 4] * 1000, 'r--',
                          label='EE desired traj')
@@ -1046,8 +1049,7 @@ Robotic Manipulation" by Murry et al.
             axs3[2].set_ylabel("|z-zd| [mm]")
             plt.legend()
             axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                         np.linalg.norm(np.arange(self.MAX_TIMESTEPS) * 100,
-                                        (plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
+                         np.linalg.norm((plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
                                         axis=1) * 1000, 'b', label='without SAC')
             axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
                          np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2,
@@ -1249,6 +1251,42 @@ Robotic Manipulation" by Murry et al.
             plt.legend()
             plt.legend()
             plt.savefig(output_dir_rendering + "/rd_t" + str(self.n) + ".pdf", format="pdf",
+                        bbox_inches='tight')
+            plt.show()
+
+            fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(8, 10))
+            axs5[0].plot(np.diff(self.plot_data_buffer[:, 3]), '-ob')
+            axs5[0].set_xlabel("t")
+            axs5[0].set_ylabel("diff rd_t[0]")
+            plt.legend()
+            axs5[1].plot(np.diff(self.plot_data_buffer[:, 4]), '-ob')
+            axs5[1].set_xlabel("t")
+            axs5[1].set_ylabel("diff rd_t[1]")
+            plt.legend()
+            axs5[2].plot(np.diff(self.plot_data_buffer[:, 5]), '-ob')
+            axs5[2].set_xlabel("t")
+            axs5[2].set_ylabel("diff rd_t[2]")
+            plt.legend()
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/diff_rd_t" + str(self.n) + ".pdf", format="pdf",
+                        bbox_inches='tight')
+            plt.show()
+
+            fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(8, 10))
+            axs5[0].plot(self.plot_data_buffer[:, 9], '-ob')
+            axs5[0].set_xlabel("t")
+            axs5[0].set_ylabel("vd_t[0]")
+            plt.legend()
+            axs5[1].plot(self.plot_data_buffer[:, 10], '-ob')
+            axs5[1].set_xlabel("t")
+            axs5[1].set_ylabel("vd_t[1]")
+            plt.legend()
+            axs5[2].plot(self.plot_data_buffer[:, 11], '-ob')
+            axs5[2].set_xlabel("t")
+            axs5[2].set_ylabel("vd_t[2]")
+            plt.legend()
+            plt.legend()
+            plt.savefig(output_dir_rendering + "/vd_t" + str(self.n) + ".pdf", format="pdf",
                         bbox_inches='tight')
             plt.show()
 
