@@ -59,7 +59,7 @@ pb.setGravity(0, 0, -9.81, physicsClientId=physics_client)
 pb.setAdditionalSearchPath(pybullet_data.getDataPath())
 
 # pb.setPhysicsEngineParameter(numSolverIterations=50)  # Increase for better accuracy
-
+# /home/mahdi/ETHZ/codes/spinningup
 arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf",
                   useFixedBase=True, physicsClientId=physics_client)
 
@@ -144,7 +144,8 @@ Robotic Manipulation" by Murry et al.
         high_s = np.array([0.2, 0.2, 0.2,
                            1.5, 1.5, 1.5, 1.5, 1.5, 1.5,
                            2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
-                           2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])
+                           2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100,
+                           0.435, 0.435, 0.435, 0.435, 0.522, 0.522])
         low_s = -high_s
         self.observation_space = spaces.Box(low=low_s, high=high_s, dtype=np.float32)
         # Attention just 6 DOF is simulated (7th DOF is disabled)
@@ -379,11 +380,11 @@ Robotic Manipulation" by Murry et al.
             np.array([self.xd_init, self.yd_init, self.zd_init]) + np.array([-0.002, -0.18, -0.15]),
             pb.getQuaternionFromEuler([0, 0, np.pi / 2 - 0.244978663]), physicsClientId=physics_client)
 
-        self.state = [r_hat_tfp1_startup[0] - rd_tf_startup[0],
+        self.state = [(r_hat_tfp1_startup[0] - rd_tf_startup[0])*1000,
                       # ATTENTION: because of assumption that on real system we start Kalman filter with final position of EE at startup phase
-                      r_hat_tfp1_startup[1] - rd_tf_startup[1],
+                      (r_hat_tfp1_startup[1] - rd_tf_startup[1])*1000,
                       # ATTENTION: because of assumption that on real system we start Kalman filter with final position of EE at startup phase
-                      r_hat_tfp1_startup[2] - rd_tf_startup[2],
+                      (r_hat_tfp1_startup[2] - rd_tf_startup[2])*1000,
                       q_t[0],
                       q_t[1],
                       q_t[2],
@@ -687,9 +688,9 @@ Robotic Manipulation" by Murry et al.
                                                deltaT=dt)
         self.dqc_PID = dqc_tp1_PID
         # observations after applying the action a
-        obs = [r_hat_tp1[0] - rd_tp1[0],
-               r_hat_tp1[1] - rd_tp1[1],
-               r_hat_tp1[2] - rd_tp1[2],
+        obs = [(r_hat_tp1[0] - rd_tp1[0])*1000,
+                (r_hat_tp1[1] - rd_tp1[1])*1000,
+                 (r_hat_tp1[2] - rd_tp1[2])*1000,
                q_tp1[0],
                q_tp1[1],
                q_tp1[2],
@@ -795,6 +796,7 @@ Robotic Manipulation" by Murry et al.
             # pb.setGravity(0, 0, -9.81, physicsClientId=physics_client_rendering)
             # Load URDFs
             # Load robot, target object and plane urdf
+            # /cluster/home/mnobar/code/spinningup
             pb.setAdditionalSearchPath(pybullet_data.getDataPath())
             pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
                                  output_dir_rendering + "/simulation.mp4")  # added by Pierre
@@ -907,7 +909,7 @@ Robotic Manipulation" by Murry et al.
             axs1[2].set_xlabel("y[mm]")
             axs1[2].set_ylabel("z[mm]")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/position_" + str(self.n) + ".pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/position_" + str(self.n) + ".png", format="png", bbox_inches='tight')
             plt.show()
 
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(8, 12))
@@ -950,35 +952,24 @@ Robotic Manipulation" by Murry et al.
             axs1[2].set_xlabel("y[mm]")
             axs1[2].set_ylabel("z[mm]")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/position_both_" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/position_both_" + str(self.n) + ".png", format="png",
                         bbox_inches='tight')
             plt.show()
 
-            fig2, axs2 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
-            axs2[0].plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 10], 'r--', label='EE desired traj',
-                         marker=".",
-                         markersize=30)
-            axs2[0].plot(self.plot_data_buffer[:, 6], self.plot_data_buffer[:, 7], 'k',
-                         label='EE position - PID only controller')
-            axs2[0].set_xlabel("vx")
-            axs2[0].set_ylabel("vy")
-            axs2[1].plot(self.plot_data_buffer[:, 9], self.plot_data_buffer[:, 11], 'r--', label='EE desired traj',
-                         marker=".",
-                         markersize=30)
-            axs2[1].plot(self.plot_data_buffer[:, 6], self.plot_data_buffer[:, 8], 'k',
-                         label='EE position - PID only controller')
-            axs2[1].set_xlabel("vx")
-            axs2[1].set_ylabel("vz")
-            axs2[2].plot(self.plot_data_buffer[:, 10], self.plot_data_buffer[:, 11], 'r--', label='EE desired velocity',
-                         marker=".",
-                         markersize=30)
-            axs2[2].plot(self.plot_data_buffer[:, 7], self.plot_data_buffer[:, 8], 'k',
-                         label='EE velocity - PID only controller')
-            axs2[2].set_xlabel("vy")
-            axs2[2].set_ylabel("vz")
+            fig5, axs5 = plt.subplots(1, 1, sharex=False, sharey=False, figsize=(8, 6))
+            t = np.linspace(0, 135, 136) / 10
+            axs5.plot(t, self.plot_data_buffer[:, 1] * 1000, '-ob', MarkerSize=3, label="r_hat_tp1[1], [mm]")
+            axs5.plot(t, self.plot_data_buffer[:, 4] * 1000, '-og', MarkerSize=3, label="rd_tp1[1], [mm]")
+            axs5.set_xlabel("t")
+            axs5.set_ylabel("y")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/velocity_" + str(self.n) + ".pdf", format="pdf", bbox_inches='tight')
+            plt.grid()
+            axs5.set_xlim([0, 1.8])
+            axs5.set_ylim([-250, -180])
+            plt.savefig(output_dir_rendering + "/checcking_KF" + str(self.n) + ".png", format="png",
+                        bbox_inches='tight')
             plt.show()
+
 
             fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 8))
             axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100,
@@ -1006,7 +997,7 @@ Robotic Manipulation" by Murry et al.
             # axs3[3].set_ylim([0, 10])
             # axs3[3].set_yscale('log')
             plt.legend()
-            plt.savefig(output_dir_rendering + "/position_errors_" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/position_errors_" + str(self.n) + ".png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1067,7 +1058,7 @@ Robotic Manipulation" by Murry et al.
             # axs3[3].set_ylim([0, 10])
             # axs3[3].set_yscale('log')
             plt.legend()
-            plt.savefig(output_dir_rendering + "/position_errors_both_" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/position_errors_both_" + str(self.n) + ".png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1096,7 +1087,7 @@ Robotic Manipulation" by Murry et al.
             axs4[2, 1].set_xlabel("t")
             axs4[2, 1].set_ylabel("dqc_5")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/dqc_" + str(self.n) + ".pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/dqc_" + str(self.n) + ".png", format="png", bbox_inches='tight')
             plt.show()
 
             fig4, axs4 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(8, 6))
@@ -1124,7 +1115,7 @@ Robotic Manipulation" by Murry et al.
             axs4[2, 1].set_xlabel("t")
             axs4[2, 1].set_ylabel("dqc_PID_5")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/dqc_PID_" + str(self.n) + ".pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/dqc_PID_" + str(self.n) + ".png", format="png", bbox_inches='tight')
             plt.show()
 
             fig4, axs4 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(8, 6))
@@ -1152,7 +1143,7 @@ Robotic Manipulation" by Murry et al.
             axs4[2, 1].set_xlabel("t")
             axs4[2, 1].set_ylabel("a_5")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/dq_SAC_" + str(self.n) + ".pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/dq_SAC_" + str(self.n) + ".png", format="png", bbox_inches='tight')
             plt.show()
 
             fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(7, 14))
@@ -1169,7 +1160,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("eta3*ddqc")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/rewards_" + str(self.n) + ".pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/rewards_" + str(self.n) + ".png", format="png", bbox_inches='tight')
             plt.show()
 
             fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(5, 10))
@@ -1186,7 +1177,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("reward_pz_t")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/rewards_position_" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/rewards_position_" + str(self.n) + ".png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1215,7 +1206,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2, 1].set_xlabel("t")
             axs5[2, 1].set_ylabel("tau_5")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/tau_" + str(self.n) + ".pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/tau_" + str(self.n) + ".png", format="png", bbox_inches='tight')
             plt.show()
 
             fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(8, 10))
@@ -1232,7 +1223,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("r_hat_tp1[2] - rd_tp1[2]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/e_tp1" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/e_tp1" + str(self.n) + ".png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1250,7 +1241,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("rd_t[2]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/rd_t" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/rd_t" + str(self.n) + ".png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1268,7 +1259,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("diff rd_t[2]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/diff_rd_t" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/diff_rd_t" + str(self.n) + ".png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1286,7 +1277,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("vd_t[2]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/vd_t" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/vd_t" + str(self.n) + ".png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1304,7 +1295,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("r_hat_t[2]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/r_hat_t" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/r_hat_t" + str(self.n) + ".png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1322,7 +1313,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("q[2]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/q_02t" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/q_02t" + str(self.n) + ".png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1340,7 +1331,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("q[5]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/q_35t" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/q_35t" + str(self.n) + ".png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1358,7 +1349,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("dq[2]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/dq_02t" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/dq_02t" + str(self.n) + ".png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1376,7 +1367,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("dq[5]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/dq_35t" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/dq_35t" + str(self.n) + ".png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1394,7 +1385,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("tau[2]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/tau_02t" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/tau_02t" + str(self.n) + ".png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1412,7 +1403,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("tau[5]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/tau_35t" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/tau_35t" + str(self.n) + ".png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1430,7 +1421,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("dqc_PI[2]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/dqc_PI_02t" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/dqc_PI_02t" + str(self.n) + ".png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1448,7 +1439,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("dqc_PI[5]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/dqc_PI_35t" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/dqc_PI_35t" + str(self.n) + ".png", format="png",
                         bbox_inches='tight')
             plt.show()
             print("")
@@ -1503,7 +1494,7 @@ Robotic Manipulation" by Murry et al.
             axs[2, 1].set_xlabel("timestep")
             axs[2, 1].set_ylabel("dqc_t_PID[5]")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/buffer_states.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/buffer_states.pdf", format="png", bbox_inches='tight')
             plt.show()
             fig6, axs6 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
             x = range(idx_start, idx_end, 1)
@@ -1525,7 +1516,7 @@ Robotic Manipulation" by Murry et al.
             axs6[2].set_xlabel("timestep")
             axs6[2].set_ylabel("r_hat_tp1[2] - rd_t[2]")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/buffer_states.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/buffer_states.pdf", format="png", bbox_inches='tight')
             plt.show()
             fig7, axs7 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
             y = buf_act[0:idx_last][idx_start:idx_end, 0]
@@ -1544,7 +1535,7 @@ Robotic Manipulation" by Murry et al.
             axs7[2].set_xlabel("timestep")
             axs7[2].set_ylabel("a[2]")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/buffer_action_0to2.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/buffer_action_0to2.pdf", format="png", bbox_inches='tight')
             plt.show()
             fig70, axs70 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
             y = buf_act[0:idx_last][idx_start:idx_end, 3]
@@ -1563,7 +1554,7 @@ Robotic Manipulation" by Murry et al.
             axs70[2].set_xlabel("timestep")
             axs70[2].set_ylabel("a[5]")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/buffer_action_3to5.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/buffer_action_3to5.pdf", format="png", bbox_inches='tight')
             plt.show()
             fig8, axs8 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
             y = buf_rew[0:idx_last][idx_start:idx_end]
@@ -1572,7 +1563,7 @@ Robotic Manipulation" by Murry et al.
             axs8[0].set_xlabel("timestep")
             axs8[0].set_ylabel("r")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/buffer_reward.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/buffer_reward.pdf", format="png", bbox_inches='tight')
             plt.show()
             fig10, axs10 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
             y = buf_done[0:idx_last][idx_start:idx_end]
@@ -1581,7 +1572,7 @@ Robotic Manipulation" by Murry et al.
             axs10[0].set_xlabel("timestep")
             axs10[0].set_ylabel("done")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/buffer_done.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/buffer_done.pdf", format="png", bbox_inches='tight')
             plt.show()
             fig11, axs11 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
             y = buf_obs[0:idx_last, :][idx_start:idx_end, 3]
@@ -1603,7 +1594,7 @@ Robotic Manipulation" by Murry et al.
             axs11[2].set_ylabel("q[2]")
             axs11[2].hlines(self.q_init[2], min(x), max(x), 'g', linestyles="dashdot")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/buffer_states_q_0to2.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/buffer_states_q_0to2.pdf", format="png", bbox_inches='tight')
             plt.show()
             fig110, axs110 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
             y = buf_obs[0:idx_last, :][idx_start:idx_end, 3]
@@ -1625,7 +1616,7 @@ Robotic Manipulation" by Murry et al.
             axs110[2].set_ylabel("q[5]")
             axs110[2].hlines(self.q_init[5], min(x), max(x), 'g', linestyles="dashdot")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/buffer_states_q_3to5.pdf", format="pdf", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/buffer_states_q_3to5.pdf", format="png", bbox_inches='tight')
             plt.show()
             print("")
 

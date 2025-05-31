@@ -5,7 +5,9 @@ import json
 import os
 import os.path as osp
 import numpy as np
-
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib import font_manager
 DIV_LINE_WIDTH = 50
 
 # Global vars for tracking and labeling data at load time.
@@ -165,7 +167,32 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
     # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
     plt.hlines( 107, 0, 1.632e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
-    plt.savefig(all_logdirs[-1]+"/learning_curve", format="pdf", bbox_inches='tight',zorder=2)
+    plt.savefig(all_logdirs[-1]+"/learning_curve", format="png", bbox_inches='tight',zorder=2)
+    plt.show()
+    
+    # Register the specific Times New Roman font
+    times_new_roman_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
+    times_new_roman_font = font_manager.FontProperties(fname=times_new_roman_path)
+    # Create DataFrame (assuming data[0] is available)
+    df = pd.DataFrame(data[0])
+    # Extract the series
+    average_test_returns = df.get("AverageTestEpRet")
+    # Generate epoch indices
+    epochs = range(1, len(average_test_returns) + 1)
+    # Plot
+    plt.figure(figsize=(6, 4))
+    plt.plot(epochs, average_test_returns, label="Average Test Return", color="blue")
+    plt.hlines( 107, 0, 4000, 'k', linestyles="dashed", label='PI only')
+    plt.xlabel("Number of Epochs", fontproperties=times_new_roman_font, fontsize=14)
+    plt.ylabel("Average Test Return", fontproperties=times_new_roman_font, fontsize=14)
+    # plt.title("Average Test Return vs Epochs", fontsize=14, fontproperties=times_new_roman_font)
+    plt.xticks(fontproperties=times_new_roman_font, fontsize=12)
+    plt.yticks(fontproperties=times_new_roman_font, fontsize=12)
+    plt.xlim([0,4000])
+    plt.grid(True)
+    plt.legend(prop=times_new_roman_font, fontsize=14)
+    plt.tight_layout()
+    plt.savefig(all_logdirs[-1] + "/learning_curve", format="pdf")
     plt.show()
 
 def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=False,
@@ -182,7 +209,7 @@ def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=Fa
     # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
     # plt.ylim([0,3])
-    plt.savefig(all_logdirs[-1]+"/Alpha", format="pdf", bbox_inches='tight',zorder=2)
+    plt.savefig(all_logdirs[-1]+"/Alpha", format="png", bbox_inches='tight',zorder=2)
     plt.show()
 
     for value in values:
@@ -193,8 +220,33 @@ def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=Fa
     # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
     # plt.ylim([-5,10])
-    plt.savefig(all_logdirs[-1]+"/AverageLogPi", format="pdf", bbox_inches='tight',zorder=2)
+    plt.savefig(all_logdirs[-1]+"/AverageLogPi", format="png", bbox_inches='tight',zorder=2)
     plt.show()
+
+    for value in values:
+        plt.figure()
+        plot_data(data, xaxis=xaxis, value="AverageTestEpRet", condition=condition, smooth=smooth, estimator=estimator,zorder=1)
+    # plt.hlines(44.47124, 0, 10e4, 'k', linestyles="dashed", label='PID only')
+    # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
+    # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
+    plt.hlines( 107, 0, 1.632e6, 'k', linestyles="dashed", label='PI only')
+    plt.legend()
+    # plt.ylim([-5,10])
+    plt.savefig(all_logdirs[-1]+"/AverageTestEpRet", format="png", bbox_inches='tight',zorder=2)
+    plt.show()
+
+    for value in values:
+        plt.figure()
+        plot_data(data, xaxis=xaxis, value="AverageEpRet", condition=condition, smooth=smooth, estimator=estimator,zorder=1)
+    # plt.hlines(44.47124, 0, 10e4, 'k', linestyles="dashed", label='PID only')
+    # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
+    # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
+    plt.hlines( 107, 0, 1.632e6, 'k', linestyles="dashed", label='PI only')
+    plt.legend()
+    # plt.ylim([-5,10])
+    plt.savefig(all_logdirs[-1]+"/AverageEpRet", format="png", bbox_inches='tight',zorder=2)
+    plt.show()
+
 
     for value in values:
         plt.figure()
@@ -204,7 +256,7 @@ def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=Fa
     # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
     # plt.ylim([-10,6])
-    plt.savefig(all_logdirs[-1]+"/LossAlpha", format="pdf", bbox_inches='tight',zorder=2)
+    plt.savefig(all_logdirs[-1]+"/LossAlpha", format="png", bbox_inches='tight',zorder=2)
     plt.show()
 
     for value in values:
@@ -215,7 +267,7 @@ def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=Fa
     # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
     # plt.ylim([0,50])
-    plt.savefig(all_logdirs[-1]+"/LossQ", format="pdf", bbox_inches='tight',zorder=2)
+    plt.savefig(all_logdirs[-1]+"/LossQ", format="png", bbox_inches='tight',zorder=2)
     plt.show()
 
     for value in values:
@@ -226,7 +278,7 @@ def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=Fa
     # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
     # plt.ylim([0,40])
-    plt.savefig(all_logdirs[-1]+"/AverageQ1Vals", format="pdf", bbox_inches='tight',zorder=2)
+    plt.savefig(all_logdirs[-1]+"/AverageQ1Vals", format="png", bbox_inches='tight',zorder=2)
     plt.show()
 
 def main():

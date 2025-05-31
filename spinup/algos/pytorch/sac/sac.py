@@ -9,6 +9,7 @@ import spinup.algos.pytorch.sac.core as core
 from spinup.utils.logx import EpochLogger
 
 import matplotlib.pyplot as plt
+from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
 
 
 class ReplayBuffer:
@@ -162,6 +163,24 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
     np.random.seed(seed)
 
     env, test_env = env_fn(), env_fn()
+
+    # # uncomment to normalize observations
+    # clip_obs_=10.0
+    # env = DummyVecEnv([env_fn])
+    # env = VecNormalize(env, norm_obs=True, norm_reward=False, clip_obs=clip_obs_)
+    # # Warm up VecNormalize with random steps to fill running stats
+    # obs = env.reset()
+    # for _ in range(13600):  # Try 5k–10k warm-up steps (more is better)
+    #     action = [env.action_space.sample()]
+    #     obs, reward, done, _ = env.step(action)
+    #     if done[0]:
+    #         obs = env.reset()
+    # #Clone normalization to test_env
+    # test_env = DummyVecEnv([env_fn])
+    # test_env = VecNormalize(test_env, norm_obs=True, norm_reward=False, clip_obs=clip_obs_)
+    # #Sync normalization stats from training env
+    # test_env.obs_rms = env.obs_rms
+
     obs_dim = env.observation_space.shape
     act_dim = env.action_space.shape[0]
 
@@ -353,6 +372,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
                 a = np.zeros(env.action_space.shape[0])
 
         # Step the env
+        # o2, r, d, _ = env.step(a.reshape(1,6))
         o2, r, d, _ = env.step(a)
         ep_ret += r
         ep_len += 1
@@ -447,7 +467,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
                 plt.show()
                 print("---ERROR=",np.mean(np.linalg.norm(env.env.plot_data_buffer[:, 30:33], ord=2, axis=1))*1000)
             ################################################################################################
-            env.env.plot_data_buffer
+            # env.env.plot_data_buffer
             logger.store(EpRet=ep_ret, EpLen=ep_len)
             o, ep_ret, ep_len = env.reset(), 0, 0
 

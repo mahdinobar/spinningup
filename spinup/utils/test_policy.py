@@ -102,13 +102,13 @@ def load_pytorch_policy(fpath, itr, deterministic=False):
     def get_action(x):
         start_time = time.time()
         with torch.no_grad():
-            # # comment for libtorch Cpp save
-            # x = torch.as_tensor(x)
-            # action = model.act(x, deterministic)
+            # comment for libtorch Cpp save
+            x = torch.as_tensor(x,dtype=torch.float32)
+            action = model.act(x, deterministic)
 
-            # uncomment for libtorch Cpp save
-            x = torch.as_tensor(x, dtype=torch.double)
-            action = model.act(x, deterministic=True)
+            # # uncomment for libtorch Cpp save
+            # x = torch.as_tensor(x, dtype=torch.double)
+            # action = model.act(x, deterministic=True)
 
             end_time=time.time()
             print("dt=", (end_time - start_time)*1000 , " [ms]\n")
@@ -116,9 +116,9 @@ def load_pytorch_policy(fpath, itr, deterministic=False):
             # trace_script_module = torch.jit.trace(model, x)
             # trace_script_module.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_37/pyt_save/tracedModel.pt")
             # model2=torch.jit.script(model.pi)
-            # # uncomment to save model of actor for libtorch
-            traced_model_Cpp=torch.jit.trace(model.pi, x.reshape(1,21)) #ATTENTION to set correctly dimension of state space here
-            traced_model_Cpp.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_274/traced_model_Cpp_Fep_HW_274_double.pt")
+            # # # uncomment to save model of actor for libtorch
+            # traced_model_Cpp=torch.jit.trace(model.pi, x.reshape(1,21)) #ATTENTION to set correctly dimension of state space here
+            # traced_model_Cpp.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_274/traced_model_Cpp_Fep_HW_274_double.pt")
         return action
 
     # ac.act(torch.as_tensor(o, dtype=torch.float32),
@@ -163,7 +163,7 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True, 
                 plt.xlabel("x")
                 plt.ylabel("y")
                 plt.legend()
-                plt.savefig(output_dir + "/position.pdf", format="pdf", bbox_inches='tight')
+                plt.savefig(output_dir + "/position.png", format="png", bbox_inches='tight')
                 plt.show()
                 plt.figure(2)
                 plt.rcParams["font.family"] = "Times New Roman"
@@ -178,7 +178,7 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True, 
                 plt.xlabel("vx")
                 plt.ylabel("vy")
                 plt.legend()
-                plt.savefig(output_dir + "/velocity.pdf", format="pdf", bbox_inches='tight')
+                plt.savefig(output_dir + "/velocity.png", format="png", bbox_inches='tight')
                 plt.show()
             n += 1
 
