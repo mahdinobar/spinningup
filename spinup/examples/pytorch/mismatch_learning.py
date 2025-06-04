@@ -11,7 +11,11 @@ from gym import core, spaces
 from gym.utils import seeding
 import sys
 
-from numpy import asarray
+import torch
+import gpytorch
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
 
 sys.path.append('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch')
 __copyright__ = "Copyright 2025, IfA https://control.ee.ethz.ch/"
@@ -150,23 +154,31 @@ def load_bags(file_name, save=False):
 
     return dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured
 
-if __name__ == '__main__':
-    file_name = "SAC_1"
-    dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, save=False)
 
-    file_name= file_name+"_240Hz_"
+def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured):
 
+    # file_name= file_name+"_240Hz_"
+
+    # Attentions
     idx_init_dq_measured=np.argwhere(abs(dq_PI[0, 0] - dq_measured[:, 0]) < 1e-3)
     idx_init_dq_desired_measured=np.argwhere(abs(dq_PI[0, 0] - dq_desired_measured[:, 0]) < 1e-3)
     dq_measured=dq_measured[idx_init_dq_measured[0][0]:, :]
+    q_measured=q_measured[idx_init_dq_measured[0][0]:, :]
     dq_desired_measured=dq_desired_measured[idx_init_dq_desired_measured[0][0]:, :]
 
-    t = (dq_PI[:, 0] - dq_PI[0, 0]) * 1000
+    t_ = (dq_PI[:, 0] - dq_PI[0, 0]) * 1000
+    target_times = np.arange(0, t_[-1], 100)
+
     # Target times: 0, 100, 200, ..., up to max(t)
-    target_times = np.arange(0, t[-1], 4.166666667)
     # Find indices in t closest to each target time
-    closest_indices = np.array([np.abs(t - target).argmin() for target in target_times])[:2480]
-    closest_times = t[closest_indices]
+    closest_idx_PI = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_t_PI = t_[closest_idx_PI]
+
+    t_ = (dq_SAC[:, 0] - dq_SAC[0, 0]) * 1000
+    # Target times: 0, 100, 200, ..., up to max(t)
+    # Find indices in t closest to each target time
+    closest_idx_SAC = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_t_SAC = t_[closest_idx_SAC]
 
     # Reset robot at the origin and move the target object to the goal position and orientation
     pb.resetBasePositionAndOrientation(
@@ -179,9 +191,9 @@ if __name__ == '__main__':
         pb.resetJointState(arm, j, 0, physicsClientId=physics_client)
 
     q_sim, dq_sim, tau_sim = [], [], []
-    for idx in closest_indices:
-        print("idx=",idx)
-        dqc_t=dq_PI[idx,1:7]+dq_SAC[idx,1:7]
+    for idx_PI, idx_SAC in zip(closest_idx_PI, closest_idx_SAC):
+        print("simulation idx_PI=",idx_PI)
+        dqc_t=dq_PI[idx_PI,1:7]+dq_SAC[idx_SAC,1:7]
         pb.setJointMotorControlArray(
             arm,
             [0, 1, 2, 3, 4, 5],
@@ -192,7 +204,7 @@ if __name__ == '__main__':
             physicsClientId=physics_client
         )
         # TODO pay attention to number of repetition (e.g., use 24 for period 24*1/240*1000=100 [ms])
-        for _ in range(1):
+        for _ in range(24):
             # default timestep is 1/240 second
             pb.stepSimulation(physicsClientId=physics_client)
 
@@ -207,48 +219,38 @@ if __name__ == '__main__':
         dq_sim.append(dq_sim_)
         tau_sim.append(tau_sim_)
 
-    fig, axes = plt.subplots(3, 2, figsize=(12, 8))  # 3 rows, 2 columns
-    # Flatten axes array for easy indexing
-    axes = axes.flatten()
-    # Plot for each joint (0 to 5)
-    for joint_idx in range(6):
-        ax = axes[joint_idx]
-        # Downsample for visualization (every 100th point)
-        # indices = np.arange(0, len(dq_measured), 100)
-        y_measured = dq_measured[closest_indices, joint_idx+1]
-        y_sim = np.array(q_sim)[:, joint_idx]
-        ax.plot(closest_times, y_measured, '-ob', label="dq - real measured")  # blue circles
-        ax.plot(closest_times, y_sim, '-or', label="dq - simulation estimation")  # red circles
-        ax.set_xlabel("t")
-        ax.set_ylabel(f"dq{joint_idx + 1}")
-        ax.grid(True)
-    ax.legend()
-    # Adjust layout
-    plt.tight_layout()
-    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_dq_measured_dq_simest.png".format(file_name), format="png",
-                bbox_inches='tight')
-    plt.show()
-
-    fig, axes = plt.subplots(3, 2, figsize=(12, 8))  # 3 rows, 2 columns
-    # Flatten axes array for easy indexing
-    axes = axes.flatten()
-    # Plot for each joint (0 to 5)
-    for joint_idx in range(6):
-        ax = axes[joint_idx]
-        # Downsample for visualization (every 100th point)
-        # indices = np.arange(0, len(dq_measured), 100)
-        y_measured = dq_desired_measured[closest_indices, joint_idx+1]
-        y_sim = np.array(q_sim)[:, joint_idx]
-        ax.plot(closest_times, abs(y_sim-y_measured), '-ok', label="|dq_real_measured - dq_simulation_est|")  # blue circles
-        ax.set_xlabel("t")
-        ax.set_ylabel(f"dq{joint_idx + 1}")
-        ax.grid(True)
-    ax.legend()
-    # Adjust layout
-    plt.tight_layout()
-    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_dq_measured_dq_simest_err.png".format(file_name), format="png",
-                bbox_inches='tight')
-    plt.show()
+    t_ = (q_measured[:, 0] - q_measured[0, 0]) * 1000
+    # Target times: 0, 100, 200, ..., up to max(t)
+    # Find indices in t closest to each target time
+    closest_idx_q = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_t_q = t_[closest_idx_q]
+    
+    t_ = (dq_measured[:, 0] - dq_measured[0, 0]) * 1000
+    # Target times: 0, 100, 200, ..., up to max(t)
+    # Find indices in t closest to each target time
+    closest_idx_dq = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_t_dq = t_[closest_idx_dq]
+    # fig, axes = plt.subplots(3, 2, figsize=(12, 8))  # 3 rows, 2 columns
+    # # Flatten axes array for easy indexing
+    # axes = axes.flatten()
+    # # Plot for each joint (0 to 5)
+    # for joint_idx in range(6):
+    #     ax = axes[joint_idx]
+    #     # Downsample for visualization (every 100th point)
+    #     # indices = np.arange(0, len(dq_measured), 100)
+    #     y_measured = dq_measured[closest_idx_dq, joint_idx+1]
+    #     y_sim = np.array(dq_sim)[:, joint_idx]
+    #     ax.plot(closest_t_dq, y_measured, '-ob', label="dq - real measured")  # blue circles
+    #     ax.plot(closest_t_PI, y_sim, '-or', label="dq - simulation estimation")  # red circles
+    #     ax.set_xlabel("t")
+    #     ax.set_ylabel(f"dq{joint_idx + 1}")
+    #     ax.grid(True)
+    # ax.legend()
+    # # Adjust layout
+    # plt.tight_layout()
+    # plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_dq_measured_dq_simest.png".format(file_name), format="png",
+    #             bbox_inches='tight')
+    # plt.show()
 
     fig, axes = plt.subplots(3, 2, figsize=(12, 8))  # 3 rows, 2 columns
     # Flatten axes array for easy indexing
@@ -259,17 +261,17 @@ if __name__ == '__main__':
         # Downsample for visualization (every 100th point)
         # indices = np.arange(0, len(dq_measured), 100)
 
-        y_commanded = dq_PI[closest_indices, joint_idx+1] + dq_SAC[closest_indices, joint_idx+1]
-        ax.plot(closest_times, y_commanded, '-om', label="dq commanded - real", markersize=8)  # blue circles
+        y_commanded = dq_PI[closest_idx_PI, joint_idx+1] + dq_SAC[closest_idx_PI, joint_idx+1]
+        ax.plot(closest_t_PI, y_commanded, '-om', label="dq commanded - real", markersize=8)  # blue circles
 
         t_ = (dq_desired_measured[:, 0] - dq_desired_measured[0, 0]) * 1000
         # Target times: 0, 100, 200, ..., up to max(t)
-        target_times_d = np.arange(0, t_[-1], 4.166666667)
+        target_times_d = np.arange(0, t_[-1], 100)
         # Find indices in t closest to each target time
-        closest_indices_d = np.array([np.abs(t_ - target).argmin() for target in target_times_d])[:2480]
-        closest_times_d = t_[closest_indices_d]
-        y_desired = dq_desired_measured[closest_indices_d, joint_idx + 1]
-        ax.plot(closest_times_d, y_desired, '-og', label="dq desired - real", markersize=3)  # red circles
+        closest_idx_PI_d = np.array([np.abs(t_ - target).argmin() for target in target_times_d])[:104]
+        closest_t_PI_d = t_[closest_idx_PI_d]
+        y_desired = dq_desired_measured[closest_idx_PI_d, joint_idx + 1]
+        ax.plot(closest_t_PI_d, y_desired, '-og', label="dq desired - real", markersize=3)  # red circles
         ax.set_xlabel("t")
         ax.set_ylabel(f"dq{joint_idx + 1}")
         ax.grid(True)
@@ -283,4 +285,178 @@ if __name__ == '__main__':
     plt.show()
 
 
-    print("")
+
+
+    dq = dq_measured[closest_idx_dq,1:7]
+    q = q_measured[closest_idx_q,1:7]
+    dq_sim = np.array(dq_sim)[:,:6]
+    q_sim = np.array(q_sim)[:,:6]
+    # Plot q and q_sim (Position)
+    fig1, axs1 = plt.subplots(3, 2, figsize=(12, 8))
+    fig1.suptitle('Joint Positions: Measured vs Simulated', fontsize=16)
+    for i in range(6):
+        ax = axs1[i // 2, i % 2]
+        ax.plot(closest_t_q, q[:, i], '-og', label='Measured q')
+        ax.plot(closest_t_PI, q_sim[:, i], '-ob', label='Simulated q_sim', markersize=2)
+        ax.set_title(f'Joint {i + 1}')
+        ax.set_xlabel('Time step')
+        ax.set_ylabel('Position')
+        ax.grid(True)
+        ax.legend()
+    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_q.png".format(file_name), format="png",
+                bbox_inches='tight')
+    plt.show()
+
+    # Plot dq and dq_sim (Velocity)
+    fig2, axs2 = plt.subplots(3, 2, figsize=(12, 8))
+    fig2.suptitle('Joint Velocities: Measured vs Simulated', fontsize=16)
+    for i in range(6):
+        ax = axs2[i // 2, i % 2]
+        ax.plot(closest_t_dq, dq[:, i], '-og', label='Measured dq')
+        ax.plot(closest_t_PI, dq_sim[:, i], '-ob', label='Simulated dq_sim', markersize=2)
+        ax.set_title(f'Joint {i + 1}')
+        ax.set_xlabel('Time step')
+        ax.set_ylabel('Velocity')
+        ax.grid(True)
+        ax.legend()
+    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_dq.png".format(file_name), format="png",
+                bbox_inches='tight')
+    plt.show()
+
+
+    return q, dq, q_sim, dq_sim
+
+
+if __name__ == '__main__':
+    file_names = ["SAC_1", "SAC_2", "SAC_3", "PIonly_1", "PIonly_2", "PIonly_3"]
+    # file_name = "PIonly_1"
+    for file_name in file_names:
+        dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, save=True)
+
+        q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured)
+
+        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_q.npy".format(file_name),q)
+        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_dq.npy".format(file_name),dq)
+        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_q_sim.npy".format(file_name),q_sim)
+        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_dq_sim.npy".format(file_name),dq_sim)
+
+    # # ----- STEP 1: Load Your Data -----
+    # # Let's say you have data from 3 iterations
+    # # q.shape = (3, T, DOF), assuming DOF = 1 for simplicity here
+    #
+    # # Use 2 iterations for training, 1 for test
+    # train_ids = [0, 1]
+    # test_id = 2
+    #
+    # # Concatenate across time
+    # X_train = np.concatenate([q[train_ids], dq[train_ids]], axis=-1).reshape(-1, 2)
+    # X_test = np.concatenate([q[test_id], dq[test_id]], axis=-1).reshape(-1, 2)
+    #
+    # y_train_q = (q[train_ids] - q_sim[train_ids]).reshape(-1)
+    # y_train_dq = (dq[train_ids] - dq_sim[train_ids]).reshape(-1)
+    #
+    # y_test_q = (q[test_id] - q_sim[test_id]).reshape(-1)
+    # y_test_dq = (dq[test_id] - dq_sim[test_id]).reshape(-1)
+    #
+    # # Convert to torch tensors
+    # X_train = torch.tensor(X_train, dtype=torch.float32)
+    # X_test = torch.tensor(X_test, dtype=torch.float32)
+    # y_train_q = torch.tensor(y_train_q, dtype=torch.float32)
+    # y_train_dq = torch.tensor(y_train_dq, dtype=torch.float32)
+    #
+    #
+    # # ----- STEP 2: Define GP Model -----
+    # class ExactGPModel(gpytorch.models.ExactGP):
+    #     def __init__(self, train_x, train_y, likelihood):
+    #         super().__init__(train_x, train_y, likelihood)
+    #         self.mean_module = gpytorch.means.ConstantMean()
+    #         self.covar_module = gpytorch.kernels.ScaleKernel(
+    #             gpytorch.kernels.RBFKernel()
+    #         )
+    #
+    #     def forward(self, x):
+    #         mean_x = self.mean_module(x)
+    #         covar_x = self.covar_module(x)
+    #         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
+    #
+    #
+    # def train_gp(train_x, train_y):
+    #     likelihood = gpytorch.likelihoods.GaussianLikelihood()
+    #     model = ExactGPModel(train_x, train_y, likelihood)
+    #
+    #     model.train()
+    #     likelihood.train()
+    #
+    #     optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
+    #     mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
+    #
+    #     training_iter = 100
+    #     for i in range(training_iter):
+    #         optimizer.zero_grad()
+    #         output = model(train_x)
+    #         loss = -mll(output, train_y)
+    #         loss.backward()
+    #         optimizer.step()
+    #     return model, likelihood
+    #
+    #
+    # # Train GPs
+    # model_q, likelihood_q = train_gp(X_train, y_train_q)
+    # model_dq, likelihood_dq = train_gp(X_train, y_train_dq)
+    #
+    # # ----- STEP 3: Make Predictions -----
+    # model_q.eval()
+    # model_dq.eval()
+    # likelihood_q.eval()
+    # likelihood_dq.eval()
+    #
+    # with torch.no_grad(), gpytorch.settings.fast_pred_var():
+    #     pred_q = likelihood_q(model_q(X_test))
+    #     pred_dq = likelihood_dq(model_dq(X_test))
+    #
+    #     mean_q = pred_q.mean.numpy()
+    #     mean_dq = pred_dq.mean.numpy()
+    #     std_q = pred_q.variance.sqrt().numpy()
+    #     std_dq = pred_dq.variance.sqrt().numpy()
+    #
+    # # ----- STEP 4: Apply Corrections -----
+    # q_sim_test = q_sim[test_id].reshape(-1)
+    # dq_sim_test = dq_sim[test_id].reshape(-1)
+    #
+    # q_corrected = q_sim_test + mean_q
+    # dq_corrected = dq_sim_test + mean_dq
+    #
+    # # ----- STEP 5: Plotting -----
+    # timesteps = np.arange(q_sim_test.shape[0])
+    # q_real = q[test_id].reshape(-1)
+    # dq_real = dq[test_id].reshape(-1)
+    #
+    # plt.figure(figsize=(14, 6))
+    #
+    # # --- q ---
+    # plt.subplot(1, 2, 1)
+    # plt.plot(timesteps, q_sim_test, label="Simulated q", linestyle="--")
+    # plt.plot(timesteps, q_real, label="Real q", linewidth=2)
+    # plt.plot(timesteps, q_corrected, label="Corrected q (GP)", linewidth=2)
+    # plt.fill_between(timesteps, q_corrected - std_q, q_corrected + std_q, alpha=0.2, label="Uncertainty")
+    # plt.title("Position Correction")
+    # plt.xlabel("Time step")
+    # plt.ylabel("q")
+    # plt.legend()
+    #
+    # # --- dq ---
+    # plt.subplot(1, 2, 2)
+    # plt.plot(timesteps, dq_sim_test, label="Simulated dq", linestyle="--")
+    # plt.plot(timesteps, dq_real, label="Real dq", linewidth=2)
+    # plt.plot(timesteps, dq_corrected, label="Corrected dq (GP)", linewidth=2)
+    # plt.fill_between(timesteps, dq_corrected - std_dq, dq_corrected + std_dq, alpha=0.2, label="Uncertainty")
+    # plt.title("Velocity Correction")
+    # plt.xlabel("Time step")
+    # plt.ylabel("dq")
+    # plt.legend()
+    #
+    # plt.tight_layout()
+    # plt.show()
+    #
+    #
+    # print("")
