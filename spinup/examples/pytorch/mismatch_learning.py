@@ -254,6 +254,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
     # plt.show()
 
     fig, axes = plt.subplots(3, 2, figsize=(12, 8))  # 3 rows, 2 columns
+    plt.rcParams['font.family'] = 'Serif'
     # Flatten axes array for easy indexing
     axes = axes.flatten()
     # Plot for each joint (0 to 5)
@@ -294,6 +295,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
     q_sim = np.array(q_sim)[:,:6]
     # Plot q and q_sim (Position)
     fig1, axs1 = plt.subplots(3, 2, figsize=(12, 8))
+    plt.rcParams['font.family'] = 'Serif'
     fig1.suptitle('Joint Positions: Measured vs Simulated', fontsize=16)
     for i in range(6):
         ax = axs1[i // 2, i % 2]
@@ -327,138 +329,170 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
 
     return q, dq, q_sim, dq_sim
 
+def GP_mismatch_learning():
+    file_names = ["SAC_1", "SAC_2", "SAC_3"]
+    base_path = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/"
+
+    q_list = []
+    dq_list = []
+    q_sim_list = []
+    dq_sim_list = []
+
+    for file_name in file_names:
+        q = np.load(f"{base_path}{file_name}_q.npy")  # shape: (T, DOF)
+        dq = np.load(f"{base_path}{file_name}_dq.npy")  # shape: (T, DOF)
+        q_sim = np.load(f"{base_path}{file_name}_q_sim.npy")  # shape: (T, DOF)
+        dq_sim = np.load(f"{base_path}{file_name}_dq_sim.npy")  # shape: (T, DOF)
+
+        q_list.append(q)
+        dq_list.append(dq)
+        q_sim_list.append(q_sim)
+        dq_sim_list.append(dq_sim)
+
+    for joint_number in range(6):
+        # Stack into arrays of shape (3, T, DOF)
+        q = np.stack(q_list, axis=0)[:,:,joint_number]
+        dq = np.stack(dq_list, axis=0)[:,:,joint_number]
+        q_sim = np.stack(q_sim_list, axis=0)[:,:,joint_number]
+        dq_sim = np.stack(dq_sim_list, axis=0)[:,:,joint_number]
+
+        # ----- STEP 1: Load Your Data -----
+        # Let's say you have data from 3 iterations
+        # q.shape = (3, T, DOF), assuming DOF = 1 for simplicity here
+
+        # Use 2 iterations for training, 1 for test
+        train_ids = [0, 1]
+        test_id = 2
+
+        # Concatenate across time
+        X_train = np.concatenate([q[train_ids], dq[train_ids]], axis=-1).reshape(-1, 2)
+        X_test = np.concatenate([q[test_id], dq[test_id]], axis=-1).reshape(-1, 2)
+
+        y_train_q = (q[train_ids] - q_sim[train_ids]).reshape(-1)
+        y_train_dq = (dq[train_ids] - dq_sim[train_ids]).reshape(-1)
+
+        y_test_q = (q[test_id] - q_sim[test_id]).reshape(-1)
+        y_test_dq = (dq[test_id] - dq_sim[test_id]).reshape(-1)
+
+        # Convert to torch tensors
+        X_train = torch.tensor(X_train, dtype=torch.float32)
+        X_test = torch.tensor(X_test, dtype=torch.float32)
+        y_train_q = torch.tensor(y_train_q, dtype=torch.float32)
+        y_train_dq = torch.tensor(y_train_dq, dtype=torch.float32)
+
+
+        # ----- STEP 2: Define GP Model -----
+        class ExactGPModel(gpytorch.models.ExactGP):
+            def __init__(self, train_x, train_y, likelihood):
+                super().__init__(train_x, train_y, likelihood)
+                self.mean_module = gpytorch.means.ConstantMean()
+                self.covar_module = gpytorch.kernels.ScaleKernel(
+                    gpytorch.kernels.RBFKernel()
+                )
+
+            def forward(self, x):
+                mean_x = self.mean_module(x)
+                covar_x = self.covar_module(x)
+                return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
+
+
+        def train_gp(train_x, train_y):
+            likelihood = gpytorch.likelihoods.GaussianLikelihood()
+            model = ExactGPModel(train_x, train_y, likelihood)
+
+            model.train()
+            likelihood.train()
+
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
+            mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
+
+            training_iter = 100
+            for i in range(training_iter):
+                optimizer.zero_grad()
+                output = model(train_x)
+                loss = -mll(output, train_y)
+                loss.backward()
+                optimizer.step()
+            return model, likelihood
+
+
+        # Train GPs
+        model_q, likelihood_q = train_gp(X_train, y_train_q)
+        model_dq, likelihood_dq = train_gp(X_train, y_train_dq)
+
+        # ----- STEP 3: Make Predictions -----
+        model_q.eval()
+        model_dq.eval()
+        likelihood_q.eval()
+        likelihood_dq.eval()
+
+        with torch.no_grad(), gpytorch.settings.fast_pred_var():
+            pred_q = likelihood_q(model_q(X_test))
+            pred_dq = likelihood_dq(model_dq(X_test))
+
+            mean_q = pred_q.mean.numpy()
+            mean_dq = pred_dq.mean.numpy()
+            std_q = pred_q.variance.sqrt().numpy()
+            std_dq = pred_dq.variance.sqrt().numpy()
+
+        # ----- STEP 4: Apply Corrections -----
+        q_sim_test = q_sim[test_id].reshape(-1)
+        dq_sim_test = dq_sim[test_id].reshape(-1)
+
+        q_corrected = q_sim_test + mean_q
+        dq_corrected = dq_sim_test + mean_dq
+
+        # ----- STEP 5: Plotting -----
+        timesteps = np.arange(q_sim_test.shape[0])
+        q_real = q[test_id].reshape(-1)
+        dq_real = dq[test_id].reshape(-1)
+
+        plt.figure(figsize=(6, 8))
+        plt.rcParams['font.family'] = 'Serif'
+        # --- q ---
+        plt.subplot(2, 1, 1)
+        plt.plot(timesteps, q_real, label="Real q[{}]".format(str(joint_number)), color="g", linewidth=1, marker="o", markersize=4)
+        plt.plot(timesteps, q_sim_test, label="Simulated q[{}]".format(str(joint_number)), color="b", linewidth=1, marker="o", markersize=2)
+        plt.plot(timesteps, q_corrected, label="Corrected q (GP)", color="m", linewidth=1, marker="o", markersize=2)
+        plt.fill_between(timesteps, q_corrected - std_q, q_corrected + std_q, color="m", alpha=0.15, label="Uncertainty")
+        plt.title("Joint {} Position Correction".format(str(joint_number)))
+        plt.xlabel("k")
+        plt.ylabel("q")
+        plt.legend()
+        # --- dq ---
+        plt.subplot(2, 1, 2)
+        plt.plot(timesteps, dq_real, label="Real dq[{}]".format(str(joint_number)), color="g", linewidth=1, marker="o", markersize=4)
+        plt.plot(timesteps, dq_sim_test, label="Simulated dq[{}]".format(str(joint_number)), color="b", linewidth=1, marker="o", markersize=2)
+        plt.plot(timesteps, dq_corrected, label="Corrected dq (GP)", color="m", linewidth=1, marker="o", markersize=2)
+        plt.fill_between(timesteps, dq_corrected - std_dq, dq_corrected + std_dq, color="m", alpha=0.15,
+                         label="Uncertainty")
+        plt.title("Joint {} Velocity Correction".format(str(joint_number)))
+        plt.xlabel("k")
+        plt.ylabel("dq")
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/joint_{}_GP.png".format(str(joint_number)), format="png",
+                    bbox_inches='tight')
+        plt.show()
+
 
 if __name__ == '__main__':
-    file_names = ["SAC_1", "SAC_2", "SAC_3"]
-    # file_names = ["PIonly_1", "PIonly_2", "PIonly_3"]
-    # file_name = "PIonly_1"
-    for file_name in file_names:
-        dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, save=True)
+    # file_names = ["SAC_1", "SAC_2", "SAC_3"]
+    # # file_names = ["PIonly_1", "PIonly_2", "PIonly_3"]
+    # # file_name = "PIonly_1"
+    # for file_name in file_names:
+    #     dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, save=True)
+    #
+    #     q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured)
+    #
+    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_q.npy".format(file_name),q)
+    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_dq.npy".format(file_name),dq)
+    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_q_sim.npy".format(file_name),q_sim)
+    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_dq_sim.npy".format(file_name),dq_sim)
 
-        q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured)
 
-        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_q.npy".format(file_name),q)
-        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_dq.npy".format(file_name),dq)
-        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_q_sim.npy".format(file_name),q_sim)
-        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_dq_sim.npy".format(file_name),dq_sim)
+    GP_mismatch_learning()
 
-    # # ----- STEP 1: Load Your Data -----
-    # # Let's say you have data from 3 iterations
-    # # q.shape = (3, T, DOF), assuming DOF = 1 for simplicity here
-    #
-    # # Use 2 iterations for training, 1 for test
-    # train_ids = [0, 1]
-    # test_id = 2
-    #
-    # # Concatenate across time
-    # X_train = np.concatenate([q[train_ids], dq[train_ids]], axis=-1).reshape(-1, 2)
-    # X_test = np.concatenate([q[test_id], dq[test_id]], axis=-1).reshape(-1, 2)
-    #
-    # y_train_q = (q[train_ids] - q_sim[train_ids]).reshape(-1)
-    # y_train_dq = (dq[train_ids] - dq_sim[train_ids]).reshape(-1)
-    #
-    # y_test_q = (q[test_id] - q_sim[test_id]).reshape(-1)
-    # y_test_dq = (dq[test_id] - dq_sim[test_id]).reshape(-1)
-    #
-    # # Convert to torch tensors
-    # X_train = torch.tensor(X_train, dtype=torch.float32)
-    # X_test = torch.tensor(X_test, dtype=torch.float32)
-    # y_train_q = torch.tensor(y_train_q, dtype=torch.float32)
-    # y_train_dq = torch.tensor(y_train_dq, dtype=torch.float32)
-    #
-    #
-    # # ----- STEP 2: Define GP Model -----
-    # class ExactGPModel(gpytorch.models.ExactGP):
-    #     def __init__(self, train_x, train_y, likelihood):
-    #         super().__init__(train_x, train_y, likelihood)
-    #         self.mean_module = gpytorch.means.ConstantMean()
-    #         self.covar_module = gpytorch.kernels.ScaleKernel(
-    #             gpytorch.kernels.RBFKernel()
-    #         )
-    #
-    #     def forward(self, x):
-    #         mean_x = self.mean_module(x)
-    #         covar_x = self.covar_module(x)
-    #         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
-    #
-    #
-    # def train_gp(train_x, train_y):
-    #     likelihood = gpytorch.likelihoods.GaussianLikelihood()
-    #     model = ExactGPModel(train_x, train_y, likelihood)
-    #
-    #     model.train()
-    #     likelihood.train()
-    #
-    #     optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
-    #     mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
-    #
-    #     training_iter = 100
-    #     for i in range(training_iter):
-    #         optimizer.zero_grad()
-    #         output = model(train_x)
-    #         loss = -mll(output, train_y)
-    #         loss.backward()
-    #         optimizer.step()
-    #     return model, likelihood
-    #
-    #
-    # # Train GPs
-    # model_q, likelihood_q = train_gp(X_train, y_train_q)
-    # model_dq, likelihood_dq = train_gp(X_train, y_train_dq)
-    #
-    # # ----- STEP 3: Make Predictions -----
-    # model_q.eval()
-    # model_dq.eval()
-    # likelihood_q.eval()
-    # likelihood_dq.eval()
-    #
-    # with torch.no_grad(), gpytorch.settings.fast_pred_var():
-    #     pred_q = likelihood_q(model_q(X_test))
-    #     pred_dq = likelihood_dq(model_dq(X_test))
-    #
-    #     mean_q = pred_q.mean.numpy()
-    #     mean_dq = pred_dq.mean.numpy()
-    #     std_q = pred_q.variance.sqrt().numpy()
-    #     std_dq = pred_dq.variance.sqrt().numpy()
-    #
-    # # ----- STEP 4: Apply Corrections -----
-    # q_sim_test = q_sim[test_id].reshape(-1)
-    # dq_sim_test = dq_sim[test_id].reshape(-1)
-    #
-    # q_corrected = q_sim_test + mean_q
-    # dq_corrected = dq_sim_test + mean_dq
-    #
-    # # ----- STEP 5: Plotting -----
-    # timesteps = np.arange(q_sim_test.shape[0])
-    # q_real = q[test_id].reshape(-1)
-    # dq_real = dq[test_id].reshape(-1)
-    #
-    # plt.figure(figsize=(14, 6))
-    #
-    # # --- q ---
-    # plt.subplot(1, 2, 1)
-    # plt.plot(timesteps, q_sim_test, label="Simulated q", linestyle="--")
-    # plt.plot(timesteps, q_real, label="Real q", linewidth=2)
-    # plt.plot(timesteps, q_corrected, label="Corrected q (GP)", linewidth=2)
-    # plt.fill_between(timesteps, q_corrected - std_q, q_corrected + std_q, alpha=0.2, label="Uncertainty")
-    # plt.title("Position Correction")
-    # plt.xlabel("Time step")
-    # plt.ylabel("q")
-    # plt.legend()
-    #
-    # # --- dq ---
-    # plt.subplot(1, 2, 2)
-    # plt.plot(timesteps, dq_sim_test, label="Simulated dq", linestyle="--")
-    # plt.plot(timesteps, dq_real, label="Real dq", linewidth=2)
-    # plt.plot(timesteps, dq_corrected, label="Corrected dq (GP)", linewidth=2)
-    # plt.fill_between(timesteps, dq_corrected - std_dq, dq_corrected + std_dq, alpha=0.2, label="Uncertainty")
-    # plt.title("Velocity Correction")
-    # plt.xlabel("Time step")
-    # plt.ylabel("dq")
-    # plt.legend()
-    #
-    # plt.tight_layout()
-    # plt.show()
-    #
-    #
-    # print("")
+
+
+    print("")
