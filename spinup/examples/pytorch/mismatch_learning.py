@@ -192,6 +192,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
 
     q_sim, dq_sim, tau_sim = [], [], []
     for idx_PI, idx_SAC in zip(closest_idx_PI, closest_idx_SAC):
+    # for idx_PI in closest_idx_PI:
         print("simulation idx_PI=",idx_PI)
         dqc_t=dq_PI[idx_PI,1:7]+dq_SAC[idx_SAC,1:7]
         pb.setJointMotorControlArray(
@@ -328,7 +329,8 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
 
 
 if __name__ == '__main__':
-    file_names = ["SAC_1", "SAC_2", "SAC_3", "PIonly_1", "PIonly_2", "PIonly_3"]
+    file_names = ["SAC_1", "SAC_2", "SAC_3"]
+    # file_names = ["PIonly_1", "PIonly_2", "PIonly_3"]
     # file_name = "PIonly_1"
     for file_name in file_names:
         dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, save=True)
