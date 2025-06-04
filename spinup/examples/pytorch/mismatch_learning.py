@@ -154,6 +154,7 @@ if __name__ == '__main__':
     file_name = "SAC_1"
     dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, save=False)
 
+    file_name= file_name+"_240Hz_"
 
     idx_init_dq_measured=np.argwhere(abs(dq_PI[0, 0] - dq_measured[:, 0]) < 1e-3)
     idx_init_dq_desired_measured=np.argwhere(abs(dq_PI[0, 0] - dq_desired_measured[:, 0]) < 1e-3)
@@ -162,9 +163,9 @@ if __name__ == '__main__':
 
     t = (dq_PI[:, 0] - dq_PI[0, 0]) * 1000
     # Target times: 0, 100, 200, ..., up to max(t)
-    target_times = np.arange(0, t[-1], 100)
+    target_times = np.arange(0, t[-1], 4.166666667)
     # Find indices in t closest to each target time
-    closest_indices = np.array([np.abs(t - target).argmin() for target in target_times])[:104]
+    closest_indices = np.array([np.abs(t - target).argmin() for target in target_times])[:2480]
     closest_times = t[closest_indices]
 
     # Reset robot at the origin and move the target object to the goal position and orientation
@@ -191,7 +192,7 @@ if __name__ == '__main__':
             physicsClientId=physics_client
         )
         # TODO pay attention to number of repetition (e.g., use 24 for period 24*1/240*1000=100 [ms])
-        for _ in range(24):
+        for _ in range(1):
             # default timestep is 1/240 second
             pb.stepSimulation(physicsClientId=physics_client)
 
@@ -263,9 +264,9 @@ if __name__ == '__main__':
 
         t_ = (dq_desired_measured[:, 0] - dq_desired_measured[0, 0]) * 1000
         # Target times: 0, 100, 200, ..., up to max(t)
-        target_times_d = np.arange(0, t_[-1], 100)
+        target_times_d = np.arange(0, t_[-1], 4.166666667)
         # Find indices in t closest to each target time
-        closest_indices_d = np.array([np.abs(t_ - target).argmin() for target in target_times_d])[:104]
+        closest_indices_d = np.array([np.abs(t_ - target).argmin() for target in target_times_d])[:2480]
         closest_times_d = t_[closest_indices_d]
         y_desired = dq_desired_measured[closest_indices_d, joint_idx + 1]
         ax.plot(closest_times_d, y_desired, '-og', label="dq desired - real", markersize=3)  # red circles
