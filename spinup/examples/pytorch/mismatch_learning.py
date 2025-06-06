@@ -16,6 +16,8 @@ import gpytorch
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+import joblib
 
 sys.path.append('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch')
 __copyright__ = "Copyright 2025, IfA https://control.ee.ethz.ch/"
@@ -154,8 +156,43 @@ def load_bags(file_name, save=False):
 
     return dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured
 
+def load_real(bag_path, file_name, save=False):
+    # file_name = "SAC_1"
+    topic_name='/PRIMITIVE_velocity_controller/r_star_messages'
+    if save:
+        # List to store data
+        data = []
+        # Open the bag
+        with rosbag.Bag(bag_path+file_name+".bag", 'r') as bag:
+            for topic, msg, t in bag.read_messages(topics=[topic_name]):
+                timestamp = t.secs + t.nsecs * 1e-9
+                row = [timestamp, msg.vector.x, msg.vector.y, msg.vector.z]
+                data.append(row)
+        # Convert to NumPy array
+        r_star = np.array(data)
+        np.save(bag_path+file_name+"_r_star.npy",r_star)
 
-def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured):
+        topic_name='/franka_state_controller/myfranka_ee_pose'
+        # List to store data
+        data = []
+        # Open the bag
+        with rosbag.Bag(bag_path+file_name+".bag", 'r') as bag:
+            for topic, msg, t in bag.read_messages(topics=[topic_name]):
+                timestamp = t.secs + t.nsecs * 1e-9
+                row = [timestamp, msg.pose.position.x, msg.pose.position.y, msg.pose.position.z]
+                data.append(row)
+        # Convert to NumPy array
+        ee_pose = np.array(data)
+        np.save(bag_path+file_name+"_ee_pose.npy",ee_pose)
+
+    else:
+        ee_pose = np.load(bag_path + file_name + "_ee_pose.npy")
+        r_star = np.load(bag_path + file_name + "_r_star.npy")
+
+    return ee_pose, r_star
+
+
+def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly):
 
     # file_name= file_name+"_240Hz_"
 
@@ -191,34 +228,63 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
         pb.resetJointState(arm, j, 0, physicsClientId=physics_client)
 
     q_sim, dq_sim, tau_sim = [], [], []
-    for idx_PI, idx_SAC in zip(closest_idx_PI, closest_idx_SAC):
-    # for idx_PI in closest_idx_PI:
-        print("simulation idx_PI=",idx_PI)
-        dqc_t=dq_PI[idx_PI,1:7]+dq_SAC[idx_SAC,1:7]
-        pb.setJointMotorControlArray(
-            arm,
-            [0, 1, 2, 3, 4, 5],
-            controlMode=pb.VELOCITY_CONTROL,
-            targetVelocities=list(dqc_t),
-            velocityGains=[1, 1, 2, 1, 1, 1],
-            forces=[87, 87, 87, 87, 12, 12],
-            physicsClientId=physics_client
-        )
-        # TODO pay attention to number of repetition (e.g., use 24 for period 24*1/240*1000=100 [ms])
-        for _ in range(24):
-            # default timestep is 1/240 second
-            pb.stepSimulation(physicsClientId=physics_client)
+    if PIonly==False:
+        for idx_PI, idx_SAC in zip(closest_idx_PI, closest_idx_SAC):
+        # for idx_PI in closest_idx_PI:
+            print("simulation idx_PI=",idx_PI)
+            dqc_t=dq_PI[idx_PI,1:7]+dq_SAC[idx_SAC,1:7]
+            pb.setJointMotorControlArray(
+                arm,
+                [0, 1, 2, 3, 4, 5],
+                controlMode=pb.VELOCITY_CONTROL,
+                targetVelocities=list(dqc_t),
+                velocityGains=[1, 1, 2, 1, 1, 1],
+                forces=[87, 87, 87, 87, 12, 12],
+                physicsClientId=physics_client
+            )
+            # TODO pay attention to number of repetition (e.g., use 24 for period 24*1/240*1000=100 [ms])
+            for _ in range(24):
+                # default timestep is 1/240 second
+                pb.stepSimulation(physicsClientId=physics_client)
 
-        # get measured values at time tp1 denotes t+1 for q and ddq as well as applied torque at time t
-        info = pb.getJointStates(arm, range(10))
-        q_sim_, dq_sim_, tau_sim_ = [], [], []
-        for joint_info in info:
-            q_sim_.append(joint_info[0])
-            dq_sim_.append(joint_info[1])
-            tau_sim_.append(joint_info[3])
-        q_sim.append(q_sim_)
-        dq_sim.append(dq_sim_)
-        tau_sim.append(tau_sim_)
+            # get measured values at time tp1 denotes t+1 for q and ddq as well as applied torque at time t
+            info = pb.getJointStates(arm, range(10))
+            q_sim_, dq_sim_, tau_sim_ = [], [], []
+            for joint_info in info:
+                q_sim_.append(joint_info[0])
+                dq_sim_.append(joint_info[1])
+                tau_sim_.append(joint_info[3])
+            q_sim.append(q_sim_)
+            dq_sim.append(dq_sim_)
+            tau_sim.append(tau_sim_)
+    elif PIonly==True:
+            for idx_PI in closest_idx_PI:
+                print("simulation idx_PI=",idx_PI)
+                dqc_t=dq_PI[idx_PI,1:7]
+                pb.setJointMotorControlArray(
+                    arm,
+                    [0, 1, 2, 3, 4, 5],
+                    controlMode=pb.VELOCITY_CONTROL,
+                    targetVelocities=list(dqc_t),
+                    velocityGains=[1, 1, 2, 1, 1, 1],
+                    forces=[87, 87, 87, 87, 12, 12],
+                    physicsClientId=physics_client
+                )
+                # TODO pay attention to number of repetition (e.g., use 24 for period 24*1/240*1000=100 [ms])
+                for _ in range(24):
+                    # default timestep is 1/240 second
+                    pb.stepSimulation(physicsClientId=physics_client)
+
+                # get measured values at time tp1 denotes t+1 for q and ddq as well as applied torque at time t
+                info = pb.getJointStates(arm, range(10))
+                q_sim_, dq_sim_, tau_sim_ = [], [], []
+                for joint_info in info:
+                    q_sim_.append(joint_info[0])
+                    dq_sim_.append(joint_info[1])
+                    tau_sim_.append(joint_info[3])
+                q_sim.append(q_sim_)
+                dq_sim.append(dq_sim_)
+                tau_sim.append(tau_sim_)
 
     t_ = (q_measured[:, 0] - q_measured[0, 0]) * 1000
     # Target times: 0, 100, 200, ..., up to max(t)
@@ -262,8 +328,10 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
         ax = axes[joint_idx]
         # Downsample for visualization (every 100th point)
         # indices = np.arange(0, len(dq_measured), 100)
-
-        y_commanded = dq_PI[closest_idx_PI, joint_idx+1] + dq_SAC[closest_idx_PI, joint_idx+1]
+        if PIonly==False:
+            y_commanded = dq_PI[closest_idx_PI, joint_idx+1] + dq_SAC[closest_idx_PI, joint_idx+1]
+        elif PIonly==True:
+            y_commanded = dq_PI[closest_idx_PI, joint_idx+1]
         ax.plot(closest_t_PI, y_commanded, '-om', label="dq commanded - real", markersize=8)  # blue circles
 
         t_ = (dq_desired_measured[:, 0] - dq_desired_measured[0, 0]) * 1000
@@ -285,8 +353,6 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
         format="png",
         bbox_inches='tight')
     plt.show()
-
-
 
 
     dq = dq_measured[closest_idx_dq,1:7]
@@ -331,7 +397,9 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
 
 def GP_mismatch_learning():
     file_names = ["SAC_1", "SAC_2", "SAC_3"]
-    base_path = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/"
+    # file_names = ["SAC_1", "SAC_2", "SAC_3", "PIonly_1", "PIonly_2", "PIonly_3"]
+    base_path_extracted_data = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/"
+    plot_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/trainOnSAC1and2and3_testOnSAC3_trackingPhaseOnly/"
 
     q_list = []
     dq_list = []
@@ -339,15 +407,17 @@ def GP_mismatch_learning():
     dq_sim_list = []
 
     for file_name in file_names:
-        q = np.load(f"{base_path}{file_name}_q.npy")  # shape: (T, DOF)
-        dq = np.load(f"{base_path}{file_name}_dq.npy")  # shape: (T, DOF)
-        q_sim = np.load(f"{base_path}{file_name}_q_sim.npy")  # shape: (T, DOF)
-        dq_sim = np.load(f"{base_path}{file_name}_dq_sim.npy")  # shape: (T, DOF)
+        q = np.load(f"{base_path_extracted_data}{file_name}_q.npy")  # shape: (T, DOF)
+        dq = np.load(f"{base_path_extracted_data}{file_name}_dq.npy")  # shape: (T, DOF)
+        q_sim = np.load(f"{base_path_extracted_data}{file_name}_q_sim.npy")  # shape: (T, DOF)
+        dq_sim = np.load(f"{base_path_extracted_data}{file_name}_dq_sim.npy")  # shape: (T, DOF)
 
-        q_list.append(q)
-        dq_list.append(dq)
-        q_sim_list.append(q_sim)
-        dq_sim_list.append(dq_sim)
+        arg_tracking_phase_init = np.argmax(abs(np.diff(dq[:, 0])))+1
+        arg_tracking_phase_length=90
+        q_list.append(q[arg_tracking_phase_init:arg_tracking_phase_init+arg_tracking_phase_length,:])
+        dq_list.append(dq[arg_tracking_phase_init:arg_tracking_phase_init+arg_tracking_phase_length,:])
+        q_sim_list.append(q_sim[arg_tracking_phase_init:arg_tracking_phase_init+arg_tracking_phase_length,:])
+        dq_sim_list.append(dq_sim[arg_tracking_phase_init:arg_tracking_phase_init+arg_tracking_phase_length,:])
 
     for joint_number in range(6):
         # Stack into arrays of shape (3, T, DOF)
@@ -361,19 +431,27 @@ def GP_mismatch_learning():
         # q.shape = (3, T, DOF), assuming DOF = 1 for simplicity here
 
         # Use 2 iterations for training, 1 for test
-        train_ids = [0, 1]
+        train_ids = [0, 1, 2]
         test_id = 2
 
         # Concatenate across time
-        X_train = np.concatenate([q[train_ids], dq[train_ids]], axis=-1).reshape(-1, 2)
-        X_test = np.concatenate([q[test_id], dq[test_id]], axis=-1).reshape(-1, 2)
+        X_train = np.concatenate([q_sim[train_ids], dq_sim[train_ids]], axis=-1).reshape(-1, 2)
+        X_test = np.concatenate([q_sim[test_id], dq_sim[test_id]], axis=-1).reshape(-1, 2)
 
         y_train_q = (q[train_ids] - q_sim[train_ids]).reshape(-1)
         y_train_dq = (dq[train_ids] - dq_sim[train_ids]).reshape(-1)
 
-        y_test_q = (q[test_id] - q_sim[test_id]).reshape(-1)
-        y_test_dq = (dq[test_id] - dq_sim[test_id]).reshape(-1)
-
+        # y_test_q = (q[test_id] - q_sim[test_id]).reshape(-1)
+        # y_test_dq = (dq[test_id] - dq_sim[test_id]).reshape(-1)
+        # Normalize inputs
+        input_scaler = StandardScaler()
+        X_train = input_scaler.fit_transform(X_train)
+        X_test = input_scaler.transform(X_test)
+        # Normalize targets
+        target_scaler_q = StandardScaler()
+        target_scaler_dq = StandardScaler()
+        y_train_q = target_scaler_q.fit_transform(y_train_q.reshape(-1, 1)).flatten()
+        y_train_dq = target_scaler_dq.fit_transform(y_train_dq.reshape(-1, 1)).flatten()
         # Convert to torch tensors
         X_train = torch.tensor(X_train, dtype=torch.float32)
         X_test = torch.tensor(X_test, dtype=torch.float32)
@@ -386,8 +464,12 @@ def GP_mismatch_learning():
             def __init__(self, train_x, train_y, likelihood):
                 super().__init__(train_x, train_y, likelihood)
                 self.mean_module = gpytorch.means.ConstantMean()
+                # self.covar_module = gpytorch.kernels.ScaleKernel(
+                #     gpytorch.kernels.RBFKernel()
+                # )
                 self.covar_module = gpytorch.kernels.ScaleKernel(
-                    gpytorch.kernels.RBFKernel()
+                    gpytorch.kernels.RBFKernel() +
+                    gpytorch.kernels.MaternKernel(nu=2.5)
                 )
 
             def forward(self, x):
@@ -396,8 +478,10 @@ def GP_mismatch_learning():
                 return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
 
 
-        def train_gp(train_x, train_y):
+        def train_gp(train_x, train_y, noise_covar=None):
             likelihood = gpytorch.likelihoods.GaussianLikelihood()
+            if noise_covar is not None:
+                likelihood.noise_covar.noise = torch.tensor(noise_covar)
             model = ExactGPModel(train_x, train_y, likelihood)
 
             model.train()
@@ -407,18 +491,34 @@ def GP_mismatch_learning():
             mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
 
             training_iter = 100
+            losses = []
             for i in range(training_iter):
                 optimizer.zero_grad()
-                output = model(train_x)
-                loss = -mll(output, train_y)
+                with gpytorch.settings.cholesky_jitter(1e-2):  # Try 1e-2 or even 1e-1
+                    output = model(train_x)
+                    loss = -mll(output, train_y)
+                # output = model(train_x)
+                # loss = -mll(output, train_y)
                 loss.backward()
                 optimizer.step()
+                losses.append(loss.item())
+            plt.figure(figsize=(6, 8))
+            plt.rcParams['font.family'] = 'Serif'
+            # --- q ---
+            plt.plot(losses, label="losses", color="b", linewidth=1,
+                     marker="o",
+                     markersize=4)
+            plt.xlabel("iteration")
+            plt.ylabel("loss")
+            plt.legend()
+            plt.show()
+
             return model, likelihood
 
 
         # Train GPs
-        model_q, likelihood_q = train_gp(X_train, y_train_q)
-        model_dq, likelihood_dq = train_gp(X_train, y_train_dq)
+        model_q, likelihood_q = train_gp(X_train, y_train_q, noise_covar=1e-2)
+        model_dq, likelihood_dq = train_gp(X_train, y_train_dq, noise_covar=1e-2)
 
         # ----- STEP 3: Make Predictions -----
         model_q.eval()
@@ -435,64 +535,222 @@ def GP_mismatch_learning():
             std_q = pred_q.variance.sqrt().numpy()
             std_dq = pred_dq.variance.sqrt().numpy()
 
+            # Uncomment when Normalizing
+            mean_q = target_scaler_q.inverse_transform(mean_q.reshape(-1, 1)).flatten()
+            std_q = std_q * target_scaler_q.scale_[0]  # only scale, don't shift
+            mean_dq = target_scaler_dq.inverse_transform(mean_dq.reshape(-1, 1)).flatten()
+            std_dq = std_dq * target_scaler_dq.scale_[0]  # only scale, don't shift
+
         # ----- STEP 4: Apply Corrections -----
         q_sim_test = q_sim[test_id].reshape(-1)
         dq_sim_test = dq_sim[test_id].reshape(-1)
 
         q_corrected = q_sim_test + mean_q
         dq_corrected = dq_sim_test + mean_dq
+        # q_corrected = q_sim_test + target_scaler_q.inverse_transform(mean_q.reshape(-1, 1)).flatten()
+        # dq_corrected = dq_sim_test + target_scaler_dq.inverse_transform(mean_dq.reshape(-1, 1)).flatten()
 
         # ----- STEP 5: Plotting -----
         timesteps = np.arange(q_sim_test.shape[0])
         q_real = q[test_id].reshape(-1)
         dq_real = dq[test_id].reshape(-1)
-
-        plt.figure(figsize=(6, 8))
+        plt.figure(figsize=(12, 8))
         plt.rcParams['font.family'] = 'Serif'
         # --- q ---
-        plt.subplot(2, 1, 1)
-        plt.plot(timesteps, q_real, label="Real q[{}]".format(str(joint_number)), color="g", linewidth=1, marker="o", markersize=4)
-        plt.plot(timesteps, q_sim_test, label="Simulated q[{}]".format(str(joint_number)), color="b", linewidth=1, marker="o", markersize=2)
+        plt.subplot(2, 2, 1)
+        plt.plot(timesteps, q_real, label="Real q[{}]".format(str(joint_number)), color="g", linewidth=1, marker="o",
+                 markersize=4)
+        plt.plot(timesteps, q_sim_test, label="Simulated q[{}]".format(str(joint_number)), color="b", linewidth=1,
+                 marker="o", markersize=2)
         plt.plot(timesteps, q_corrected, label="Corrected q (GP)", color="m", linewidth=1, marker="o", markersize=2)
-        plt.fill_between(timesteps, q_corrected - std_q, q_corrected + std_q, color="m", alpha=0.15, label="Uncertainty")
-        plt.title("Joint {} Position Correction".format(str(joint_number)))
+        plt.fill_between(timesteps, q_corrected - std_q, q_corrected + std_q, color="m", alpha=0.15,
+                         label="Uncertainty")
+        plt.title("Joint {} Positions".format(str(joint_number)))
         plt.xlabel("k")
         plt.ylabel("q")
         plt.legend()
+        plt.subplot(2, 2, 3)
+        plt.plot(timesteps, abs(q_real - q_corrected),
+                 label="$|q_{{real}}[{}]-q_{{corrected}}[{}]|$".format(str(joint_number), str(joint_number)), color="m",
+                 linewidth=1, marker="o", markersize=4)
+        plt.plot(timesteps, abs(q_real - q_sim_test),
+                 label="$|q_{{real}}[{}]-q_{{sim}}[{}]|$".format(str(joint_number), str(joint_number)), color="b",
+                 linewidth=1, marker="o", markersize=2)
+        plt.fill_between(timesteps, np.clip(abs(q_real - q_corrected) - std_q, a_min=0, a_max=None),
+                         np.clip(abs(q_real - q_corrected) + std_q, a_min=0, a_max=None), color="m", alpha=0.15,
+                         label="Uncertainty")
+        plt.title("Joint {} Position Errors".format(str(joint_number)))
+        plt.xlabel("k")
+        plt.ylabel("q abs error")
+        plt.legend()
         # --- dq ---
-        plt.subplot(2, 1, 2)
-        plt.plot(timesteps, dq_real, label="Real dq[{}]".format(str(joint_number)), color="g", linewidth=1, marker="o", markersize=4)
-        plt.plot(timesteps, dq_sim_test, label="Simulated dq[{}]".format(str(joint_number)), color="b", linewidth=1, marker="o", markersize=2)
+        plt.subplot(2, 2, 2)
+        plt.plot(timesteps, dq_real, label="Real dq[{}]".format(str(joint_number)), color="g", linewidth=1, marker="o",
+                 markersize=4)
+        plt.plot(timesteps, dq_sim_test, label="Simulated dq[{}]".format(str(joint_number)), color="b", linewidth=1,
+                 marker="o", markersize=2)
         plt.plot(timesteps, dq_corrected, label="Corrected dq (GP)", color="m", linewidth=1, marker="o", markersize=2)
         plt.fill_between(timesteps, dq_corrected - std_dq, dq_corrected + std_dq, color="m", alpha=0.15,
                          label="Uncertainty")
-        plt.title("Joint {} Velocity Correction".format(str(joint_number)))
+        plt.title("Joint {} Speeds".format(str(joint_number)))
         plt.xlabel("k")
         plt.ylabel("dq")
         plt.legend()
         plt.tight_layout()
-        plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/joint_{}_GP.png".format(str(joint_number)), format="png",
-                    bbox_inches='tight')
+        plt.subplot(2, 2, 4)
+        plt.plot(timesteps, abs(dq_real - dq_corrected),
+                 label="$|dq_{{real}}[{}]-dq_{{corrected}}[{}]|$".format(str(joint_number), str(joint_number)),
+                 color="m", linewidth=1, marker="o", markersize=4)
+        plt.plot(timesteps, abs(dq_real - dq_sim_test),
+                 label="$|dq_{{real}}[{}]-dq_{{sim}}[{}]|$".format(str(joint_number), str(joint_number)), color="b",
+                 linewidth=1, marker="o", markersize=2)
+        plt.fill_between(timesteps, np.clip(abs(dq_real - dq_corrected) - std_dq, a_min=0, a_max=None),
+                         np.clip(abs(dq_real - dq_corrected) + std_dq, a_min=0, a_max=None), color="m", alpha=0.15,
+                         label="Uncertainty")
+        plt.title("Joint {} Speed Errors".format(str(joint_number)))
+        plt.xlabel("k")
+        plt.ylabel("dq abs error")
+        plt.legend()
+        plt.savefig(
+            plot_dir+"joint_{}_normalized_GP.png".format(
+                str(joint_number)), format="png",
+            bbox_inches='tight')
         plt.show()
+
+        joblib.dump(input_scaler, plot_dir+'input_scaler{}.pkl'.format(str(joint_number)))
+        joblib.dump(target_scaler_q, plot_dir+'target_scaler_q{}.pkl'.format(str(joint_number)))
+        joblib.dump(target_scaler_dq, plot_dir+'target_scaler_dq{}.pkl'.format(str(joint_number)))
+        # Save q model
+        torch.save({
+            'model_state_dict': model_q.state_dict(),
+            'likelihood_state_dict': likelihood_q.state_dict(),
+            'input_scaler': input_scaler,
+            'target_scaler': target_scaler_q,
+        }, plot_dir+'gp_model_q{}.pth'.format(str(joint_number)))
+
+        # Save dq model
+        torch.save({
+            'model_state_dict': model_dq.state_dict(),
+            'likelihood_state_dict': likelihood_dq.state_dict(),
+            'input_scaler': input_scaler,
+            'target_scaler': target_scaler_dq,
+        }, plot_dir+'gp_model_dq{}.pth'.format(str(joint_number)))
+
+    print("")
 
 
 if __name__ == '__main__':
-    # file_names = ["SAC_1", "SAC_2", "SAC_3"]
-    # # file_names = ["PIonly_1", "PIonly_2", "PIonly_3"]
-    # # file_name = "PIonly_1"
-    # for file_name in file_names:
-    #     dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, save=True)
+    # # file_names = ["SAC_1", "SAC_2", "SAC_3","PIonly_1", "PIonly_2", "PIonly_3"]
+    # # # file_names = ["SAC_1", "SAC_2", "SAC_3"]
+    # # # file_names = ["PIonly_1", "PIonly_2", "PIonly_3"]
+    # # # file_name = "PIonly_1"
+    # # for file_name in file_names:
+    # #     dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, save=True)
+    # #
+    # #     if file_name[0:3]=="SAC":
+    # #         q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=False)
+    # #     elif file_name[0:6]=="PIonly":
+    # #         q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=True)
+    # #
+    # #
+    # #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/{}_q.npy".format(file_name),q)
+    # #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/{}_dq.npy".format(file_name),dq)
+    # #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/{}_q_sim.npy".format(file_name),q_sim)
+    # #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/{}_dq_sim.npy".format(file_name),dq_sim)
     #
-    #     q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured)
     #
-    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_q.npy".format(file_name),q)
-    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_dq.npy".format(file_name),dq)
-    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_q_sim.npy".format(file_name),q_sim)
-    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_dq_sim.npy".format(file_name),dq_sim)
+    # GP_mismatch_learning()
+    # Path to your bag file
+    bag_path = '/home/mahdi/bagfiles/experiments_HW274/'
+    # plot real system tracking errors
+    ee_pose, r_star = load_real(bag_path, "SAC_Kp01Ki001_1", save=True)
+    # Attentions
+    idx_init_ee_pose=np.argwhere(abs(r_star[0, 0] - ee_pose[:, 0]) < 1e-3)
+    ee_pose=ee_pose[idx_init_ee_pose[0][0]:, :]
 
+    t_ = (r_star[:,0]-r_star[0,0])*1000
+    target_times = np.arange(0, t_[-1], 100)[:100]
+    # Find indices in t closest to each target time
+    closest_idx_r_star = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])
+    closest_t_r_star = t_[closest_idx_r_star[:100]]
 
-    GP_mismatch_learning()
+    t_ = (ee_pose[:,0]-ee_pose[0,0])*1000
+    # Find indices in t closest to each target time
+    closest_idx_ee_pose = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])
+    closest_idx_ee_pose = closest_idx_ee_pose[closest_idx_ee_pose<t_.shape[0]]
+    closest_t_ee_pose = t_[closest_idx_ee_pose[:100]]
 
+    ee_pose_PIonly, r_star_PIonly = load_real(bag_path,"PIonly_Kp01Ki001_1", save=True)
+    # Attentions
+    # idx_init_ee_pose_PIonly=np.argwhere(abs(r_star_PIonly[0, 0] - ee_pose_PIonly[:, 0]) < 1e-3)
+    # ee_pose_PIonly=ee_pose_PIonly[idx_init_ee_pose_PIonly[0][0]:, :]
+    idx_init_r_star_PIonly=np.argwhere(abs(ee_pose_PIonly[0, 0] - r_star_PIonly[:, 0]) < 1e-3)
+    r_star_PIonly=r_star_PIonly[idx_init_r_star_PIonly[0][0]:, :]
 
+    t_ = (r_star_PIonly[:,0]-r_star_PIonly[0,0])*1000
+    target_times_PIonly = np.arange(0, t_[-1], 100)[:100]
+    # Find indices in t closest to each target time
+    closest_idx_r_star_PIonly = np.array([np.abs(t_ - target_).argmin() for target_ in target_times_PIonly])
+    closest_t_r_star_PIonly = t_[closest_idx_r_star_PIonly[:100]]
+
+    t_ = (ee_pose_PIonly[:,0]-ee_pose_PIonly[0,0])*1000
+    # Find indices in t closest to each target time
+    closest_idx_ee_pose_PIonly = np.array([np.abs(t_ - target_).argmin() for target_ in target_times_PIonly])
+    closest_idx_ee_pose_PIonly = closest_idx_ee_pose_PIonly[closest_idx_ee_pose_PIonly<t_.shape[0]]
+    closest_t_ee_pose_PIonly = t_[closest_idx_ee_pose_PIonly[:100]]
+
+    plt.rcParams.update({
+        'font.size': 14,  # overall font size
+        'axes.labelsize': 16,  # x and y axis labels
+        'xtick.labelsize': 12,  # x-axis tick labels
+        'ytick.labelsize': 12,  # y-axis tick labels
+        'legend.fontsize': 12,  # legend text
+        'font.family': 'Serif'
+    })
+    fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(8, 16))
+    plt.rcParams['font.family'] = 'Serif'
+    axs3[0].plot(target_times_PIonly,
+                 abs(ee_pose_PIonly[closest_idx_ee_pose_PIonly, 1] - r_star_PIonly[
+                     closest_idx_r_star_PIonly, 1]) * 1000, '-ob',
+                 label='without SAC')
+    axs3[0].plot(target_times,
+                 abs(ee_pose[closest_idx_ee_pose, 1] - r_star[closest_idx_r_star, 1]) * 1000, '-om', label='with SAC')
+    axs3[0].set_xlabel("t [ms]")
+    axs3[0].set_ylabel("|x-xd| [mm]")
+    axs3[0].set_ylim([0, 3.2])
+    axs3[0].legend(loc="upper right")
+    axs3[1].plot(target_times_PIonly,
+                 abs(ee_pose_PIonly[closest_idx_ee_pose_PIonly, 2] - r_star_PIonly[
+                     closest_idx_r_star_PIonly, 2]) * 1000, '-ob',
+                 label='without SAC')
+    axs3[1].plot(target_times,
+                 abs(ee_pose[closest_idx_ee_pose, 2] - r_star[closest_idx_r_star, 2]) * 1000, '-om', label='with SAC')
+    axs3[1].set_xlabel("t [ms]")
+    axs3[1].set_ylabel("|y-yd| [mm]")
+    axs3[1].set_ylim([0, 3.2])
+    axs3[2].plot(target_times_PIonly,
+                 abs(ee_pose_PIonly[closest_idx_ee_pose_PIonly, 3] - r_star_PIonly[
+                     closest_idx_r_star_PIonly, 3]) * 1000, '-ob',
+                 label='without SAC')
+    axs3[2].plot(target_times,
+                 abs(ee_pose[closest_idx_ee_pose, 3] - r_star[closest_idx_r_star, 3]) * 1000, '-om', label='with SAC')
+    axs3[2].set_xlabel("t [ms]")
+    axs3[2].set_ylabel("|z-zd| [mm]")
+    axs3[2].set_ylim([0, 3.2])
+    axs3[3].plot(target_times_PIonly,
+                 np.linalg.norm(
+                     (ee_pose_PIonly[closest_idx_ee_pose_PIonly, 1:4] - r_star_PIonly[closest_idx_r_star_PIonly, 1:4]),
+                     ord=2,
+                     axis=1) * 1000, '-ob', label='without SAC')
+    axs3[3].plot(target_times,
+                 np.linalg.norm((ee_pose[closest_idx_ee_pose, 1:4] - r_star[closest_idx_r_star, 1:4]), ord=2,
+                                axis=1) * 1000,
+                 '-om', label='with SAC')
+    axs3[3].set_xlabel("t [ms]")
+    axs3[3].set_ylabel("||r-rd||_2 [mm]")
+    axs3[3].set_ylim([0, 5])
+    plt.savefig(bag_path + "/real_position_errors_both_SAC_Kp01Ki001_1_PIonly_Kp01Ki001_1.pdf", format="pdf",
+                bbox_inches='tight')
+    plt.show()
 
     print("")
