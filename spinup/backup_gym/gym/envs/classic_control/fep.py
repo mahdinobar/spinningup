@@ -1,4 +1,3 @@
-"""Two-link RR Planar Manipulator Tracking Task"""
 import math
 import time
 
@@ -8,13 +7,15 @@ import pybullet as pb
 import pybullet_data
 from gym import core, spaces
 from gym.utils import seeding
-
 import sys
+import gpytorch
+import joblib
+import torch
+
 
 sys.path.append('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch')
 from myKalmanFilter import KalmanFilter
 
-# /home/mahdi/ETHZ/codes/spinningup/spinup
 __copyright__ = "Copyright 2024, IfA https://control.ee.ethz.ch/"
 __credits__ = ["Mahdi Nobar"]
 __author__ = "Mahdi Nobar from ETH Zurich <mnobar@ethz.ch>"
@@ -105,6 +106,24 @@ plane = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/U
                     useFixedBase=True, physicsClientId=physics_client)
 
 
+class GPModel(gpytorch.models.ExactGP):
+    def __init__(self, train_x_shape, likelihood):
+        dummy_train_x = torch.empty(train_x_shape)
+        dummy_train_y = torch.empty(train_x_shape[0])
+
+        super().__init__(dummy_train_x, dummy_train_y, likelihood)
+
+        self.mean_module = gpytorch.means.ConstantMean()
+        self.covar_module = gpytorch.kernels.ScaleKernel(
+            gpytorch.kernels.RBFKernel() +
+            gpytorch.kernels.MaternKernel(nu=2.5)
+        )
+
+    def forward(self, x):
+        mean_x = self.mean_module(x)
+        covar_x = self.covar_module(x)
+        return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
+
 class FepEnv(core.Env):
     """
     Two-link planar arm with two revolut joints (based on simplified models at book "A Mathematical Introduction to
@@ -118,7 +137,9 @@ Robotic Manipulation" by Murry et al.
         np.random.seed(seed)
         self.seed(seed=seed)
         # TODO: reward params
-        self.lp = 600
+        self.lpx = 600
+        self.lpy = 600
+        self.lpz = 400
         self.lv = 10
         self.lddqc = 1
         self.reward_eta_p = 1
@@ -154,6 +175,83 @@ Robotic Manipulation" by Murry et al.
                                  2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
+
+
+        # for i in range(6):
+        #     input_scaler = joblib.load('input_scaler{}.pkl'.format(str(joint_number)))
+        #     target_scaler_q = joblib.load('target_scaler_q{}.pkl'.format(str(joint_number)))
+        #     target_scaler_dq = joblib.load('target_scaler_dq{}.pkl'.format(str(joint_number)))
+        #     # Re-instantiate model and likelihood for q
+        #     likelihood_q = gpytorch.likelihoods.GaussianLikelihood()
+        #     model_q = GPModel(train_x_shape=(1, input_dim), likelihood=likelihood_q)
+        #     # Load q model
+        #     checkpoint_q = torch.load('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/gp_model_q{}.pth'.format(str(joint_number)))
+        #     model_q.load_state_dict(checkpoint_q['model_state_dict'])
+        #     likelihood_q.load_state_dict(checkpoint_q['likelihood_state_dict'])
+        #     input_scaler = checkpoint_q['input_scaler']
+        #     target_scaler_q = checkpoint_q['target_scaler']
+        #     self.model_q.eval()
+        #     self.likelihood_q.eval()
+        #     # Repeat for dq
+        #     likelihood_dq = gpytorch.likelihoods.GaussianLikelihood()
+        #     model_dq = GPModel(train_x_shape=(1, input_dim), likelihood=likelihood_dq)
+        #     checkpoint_dq = torch.load('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/gp_model_dq{}.pth'.format(str(joint_number)))
+        #     model_dq.load_state_dict(checkpoint_dq['model_state_dict'])
+        #     likelihood_dq.load_state_dict(checkpoint_dq['likelihood_state_dict'])
+        #     target_scaler_dq = checkpoint_dq['target_scaler']
+        #     self.model_dq.eval()
+        #     self.likelihood_dq.eval()
+
+        # # Initialize lists to hold models and scalers for all joints
+        # self.input_scalers = []
+        # self.target_scalers_q = []
+        # self.target_scalers_dq = []
+        # self.models_q = []
+        # self.likelihoods_q = []
+        # self.models_dq = []
+        # self.likelihoods_dq = []
+        # # GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/trainOnSAC1and2PI1and2and3_testOnSAC3_trackingPhaseOnly/"
+        # GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/trainOnSAC1and2and3_testOnSAC3_trackingPhaseOnly/"
+        # GP_input_dim=2
+        # for joint_number in range(6):
+        #     # Load scalers
+        #     input_scaler = joblib.load(GP_dir+f'input_scaler{joint_number}.pkl')
+        #     target_scaler_q = joblib.load(GP_dir+f'target_scaler_q{joint_number}.pkl')
+        #     target_scaler_dq = joblib.load(GP_dir+f'target_scaler_dq{joint_number}.pkl')
+        #
+        #     # Instantiate and load model for q
+        #     likelihood_q = gpytorch.likelihoods.GaussianLikelihood()
+        #     model_q = GPModel(train_x_shape=(1, GP_input_dim), likelihood=likelihood_q)
+        #     checkpoint_q = torch.load(
+        #         GP_dir+f'gp_model_q{joint_number}.pth')
+        #     model_q.load_state_dict(checkpoint_q['model_state_dict'])
+        #     likelihood_q.load_state_dict(checkpoint_q['likelihood_state_dict'])
+        #     input_scaler = checkpoint_q['input_scaler']  # overwrite with trained one
+        #     target_scaler_q = checkpoint_q['target_scaler']
+        #
+        #     model_q.eval()
+        #     likelihood_q.eval()
+        #
+        #     # Instantiate and load model for dq
+        #     likelihood_dq = gpytorch.likelihoods.GaussianLikelihood()
+        #     model_dq = GPModel(train_x_shape=(1, GP_input_dim), likelihood=likelihood_dq)
+        #     checkpoint_dq = torch.load(
+        #         GP_dir+f'gp_model_dq{joint_number}.pth')
+        #     model_dq.load_state_dict(checkpoint_dq['model_state_dict'])
+        #     likelihood_dq.load_state_dict(checkpoint_dq['likelihood_state_dict'])
+        #     target_scaler_dq = checkpoint_dq['target_scaler']
+        #
+        #     model_dq.eval()
+        #     likelihood_dq.eval()
+        #
+        #     # Append to lists
+        #     self.input_scalers.append(input_scaler)
+        #     self.target_scalers_q.append(target_scaler_q)
+        #     self.target_scalers_dq.append(target_scaler_dq)
+        #     self.models_q.append(model_q)
+        #     self.likelihoods_q.append(likelihood_q)
+        #     self.models_dq.append(model_dq)
+        #     self.likelihoods_dq.append(likelihood_dq)
 
     def pseudoInverseMat(self, A, ld):
         # Input: Any m-by-n matrix, and a damping factor.
@@ -193,7 +291,9 @@ Robotic Manipulation" by Murry et al.
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def reset(self):
+    def reset(self, signal=False):
+        if signal:
+            print("hello")
         "reset considering the startup phase on real system"
         self.n += 1
         self.k = 0
@@ -242,6 +342,7 @@ Robotic Manipulation" by Murry et al.
             tau_t.append(joint_info[3])
         if abs(sum(self.q_init - q_t[:6])) > 1e-6:
             raise ValueError('shouldn\'t q_init be equal to q_t?!')
+
         # q_t[0:6]=q_t[0:6] + np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.5]) * 3.14 / 180
         # STARTUP PHASE Simulatiob
         # ATTENTION: startup phase should be at 1 [ms]
@@ -636,6 +737,40 @@ Robotic Manipulation" by Murry et al.
         q_tp1 = np.array(q_tp1)[:6]
         # add dq measurement noise
         dq_tp1 = np.array(dq_tp1)[:6] + np.random.normal(loc=0.0, scale=0.004, size=6)
+
+        # #########################################################################
+        # # ----- q and dq Mismatch Compensation -----
+        # for i in range(6):
+        #     self.models_q[i].eval()
+        #     self.models_dq[i].eval()
+        #     self.likelihoods_q[i].eval()
+        #     self.likelihoods_dq[i].eval()
+        #     X_test = np.array([q_tp1[i], dq_tp1[i]]).reshape(-1, 2)
+        #     X_test = self.input_scalers[i].transform(X_test)
+        #     X_test = torch.tensor(X_test, dtype=torch.float32)
+        #     with torch.no_grad(), gpytorch.settings.fast_pred_var():
+        #         pred_q = self.likelihoods_q[i](self.models_q[i](X_test))
+        #         pred_dq = self.likelihoods_dq[i](self.models_dq[i](X_test))
+        #         mean_q = pred_q.mean.numpy()
+        #         mean_dq = pred_dq.mean.numpy()
+        #         std_q = pred_q.variance.sqrt().numpy()
+        #         std_dq = pred_dq.variance.sqrt().numpy()
+        #         # Uncomment when Normalizing
+        #         mean_q = self.target_scalers_q[i].inverse_transform(mean_q.reshape(-1, 1)).flatten()
+        #         std_q = std_q * self.target_scalers_q[i].scale_[0]  # only scale, don't shift
+        #         mean_dq = self.target_scalers_dq[i].inverse_transform(mean_dq.reshape(-1, 1)).flatten()
+        #         std_dq = std_dq * self.target_scalers_dq[i].scale_[0]  # only scale, don't shift
+        #     # TODO
+        #     if ~np.isnan(mean_q):
+        #         q_tp1[i] = q_tp1[i] + mean_q
+        #     else:
+        #         print("mean_q[{}] is nan!".format(i))
+        #     if ~np.isnan(mean_dq):
+        #         dq_tp1[i] = dq_tp1[i] + mean_dq
+        #     else:
+        #         print("mean_dq[{}] is nan!".format(i))
+        # #########################################################################
+
         # add tau measurement noise and bias
         tau_tp1 = np.array(tau_tp1)[:6]  # + np.random.normal(loc=0.0, scale=0.08, size=6) #+ np.array(
         # [0.31, 9.53, 1.76, -9.54, 0.89, -2.69])
@@ -655,9 +790,9 @@ Robotic Manipulation" by Murry et al.
         # error_v_t = sum(abs(v_hat_tp1 - vd_t))
         # error_ddqc_t = sum(abs(dqc_t - self.dq[-2, :]))
         # reward_p_t = self.f_logistic(error_p_t, self.lp)
-        reward_px_t = self.f_logistic(abs(r_hat_tp1[0] - rd_tp1[0]), self.lp)
-        reward_py_t = self.f_logistic(abs(r_hat_tp1[1] - rd_tp1[1]), self.lp)
-        reward_pz_t = self.f_logistic(abs(r_hat_tp1[2] - rd_tp1[2]), 400)
+        reward_px_t = self.f_logistic(abs(r_hat_tp1[0] - rd_tp1[0]), self.lpx)
+        reward_py_t = self.f_logistic(abs(r_hat_tp1[1] - rd_tp1[1]), self.lpy)
+        reward_pz_t = self.f_logistic(abs(r_hat_tp1[2] - rd_tp1[2]), self.lpz)
         reward_p_t = (reward_px_t + reward_py_t + reward_pz_t) / 3
         # reward_v_t = self.f_logistic(error_v_t, self.lv)
         # reward_ddqc_t = self.f_logistic(error_ddqc_t, self.lddqc)
@@ -674,8 +809,7 @@ Robotic Manipulation" by Murry et al.
                                                                          list(np.append(self.dq[-1, :], [0, 0, 0])),
                                                                          list(np.zeros(9)),
                                                                          physicsClientId=physics_client)
-        J_tp1 = np.asarray(linearJacobian_tp1)[:, :6]
-        Jpinv_tp1 = self.pseudoInverseMat(J_tp1, ld=0.01)
+
         [linearJacobian_TRUE_tp1, angularJacobian_TRUE_tp1] = pb.calculateJacobian(arm,
                                                                                    10,
                                                                                    list(LinkState_tp1[2]),
@@ -772,7 +906,7 @@ Robotic Manipulation" by Murry et al.
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
         # # # # TODO: so dirty code: uncomment when NOSAC for plots -- you need to take care of which random values you call by break points after first done in sac.py ... and cmment a too ...
         # plot_data_buffer_no_SAC=self.plot_data_buffer
-        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_274/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_284/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
         # given action it returns 4-tuple (observation, reward, done, info)
         return (obs, reward_t, terminal, {})
 
@@ -808,7 +942,7 @@ Robotic Manipulation" by Murry et al.
             # pb.setGravity(0, 0, -9.81, physicsClientId=physics_client_rendering)
             # Load URDFs
             # Load robot, target object and plane urdf
-            # /cluster/home/mnobar/code/spinningup
+            # /home/mahdi/ETHZ/codes/spinningup
             pb.setAdditionalSearchPath(pybullet_data.getDataPath())
             pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
                                  output_dir_rendering + "/simulation.mp4")  # added by Pierre
@@ -881,7 +1015,7 @@ Robotic Manipulation" by Murry et al.
         if render_test_buffer == True:
             # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
             plot_data_buffer_no_SAC = np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_274/plot_data_buffer_no_SAC.npy")
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_284/plot_data_buffer_no_SAC.npy")
 
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(8, 12))
             plt.rcParams['font.family'] = 'Serif'
@@ -954,8 +1088,8 @@ Robotic Manipulation" by Murry et al.
                          label='error bound without SAC')
             axs3[0].set_xlabel("t [ms]")
             axs3[0].set_ylabel("|x-xd| [mm]")
-            axs3[0].set_ylim([0, 10])
-            plt.legend()
+            axs3[0].set_ylim([0, 12])
+            axs3[0].legend(loc="upper right")
             axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100,
                          abs(plot_data_buffer_no_SAC[:, 1] - plot_data_buffer_no_SAC[:, 4]) * 1000, '-ob',
                          label='without SAC')
@@ -967,8 +1101,7 @@ Robotic Manipulation" by Murry et al.
                          label='error bound on without SAC')
             axs3[1].set_xlabel("t [ms]")
             axs3[1].set_ylabel("|y-yd| [mm]")
-            axs3[1].set_ylim([0, 10])
-            plt.legend()
+            axs3[1].set_ylim([0, 12])
             axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100,
                          abs(plot_data_buffer_no_SAC[:, 2] - plot_data_buffer_no_SAC[:, 5]) * 1000, '-ob',
                          label='without SAC')
@@ -980,8 +1113,7 @@ Robotic Manipulation" by Murry et al.
                          label='error bound on without SAC')
             axs3[2].set_xlabel("t [ms]")
             axs3[2].set_ylabel("|z-zd| [mm]")
-            axs3[2].set_ylim([0, 10])
-            plt.legend()
+            axs3[2].set_ylim([0, 12])
             axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
                          np.linalg.norm((plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
                                         axis=1) * 1000, '-ob', label='without SAC')
@@ -997,9 +1129,8 @@ Robotic Manipulation" by Murry et al.
                          'b:', label='error bound on without SAC')
             axs3[3].set_xlabel("t [ms]")
             axs3[3].set_ylabel("||r-rd||_2 [mm]")
-            axs3[3].set_ylim([0, 10])
-            plt.legend()
-            plt.savefig(output_dir_rendering + "/test_position_errors_both_" + str(self.n) + ".png", format="png",
+            axs3[3].set_ylim([0, 12])
+            plt.savefig(output_dir_rendering + "/test_position_errors_both_" + str(self.n) + ".pdf", format="pdf",
                         bbox_inches='tight')
             plt.show()
 
@@ -1403,9 +1534,18 @@ Robotic Manipulation" by Murry et al.
             axs[2, 1].set_xlabel("timestep")
             axs[2, 1].set_ylabel("dqc_t_PID[5]")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/buffer_states.pdf", format="png", bbox_inches='tight')
+            # plt.savefig(output_dir_rendering + "/buffer_states.pdf", format="png", bbox_inches='tight')
             plt.show()
-            fig6, axs6 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
+
+            ################################################################################
+            ################################################################################
+            epoch_length = 136
+            idx_last = epoch_length * 10000
+            idx_start = epoch_length * 3500
+            idx_end = idx_start + 3 * epoch_length
+            idx_vline = range(idx_start, idx_end, epoch_length)
+
+            fig6, axs6 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(18, 12))
             x = range(idx_start, idx_end, 1)
             y = buf_obs[0:idx_last, :][idx_start:idx_end, 0]
             axs6[0].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[0] - rd_t[0]')
@@ -1414,8 +1554,9 @@ Robotic Manipulation" by Murry et al.
             axs6[0].set_ylabel("r_hat_tp1[0] - rd_t[0]")
             plt.legend()
             y = buf_obs[0:idx_last, :][idx_start:idx_end, 1]
-            axs6[1].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='r_hat_tp1[1] - rd_t[1]')
+            axs6[1].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=4, label='r_hat_tp1[1] - rd_t[1]')
             axs6[1].vlines(idx_vline, min(y), max(y), 'r', linestyles="dashed")
+            axs6[1].hlines(0, min(x), max(x), 'k', linestyles="dashed")
             axs6[1].set_xlabel("timestep")
             axs6[1].set_ylabel("r_hat_tp1[1] - rd_t[1]")
             plt.legend()
@@ -1425,8 +1566,9 @@ Robotic Manipulation" by Murry et al.
             axs6[2].set_xlabel("timestep")
             axs6[2].set_ylabel("r_hat_tp1[2] - rd_t[2]")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/buffer_states.pdf", format="png", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/train_buffer_states", format="pdf", bbox_inches='tight')
             plt.show()
+
             fig7, axs7 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(16, 10))
             y = buf_act[0:idx_last][idx_start:idx_end, 0]
             axs7[0].plot(x, y, 'b', linewidth=0.08, marker=".", markersize=2, label='a[0]')
