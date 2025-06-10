@@ -114,11 +114,11 @@ def load_pytorch_policy(fpath, itr, deterministic=False):
             print("dt=", (end_time - start_time)*1000 , " [ms]\n")
 
             # trace_script_module = torch.jit.trace(model, x)
-            # trace_script_module.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_37/pyt_save/tracedModel.pt")
+            # trace_script_module.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_37/pyt_save/tracedModel.pt")
             # model2=torch.jit.script(model.pi)
             # # # uncomment to save model of actor for libtorch
             # traced_model_Cpp=torch.jit.trace(model.pi, x.reshape(1,21)) #ATTENTION to set correctly dimension of state space here
-            # traced_model_Cpp.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_274/traced_model_Cpp_Fep_HW_274_double.pt")
+            # traced_model_Cpp.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_274/traced_model_Cpp_Fep_HW_274_double.pt")
         return action
 
     # ac.act(torch.as_tensor(o, dtype=torch.float32),
@@ -132,6 +132,7 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True, 
         "Environment not found!\n\n It looks like the environment wasn't saved, " + \
         "and we can't run the agent in it. :( \n\n Check out the readthedocs " + \
         "page on Experiment Outputs for how to handle this situation."
+    # logger = EpochLogger(output_dir=output_dir, resume=False)
     logger = EpochLogger()
     o, d, ep_ret, ep_len, n, r = env.reset(), False, 0, 0, 0, 0
 
@@ -147,10 +148,10 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True, 
             if "Tworr" in output_dir:
                 # plotting for planar (modify for others)
                 # np.save(
-                #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/no_SAC_0_12/no_SAC_plot_data_buffer.npy",
+                #     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/no_SAC_0_12/no_SAC_plot_data_buffer.npy",
                 #     env.plot_data_buffer)
                 no_SAC_plot_data_buffer = np.load(
-                    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/no_SAC_0_12/no_SAC_plot_data_buffer.npy")
+                    "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/no_SAC_0_12/no_SAC_plot_data_buffer.npy")
                 plt.figure(1)
                 plt.rcParams["font.family"] = "Times New Roman"
                 plt.plot(env.plot_data_buffer[:, 2], env.plot_data_buffer[:, 3], 'r--', label='rd: desired traj')
@@ -196,7 +197,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('fpath', type=str,
-                        default="/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Tworrv0_10")
+                        default="/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Tworrv0_10")
     parser.add_argument('--len', '-l', type=int, default=0)
     parser.add_argument('--episodes', '-n', type=int, default=10)
     parser.add_argument('--norender', '-nr', action='store_true')

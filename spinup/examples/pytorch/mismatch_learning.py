@@ -669,7 +669,7 @@ if __name__ == '__main__':
     ee_pose=ee_pose[idx_init_ee_pose[0][0]:, :]
 
     t_ = (r_star[:,0]-r_star[0,0])*1000
-    target_times = np.arange(0, t_[-1], 100)[:100]
+    target_times = np.arange(1100, t_[-1], 100)[:100]
     # Find indices in t closest to each target time
     closest_idx_r_star = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])
     closest_t_r_star = t_[closest_idx_r_star[:100]]
@@ -688,7 +688,7 @@ if __name__ == '__main__':
     r_star_PIonly=r_star_PIonly[idx_init_r_star_PIonly[0][0]:, :]
 
     t_ = (r_star_PIonly[:,0]-r_star_PIonly[0,0])*1000
-    target_times_PIonly = np.arange(0, t_[-1], 100)[:100]
+    target_times_PIonly = np.arange(1100, t_[-1], 100)[:100]
     # Find indices in t closest to each target time
     closest_idx_r_star_PIonly = np.array([np.abs(t_ - target_).argmin() for target_ in target_times_PIonly])
     closest_t_r_star_PIonly = t_[closest_idx_r_star_PIonly[:100]]

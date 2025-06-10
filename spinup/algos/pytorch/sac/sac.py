@@ -7,9 +7,10 @@ import gym
 import time
 import spinup.algos.pytorch.sac.core as core
 from spinup.utils.logx import EpochLogger
-
 import matplotlib.pyplot as plt
 from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
+import os
+import pickle
 
 
 class ReplayBuffer:
@@ -53,12 +54,59 @@ class ReplayBuffer:
                      done=self.done_buf[idxs])
         return {k: torch.as_tensor(v, dtype=torch.float32) for k, v in batch.items()}
 
+def save_checkpoint(ac, replay_buffer, pi_optimizer, q_optimizer, alpha=None,
+                    alpha_optimizer=None, step=0, save_dir=''):
+    os.makedirs(save_dir, exist_ok=True)
+
+    # Save actor-critic model
+    torch.save(ac.state_dict(), os.path.join(save_dir, 'ac.pth'))
+
+    # Save optimizers
+    torch.save({
+        'pi_optimizer': pi_optimizer.state_dict(),
+        'q_optimizer': q_optimizer.state_dict(),
+        'alpha_optimizer': alpha_optimizer.state_dict() if alpha_optimizer else None
+    }, os.path.join(save_dir, 'optimizers.pth'))
+
+    # Save replay buffer
+    with open(os.path.join(save_dir, 'replay_buffer.pkl'), 'wb') as f:
+        pickle.dump(replay_buffer, f)
+
+    # Save alpha and training step
+    metadata = {'alpha': alpha, 'step': step}
+    with open(os.path.join(save_dir, 'metadata.pkl'), 'wb') as f:
+        pickle.dump(metadata, f)
+
+
+def load_checkpoint(ac, replay_buffer, pi_optimizer, q_optimizer, alpha_optimizer=None,
+                    save_dir=''):
+    # Load models
+    ac.load_state_dict(torch.load(os.path.join(save_dir, 'ac.pth')))
+
+    # Load optimizers
+    optimizers = torch.load(os.path.join(save_dir, 'optimizers.pth'))
+    pi_optimizer.load_state_dict(optimizers['pi_optimizer'])
+    q_optimizer.load_state_dict(optimizers['q_optimizer'])
+    if alpha_optimizer and optimizers['alpha_optimizer']:
+        alpha_optimizer.load_state_dict(optimizers['alpha_optimizer'])
+
+    # Load replay buffer
+    with open(os.path.join(save_dir, 'replay_buffer.pkl'), 'rb') as f:
+        loaded_buffer = pickle.load(f)
+        replay_buffer.__dict__.update(loaded_buffer.__dict__)  # quick hack to restore
+
+    # Load alpha and step
+    with open(os.path.join(save_dir, 'metadata.pkl'), 'rb') as f:
+        metadata = pickle.load(f)
+
+    return metadata.get('alpha'), metadata.get('step', 0)
 
 def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         steps_per_epoch=4000, epochs=100, replay_size=int(1e6), gamma=0.99,
         polyak=0.995, lr=1e-3, alpha_init=0.2, batch_size=100, start_steps=10000,
         update_after=1000, update_every=50, num_test_episodes=10, max_ep_len=1000,
-        logger_kwargs=dict(), save_freq=1, initial_actions="random", save_buffer=False, sample_mode=1, automatic_entropy_tuning=False):
+        logger_kwargs=dict(), save_freq=1, initial_actions="random", save_buffer=False,
+        sample_mode=1, automatic_entropy_tuning=False, save_checkpoint_switch=False, load_checkpoint_switch=False, checkpoint_dir=""):
     """
     Soft Actor-Critic (SAC)
 
@@ -155,8 +203,14 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             the current policy and value function.
 
     """
+    if load_checkpoint_switch == True:
+        with open(checkpoint_dir + "/progress.txt", "r") as src:
+            with open(logger_kwargs["output_dir"]+"/progress.txt", "w") as dst:
+                dst.write(src.read())
+        logger = EpochLogger(output_dir=logger_kwargs["output_dir"] + "/", output_fname='progress.txt', resume=True)
+    else:
+        logger = EpochLogger(**logger_kwargs)
 
-    logger = EpochLogger(**logger_kwargs)
     logger.save_config(locals())
 
     torch.manual_seed(seed)
@@ -188,7 +242,6 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
     act_limit = env.action_space.high[0]
 
     # Create actor-critic module and target networks
-
     ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
     ac_targ = deepcopy(ac)
 
@@ -206,10 +259,34 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
     var_counts = tuple(core.count_vars(module) for module in [ac.pi, ac.q1, ac.q2])
     logger.log('\nNumber of parameters: \t pi: %d, \t q1: %d, \t q2: %d\n' % var_counts)
 
+    # Set up optimizers for policy and q-function
+    pi_optimizer = Adam(ac.pi.parameters(), lr=lr)
+    q_optimizer = Adam(q_params, lr=lr)
+    if automatic_entropy_tuning is True:
+        device = torch.device("cpu")
+        target_entropy = -6 #-0.1*(ac.pi.mu_layer.out_features)
+        # log_alpha=torch.zeros(1, requires_grad=True, device=device)
+        log_alpha = torch.tensor([np.log(alpha_init)], requires_grad=True, device=device)
+        alpha_optimizer = Adam([log_alpha], lr=0.0001)
+        # alpha_min=0.05
+        alpha = log_alpha.exp()
+
+        if load_checkpoint_switch==True:
+            # === Load checkpoint if resuming ===
+            alpha, t_start_step_checkpoint = load_checkpoint(
+                ac=ac,
+                replay_buffer=replay_buffer,
+                pi_optimizer=pi_optimizer,
+                q_optimizer=q_optimizer,
+                alpha_optimizer=alpha_optimizer,
+                save_dir=checkpoint_dir+"/"
+            )
+        else:
+            t_start_step_checkpoint = 0
+
     # Set up function for computing SAC Q-losses
     def compute_loss_q(data):
         o, a, r, o2, d = data['obs'], data['act'], data['rew'], data['obs2'], data['done']
-
         q1 = ac.q1(o, a)
         q2 = ac.q2(o, a)
         if automatic_entropy_tuning==True:
@@ -258,19 +335,6 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         # Useful info for logging
         pi_info = dict(LogPi=logp_pi.detach().numpy())
         return loss_pi, pi_info
-
-    # Set up optimizers for policy and q-function
-    pi_optimizer = Adam(ac.pi.parameters(), lr=lr)
-    q_optimizer = Adam(q_params, lr=lr)
-
-    if automatic_entropy_tuning is True:
-        device = torch.device("cpu")
-        target_entropy = -6 #-0.1*(ac.pi.mu_layer.out_features)
-        # log_alpha=torch.zeros(1, requires_grad=True, device=device)
-        log_alpha = torch.tensor([np.log(alpha_init)], requires_grad=True, device=device)
-        alpha_optimizer = Adam([log_alpha], lr=0.0001)
-        # alpha_min=0.05
-        alpha = log_alpha.exp()
 
     # Set up model saving
     logger.setup_pytorch_saver(ac)
@@ -485,7 +549,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
         # End of epoch handling
         if (t + 1) % steps_per_epoch == 0:
-            epoch = (t + 1) // steps_per_epoch
+            epoch = (t + 1) // steps_per_epoch + (t_start_step_checkpoint + 1) // steps_per_epoch
 
             # Save model
             if (epoch % save_freq == 0) or (epoch == epochs):
@@ -515,12 +579,27 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             logger.log_tabular('Time', time.time() - start_time)
             logger.dump_tabular()
 
-    if save_buffer == True:
-        np.save(logger_kwargs["output_dir"] + "/buf_act.npy", replay_buffer.act_buf)
-        np.save(logger_kwargs["output_dir"] + "/buf_done.npy", replay_buffer.done_buf)
-        np.save(logger_kwargs["output_dir"] + "/buf_rew.npy", replay_buffer.rew_buf)
-        np.save(logger_kwargs["output_dir"] + "/buf_obs.npy", replay_buffer.obs_buf)
-        np.save(logger_kwargs["output_dir"] + "/buf_obs2.npy", replay_buffer.obs2_buf)
+            save_freq_checkpoint=100
+            if (save_checkpoint_switch and epoch % save_freq_checkpoint == 0):
+                save_checkpoint(
+                    ac=ac,
+                    replay_buffer=replay_buffer,
+                    pi_optimizer=pi_optimizer,
+                    q_optimizer=q_optimizer,
+                    alpha=alpha,  # if using entropy tuning
+                    alpha_optimizer=alpha_optimizer,
+                    step=t,
+                    save_dir=logger_kwargs["output_dir"]+"/"
+                )
+                # TODO
+                if save_buffer == True:
+                    np.save(logger_kwargs["output_dir"] + "/buf_act.npy", replay_buffer.act_buf)
+                    np.save(logger_kwargs["output_dir"] + "/buf_done.npy", replay_buffer.done_buf)
+                    np.save(logger_kwargs["output_dir"] + "/buf_rew.npy", replay_buffer.rew_buf)
+                    np.save(logger_kwargs["output_dir"] + "/buf_obs.npy", replay_buffer.obs_buf)
+                    np.save(logger_kwargs["output_dir"] + "/buf_obs2.npy", replay_buffer.obs2_buf)
+
+
 
 
 if __name__ == '__main__':
