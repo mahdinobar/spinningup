@@ -12,7 +12,6 @@ import gpytorch
 import joblib
 import torch
 
-
 sys.path.append('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch')
 from myKalmanFilter import KalmanFilter
 
@@ -124,6 +123,7 @@ class GPModel(gpytorch.models.ExactGP):
         covar_x = self.covar_module(x)
         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
 
+
 class FepEnv(core.Env):
     """
     Two-link planar arm with two revolut joints (based on simplified models at book "A Mathematical Introduction to
@@ -132,22 +132,22 @@ Robotic Manipulation" by Murry et al.
 
     def __init__(self):
         seed = 1
-        self.n = 0
+        # self.n = 0
         # reset seed(here is where seed is reset to count 0)
         np.random.seed(seed)
         self.seed(seed=seed)
         # TODO: reward params
         self.lpx = 600
         self.lpy = 600
-        self.lpz = 400
+        self.lpz = 600
         self.lv = 10
         self.lddqc = 1
         self.reward_eta_p = 1
         self.reward_eta_v = 0
         self.reward_eta_ddqc = 0
         # TODO: User defined linear position gain
-        self.K_p = 1
-        self.K_i = 0.1
+        self.K_p = 0.1
+        self.K_i = 0.01
         self.K_d = 0
         self.korque_noise_max = 0.  # TODO
         self.viewer = None
@@ -175,7 +175,6 @@ Robotic Manipulation" by Murry et al.
                                  2.6100])  # TODO Attention: limits should be the same otherwise modify sac code
         low_a = -high_a
         self.action_space = spaces.Box(low=low_a, high=high_a, dtype=np.float32)
-
 
         # for i in range(6):
         #     input_scaler = joblib.load('input_scaler{}.pkl'.format(str(joint_number)))
@@ -292,140 +291,147 @@ Robotic Manipulation" by Murry et al.
         return [seed]
 
     def reset(self, signal=False):
-        if signal:
-            print("hello")
-        "reset considering the startup phase on real system"
-        self.n += 1
-        self.k = 0
-        # Reset robot at the origin and move the target object to the goal position and orientation
-        pb.resetBasePositionAndOrientation(
-            arm, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]), physicsClientId=physics_client)
-        # pb.resetBasePositionAndOrientation(
-        #     arm_auxilary, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]), physicsClientId=client_auxilary)
-        # ATTENTION: assumption that we use biased kinematics just for jacobian otherwise you need to consider the base offset below
-        pb.resetBasePositionAndOrientation(
-            arm_biased_kinematics, [100, 100, 100], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]),
-            physicsClientId=physics_client)
-        # we add random normal noise with std of 0.25 [deg] and zero mean on all 6 joints
-        # q_init is the inital condition of the startup phase
-        self.q_init = np.array(
-            [-0.22683544711236076, 0.4152892646837951, -0.2240776697835826, -2.029656763049754,
-             -0.1323494169192162,
-             2.433754967707292]) + np.random.normal(
-            loc=0.0,
-            scale=0.004363323,
-            size=6)
-        self.q_init_bias = 0.01 * np.random.normal(loc=0.0, scale=1, size=6) * np.array(
-            [-0.22683544711236076, 0.4152892646837951, -0.2240776697835826, -2.029656763049754,
-             -0.1323494169192162, 2.433754967707292])
-        # Reset joint at initial angles
-        for i in range(6):
-            pb.resetJointState(arm, i, self.q_init[i], physicsClientId=physics_client)
-            pb.resetJointState(arm_biased_kinematics, i, self.q_init[i] + self.q_init_bias[i],
-                               physicsClientId=physics_client)
-        # In Pybullet, gripper halves are controlled separately+we also deactivated the 7th joint too
-        pb.resetJointState(arm, 7, 1.939142517407308, physicsClientId=physics_client)
-        pb.resetJointState(arm_biased_kinematics, 7, 1.939142517407308, physicsClientId=physics_client)
-        for j in [6] + list(range(8, 12)):
-            pb.resetJointState(arm, j, 0, physicsClientId=physics_client)
-            pb.resetJointState(arm_biased_kinematics, j, 0, physicsClientId=physics_client)
-        # Get end effector coordinates
-        LinkState = pb.getLinkState(arm, 9, computeForwardKinematics=True, computeLinkVelocity=True,
-                                    physicsClientId=physics_client)
-        r_hat_t = np.asarray(LinkState[0])
-        v_hat_t = np.asarray(LinkState[6])
-        info = pb.getJointStates(arm, range(12), physicsClientId=physics_client)
-        q_t, dq_t, tau_t = [], [], []
-        for joint_info in info:
-            q_t.append(joint_info[0])
-            dq_t.append(joint_info[1])
-            tau_t.append(joint_info[3])
-        if abs(sum(self.q_init - q_t[:6])) > 1e-6:
-            raise ValueError('shouldn\'t q_init be equal to q_t?!')
-
-        # q_t[0:6]=q_t[0:6] + np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.5]) * 3.14 / 180
-        # STARTUP PHASE Simulatiob
-        # ATTENTION: startup phase should be at 1 [ms]
-        pb.setTimeStep(timeStep=dt_startup, physicsClientId=physics_client)
-        v_star_dir = np.array([self.xd_init, self.yd_init, self.zd_init]) - r_hat_t
-        norm_v_star_dir = np.linalg.norm(v_star_dir)
-        k_startup = 0
-        xd_startup = r_hat_t[0]
-        yd_startup = r_hat_t[1]
-        zd_startup = r_hat_t[2]
-        while np.linalg.norm(r_hat_t - np.array([self.xd_init, self.yd_init, self.zd_init])) > 0.001:
-            v_star_dir_length = 34.9028 / (1 + np.exp(-0.04 * (k_startup - 250))) / 1000 - 34.9028 / (
-                    1 + np.exp(-0.04 * (0 - 250))) / 1000;
-            v_star = v_star_dir_length * (v_star_dir / norm_v_star_dir)
-            vxd = v_star[0]
-            vyd = v_star[1]
-            vzd = v_star[2]
-            deltax = vxd * dt_startup
-            deltay = vyd * dt_startup
-            deltaz = vzd * dt_startup
-            xd_startup = xd_startup + deltax
-            yd_startup = yd_startup + deltay
-            zd_startup = zd_startup + deltaz
-            rd_t = np.array([xd_startup, yd_startup, zd_startup])
-            vd_t = np.array([vxd, vyd, vzd])
-            if k_startup == 0:
-                self.edt = (rd_t - r_hat_t) * dt_startup
-
+        # if signal:
+        #     print("hello")
+        # "reset considering the startup phase on real system"
+        restart_outer = False
+        while True:
+            # self.n += 1
+            self.k = 0
+            # Reset robot at the origin and move the target object to the goal position and orientation
+            pb.resetBasePositionAndOrientation(
+                arm, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]), physicsClientId=physics_client)
+            # pb.resetBasePositionAndOrientation(
+            #     arm_auxilary, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]), physicsClientId=client_auxilary)
+            # ATTENTION: assumption that we use biased kinematics just for jacobian otherwise you need to consider the base offset below
+            pb.resetBasePositionAndOrientation(
+                arm_biased_kinematics, [100, 100, 100], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]),
+                physicsClientId=physics_client)
+            # we add random normal noise with std of 0.25 [deg] and zero mean on all 6 joints
+            # q_init is the inital condition of the startup phase
+            self.q_init = np.array(
+                [-0.22683544711236076, 0.4152892646837951, -0.2240776697835826, -2.029656763049754,
+                 -0.1323494169192162,
+                 2.433754967707292]) + np.random.normal(
+                loc=0.0,
+                scale=0.004363323,
+                size=6)
+            self.q_init_bias = 0.01 * np.random.normal(loc=0.0, scale=1, size=6) * np.array(
+                [-0.22683544711236076, 0.4152892646837951, -0.2240776697835826, -2.029656763049754,
+                 -0.1323494169192162, 2.433754967707292])
+            # Reset joint at initial angles
+            for i in range(6):
+                pb.resetJointState(arm, i, self.q_init[i], physicsClientId=physics_client)
+                pb.resetJointState(arm_biased_kinematics, i, self.q_init[i] + self.q_init_bias[i],
+                                   physicsClientId=physics_client)
+            # In Pybullet, gripper halves are controlled separately+we also deactivated the 7th joint too
+            pb.resetJointState(arm, 7, 1.939142517407308, physicsClientId=physics_client)
+            pb.resetJointState(arm_biased_kinematics, 7, 1.939142517407308, physicsClientId=physics_client)
+            for j in [6] + list(range(8, 12)):
+                pb.resetJointState(arm, j, 0, physicsClientId=physics_client)
+                pb.resetJointState(arm_biased_kinematics, j, 0, physicsClientId=physics_client)
+            # Get end effector coordinates
+            LinkState = pb.getLinkState(arm, 9, computeForwardKinematics=True, computeLinkVelocity=True,
+                                        physicsClientId=physics_client)
+            r_hat_t = np.asarray(LinkState[0])
+            v_hat_t = np.asarray(LinkState[6])
             info = pb.getJointStates(arm, range(12), physicsClientId=physics_client)
             q_t, dq_t, tau_t = [], [], []
             for joint_info in info:
                 q_t.append(joint_info[0])
                 dq_t.append(joint_info[1])
                 tau_t.append(joint_info[3])
-            # q_t[0:6] = q_t[0:6] + np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.5]) * 3.14 / 180
-            [linearJacobian, angularJacobian] = pb.calculateJacobian(arm,
-                                                                     10,
-                                                                     list(LinkState[2]),
-                                                                     list(np.append(q_t[:6], [0, 0, 0])),
-                                                                     list(np.append(dq_t[:6], [0, 0, 0])),
-                                                                     list(np.zeros(9)), physicsClientId=physics_client)
+            if abs(sum(self.q_init - q_t[:6])) > 1e-6:
+                raise ValueError('shouldn\'t q_init be equal to q_t?!')
 
-            J_t = np.asarray(linearJacobian)[:, :6]
-            Jpinv_t = self.pseudoInverseMat(J_t, ld=0.01)
+            # q_t[0:6]=q_t[0:6] + np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.5]) * 3.14 / 180
+            # STARTUP PHASE Simulatiob
+            # ATTENTION: startup phase should be at 1 [ms]
+            pb.setTimeStep(timeStep=dt_startup, physicsClientId=physics_client)
+            v_star_dir = np.array([self.xd_init, self.yd_init, self.zd_init]) - r_hat_t
+            norm_v_star_dir = np.linalg.norm(v_star_dir)
+            k_startup = 0
+            xd_startup = r_hat_t[0]
+            yd_startup = r_hat_t[1]
+            zd_startup = r_hat_t[2]
+            while np.linalg.norm(r_hat_t - np.array([self.xd_init, self.yd_init, self.zd_init])) > 0.001:
+                v_star_dir_length = 34.9028 / (1 + np.exp(-0.04 * (k_startup - 250))) / 1000 - 34.9028 / (
+                        1 + np.exp(-0.04 * (0 - 250))) / 1000;
+                v_star = v_star_dir_length * (v_star_dir / norm_v_star_dir)
+                vxd = v_star[0]
+                vyd = v_star[1]
+                vzd = v_star[2]
+                deltax = vxd * dt_startup
+                deltay = vyd * dt_startup
+                deltaz = vzd * dt_startup
+                xd_startup = xd_startup + deltax
+                yd_startup = yd_startup + deltay
+                zd_startup = zd_startup + deltaz
+                rd_t = np.array([xd_startup, yd_startup, zd_startup])
+                vd_t = np.array([vxd, vyd, vzd])
+                if k_startup == 0:
+                    self.edt = (rd_t - r_hat_t) * dt_startup
 
-            dqc_t_PID, self.edt = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t,
-                                                 edt=self.edt,
-                                                 deltaT=dt_startup)
-            # ATTENTION
-            dqc_t = dqc_t_PID
-            # TODO check
-            # command joint speeds (only 6 joints)
-            pb.setJointMotorControlArray(
-                arm,
-                [0, 1, 2, 3, 4, 5],
-                controlMode=pb.VELOCITY_CONTROL,
-                targetVelocities=list(dqc_t),
-                velocityGains=[1, 1, 1, 1, 1, 1],
-                forces=[87, 87, 87, 87, 12, 12],
-                physicsClientId=physics_client
-            )
-            pb.stepSimulation(physicsClientId=physics_client)
+                info = pb.getJointStates(arm, range(12), physicsClientId=physics_client)
+                q_t, dq_t, tau_t = [], [], []
+                for joint_info in info:
+                    q_t.append(joint_info[0])
+                    dq_t.append(joint_info[1])
+                    tau_t.append(joint_info[3])
+                # q_t[0:6] = q_t[0:6] + np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.5]) * 3.14 / 180
+                [linearJacobian, angularJacobian] = pb.calculateJacobian(arm,
+                                                                         10,
+                                                                         list(LinkState[2]),
+                                                                         list(np.append(q_t[:6], [0, 0, 0])),
+                                                                         list(np.append(dq_t[:6], [0, 0, 0])),
+                                                                         list(np.zeros(9)), physicsClientId=physics_client)
 
-            LinkState = pb.getLinkState(arm, 9, computeForwardKinematics=True, computeLinkVelocity=True)
-            r_hat_t = np.array(LinkState[0])
-            v_hat_t = np.array(LinkState[6])
-            k_startup += 1
-            # if np.linalg.norm(r_hat_t - np.array([self.xd_init, self.yd_init, self.zd_init])) < 0.002:
-            #     print("+++++np.linalg.norm(r_hat_t - np.array([self.xd_init, self.yd_init, self.zd_init]))=",
-            #           np.linalg.norm(r_hat_t - np.array([self.xd_init, self.yd_init, self.zd_init])))
-            #     print(
-            #         "-----np.array([self.xd_init, self.yd_init, self.zd_init])-np.array([xd_startup, yd_startup, zd_startup])",
-            #         np.array([self.xd_init, self.yd_init, self.zd_init]) - np.array(
-            #             [xd_startup, yd_startup, zd_startup]))
-            #     print(
-            #         "!!!!!np.linalg.norm(np.array([self.xd_init, self.yd_init, self.zd_init])-np.array([xd_startup, yd_startup, zd_startup]))",
-            #         np.linalg.norm(np.array([self.xd_init, self.yd_init, self.zd_init]) - np.array(
-            #             [xd_startup, yd_startup, zd_startup])))
-            if k_startup > 5000:
-                raise ValueError("took too long for startup phase!")
+                J_t = np.asarray(linearJacobian)[:, :6]
+                Jpinv_t = self.pseudoInverseMat(J_t, ld=0.01)
+
+                dqc_t_PID, self.edt = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t,
+                                                     edt=self.edt,
+                                                     deltaT=dt_startup)
+                # ATTENTION
+                dqc_t = dqc_t_PID
+                # TODO check
+                # command joint speeds (only 6 joints)
+                pb.setJointMotorControlArray(
+                    arm,
+                    [0, 1, 2, 3, 4, 5],
+                    controlMode=pb.VELOCITY_CONTROL,
+                    targetVelocities=list(dqc_t),
+                    velocityGains=[1, 1, 1, 1, 1, 1],
+                    forces=[87, 87, 87, 87, 12, 12],
+                    physicsClientId=physics_client
+                )
+                pb.stepSimulation(physicsClientId=physics_client)
+
+                LinkState = pb.getLinkState(arm, 9, computeForwardKinematics=True, computeLinkVelocity=True)
+                r_hat_t = np.array(LinkState[0])
+                v_hat_t = np.array(LinkState[6])
+                k_startup += 1
+                # if np.linalg.norm(r_hat_t - np.array([self.xd_init, self.yd_init, self.zd_init])) < 0.002:
+                #     print("+++++np.linalg.norm(r_hat_t - np.array([self.xd_init, self.yd_init, self.zd_init]))=",
+                #           np.linalg.norm(r_hat_t - np.array([self.xd_init, self.yd_init, self.zd_init])))
+                #     print(
+                #         "-----np.array([self.xd_init, self.yd_init, self.zd_init])-np.array([xd_startup, yd_startup, zd_startup])",
+                #         np.array([self.xd_init, self.yd_init, self.zd_init]) - np.array(
+                #             [xd_startup, yd_startup, zd_startup]))
+                #     print(
+                #         "!!!!!np.linalg.norm(np.array([self.xd_init, self.yd_init, self.zd_init])-np.array([xd_startup, yd_startup, zd_startup]))",
+                #         np.linalg.norm(np.array([self.xd_init, self.yd_init, self.zd_init]) - np.array(
+                #             [xd_startup, yd_startup, zd_startup])))
+                if k_startup > 5000:
+                    print("took too long for startup phase! Repeat the reset.")
+                    restart_outer = True
+                    break #exit the inner while loop
+            if restart_outer==True:
+                continue #restart the reset
 
         r_hat_tfp1_startup = r_hat_t
-        rd_tf_startup = rd_t
+        # rd_tf_startup = rd_t
+        rd_tf_startup = np.array([self.xd_init, self.yd_init, self.zd_init])
 
         # ATTENTION: here we do to keep self.dqc_PID for next step
         v_star_dir_length = 34.9028 / (1 + np.exp(-0.04 * (k_startup - 250))) / 1000 - 34.9028 / (
@@ -481,11 +487,11 @@ Robotic Manipulation" by Murry et al.
             np.array([self.xd_init, self.yd_init, self.zd_init]) + np.array([-0.002, -0.18, -0.15]),
             pb.getQuaternionFromEuler([0, 0, np.pi / 2 - 0.244978663]), physicsClientId=physics_client)
 
-        self.state = [(r_hat_tfp1_startup[0] - rd_tf_startup[0])*1000,
+        self.state = [(r_hat_tfp1_startup[0] - rd_tf_startup[0]) * 1000,
                       # ATTENTION: because of assumption that on real system we start Kalman filter with final position of EE at startup phase
-                      (r_hat_tfp1_startup[1] - rd_tf_startup[1])*1000,
+                      (r_hat_tfp1_startup[1] - rd_tf_startup[1]) * 1000,
                       # ATTENTION: because of assumption that on real system we start Kalman filter with final position of EE at startup phase
-                      (r_hat_tfp1_startup[2] - rd_tf_startup[2])*1000,
+                      (r_hat_tfp1_startup[2] - rd_tf_startup[2]) * 1000,
                       q_t[0],
                       q_t[1],
                       q_t[2],
@@ -504,12 +510,12 @@ Robotic Manipulation" by Murry et al.
                       dqc_t_PID[3],
                       dqc_t_PID[4],
                       dqc_t_PID[5],
-                       0,
-                       0,
-                       0,
-                       0,
-                       0,
-                       0]
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0]
         self.state_buffer = self.state
 
         # # Add noise to target speed
@@ -571,39 +577,49 @@ Robotic Manipulation" by Murry et al.
         B = np.array([[0], [1], [0]])
         C = np.matrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
-        # measurement noise covariance
-        R = np.array([[2 ** 2, 0, 0], [0, 5 ** 2, 0], [0, 0, 2 ** 2]])
-        # process uncertainty covariance
-        Q = np.array([[1 ** 2, 0, 0], [0, 2 ** 2, 0], [0, 0, 1 ** 2]])  # np.matrix(np.zeros((3, 3)))
+        # # measurement noise covariance
+        # R = np.array([[2 ** 2, 0, 0], [0, 5 ** 2, 0], [0, 0, 2 ** 2]])
+        # # process uncertainty covariance
+        # Q = np.array([[1 ** 2, 0, 0], [0, 2 ** 2, 0], [0, 0, 1 ** 2]])
+        # # initial covariance matrix
+        # P0 = np.asmatrix(np.diag([1, 4, 1]))
 
+        # measurement noise covariance
+        R = np.array([[0.0625e-6, 0, 0], [0, 0.0625e-6, 0], [0, 0, 0.0625e-6]])  # [m^2]
+        # process uncertainty covariance
+        Q = np.array([[0.01e-6, 0, 0], [0, 0.04e-6, 0], [0, 0, 0.02e-6]])  # #[m^2]
         # initial covariance matrix
-        P0 = np.asmatrix(np.diag([1, 4, 1]))
+        P0 = np.asmatrix(np.diag([0.04e-6, 0.09e-6, 0.04e-6]))
 
         # Generate time stamp randomness of camera measurements
         time_randomness = np.random.normal(0, 32, 137).astype(int)
         time_randomness = np.clip(time_randomness, -49, 49)
         time_randomness[0] = np.clip(time_randomness[0], 1, 49)
         tVec_camera = np.linspace(0, 13600, 137) + time_randomness  # [ms]
-        self.vxd = (np.random.normal(loc=0.0, scale=0.000367647, size=1)[
-            0]) / 1000  # [m/ms] for 2 [cm] drift given std error after 13.6 [s]
-        self.vyd = (34.9028e-3 + np.random.normal(loc=0.0, scale=0.002205882, size=1)[
-            0]) / 1000  # [m/ms] for 5 [cm] drift given std error after 13.6 [s]
+        # self.vxd = (np.random.normal(loc=0.0, scale=0.000367647, size=1)[
+        #     0]) / 1000  # [m/ms] for 2 [cm] drift given std error after 13.6 [s]
+        # self.vyd = (34.9028e-3 + np.random.normal(loc=0.0, scale=0.002205882, size=1)[
+        #     0]) / 1000  # [m/ms] for 5 [cm] drift given std error after 13.6 [s]
+        # self.vzd = 0
+        self.vxd = 0  # [m/ms]
+        self.vyd = (34.9028e-3 + np.random.normal(loc=0.0, scale=0.00005077, size=1)[
+            0]) / 1000  # [m/ms]
         self.vzd = 0
         x_camera = np.zeros((self.MAX_TIMESTEPS + 1))
         y_camera = np.zeros((self.MAX_TIMESTEPS + 1))
         z_camera = np.zeros((self.MAX_TIMESTEPS + 1))
 
         dt_camera = np.hstack((tVec_camera[0], np.diff(tVec_camera)))  # [ms]
-        x_camera[0] = self.xd_init + self.vxd * dt_camera[0] + np.random.normal(loc=0.0, scale=0.0005, size=1)  # [m]
-        y_camera[0] = self.yd_init + self.vyd * dt_camera[0] + np.random.normal(loc=0.0, scale=0.001, size=1)  # [m]
-        z_camera[0] = self.zd_init + self.vzd * dt_camera[0] + np.random.normal(loc=0.0, scale=0.0005, size=1)  # [m]
+        x_camera[0] = self.xd_init + self.vxd * dt_camera[0]
+        y_camera[0] = self.yd_init + self.vyd * dt_camera[0]
+        z_camera[0] = self.zd_init + self.vzd * dt_camera[0]
         for i in range(0, self.MAX_TIMESTEPS):
-            x_camera[i + 1] = x_camera[i] + self.vxd * dt_camera[i + 1] + np.random.normal(loc=0.0, scale=0.0005,
-                                                                                           size=1)  # [m]
-            y_camera[i + 1] = y_camera[i] + self.vyd * dt_camera[i + 1] + np.random.normal(loc=0.0, scale=0.001,
-                                                                                           size=1)  # [m]
-            z_camera[i + 1] = z_camera[i] + self.vzd * dt_camera[i + 1] + np.random.normal(loc=0.0, scale=0.0005,
-                                                                                           size=1)  # [m]
+            x_camera[i + 1] = x_camera[i] + self.vxd * dt_camera[i + 1]  # [m]
+            y_camera[i + 1] = y_camera[i] + self.vyd * dt_camera[i + 1]  # [m]
+            z_camera[i + 1] = z_camera[i] + self.vzd * dt_camera[i + 1]  # [m]
+        x_camera = x_camera + np.random.normal(loc=0.0, scale=0.0005, size=137) # [m]
+        y_camera = y_camera + np.random.normal(loc=0.0, scale=0.001, size=137)  # [m]
+        z_camera = z_camera + np.random.normal(loc=0.0, scale=0.0005, size=137) # [m]
         X_camera = np.array([x_camera, y_camera, z_camera])
 
         # create a Kalman filter object
@@ -828,9 +844,9 @@ Robotic Manipulation" by Murry et al.
                                                deltaT=dt)
         self.dqc_PID = dqc_tp1_PID
         # observations after applying the action a
-        obs = [(r_hat_tp1[0] - rd_tp1[0])*1000,
-                (r_hat_tp1[1] - rd_tp1[1])*1000,
-                 (r_hat_tp1[2] - rd_tp1[2])*1000,
+        obs = [(r_hat_tp1[0] - rd_tp1[0]) * 1000,
+               (r_hat_tp1[1] - rd_tp1[1]) * 1000,
+               (r_hat_tp1[2] - rd_tp1[2]) * 1000,
                q_tp1[0],
                q_tp1[1],
                q_tp1[2],
@@ -849,12 +865,12 @@ Robotic Manipulation" by Murry et al.
                dqc_tp1_PID[3],
                dqc_tp1_PID[4],
                dqc_tp1_PID[5],
-                       a[0],
-                       a[1],
-                       a[2],
-                       a[3],
-                       a[4],
-                       a[5]]
+               a[0],
+               a[1],
+               a[2],
+               a[3],
+               a[4],
+               a[5]]
         # update states
         self.state = obs
         self.state_buffer = np.vstack((self.state_buffer, self.state))
@@ -906,7 +922,7 @@ Robotic Manipulation" by Murry et al.
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
         # # # # TODO: so dirty code: uncomment when NOSAC for plots -- you need to take care of which random values you call by break points after first done in sac.py ... and cmment a too ...
         # plot_data_buffer_no_SAC=self.plot_data_buffer
-        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_284/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_284/plot_data_buffer_no_SAC_correctKF_Kp_01_Ki_001.npy",plot_data_buffer_no_SAC)
         # given action it returns 4-tuple (observation, reward, done, info)
         return (obs, reward_t, terminal, {})
 
@@ -1013,9 +1029,70 @@ Robotic Manipulation" by Murry et al.
         #         self.n) + ".npy", self.plot_data_buffer)
         # render_test_buffer=False
         if render_test_buffer == True:
-            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
+            # # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
             plot_data_buffer_no_SAC = np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_284/plot_data_buffer_no_SAC.npy")
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_284/plot_data_buffer_no_SAC_correctKF_Kp_01_Ki_001.npy")
+            plots_PIonly = True
+            if plots_PIonly == True:
+                fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(12, 12))
+                for ax in axs5:
+                    ax.grid(True)
+                axs5[0].plot(plot_data_buffer_no_SAC[:, 9], '-ob')
+                axs5[0].set_xlabel("t")
+                axs5[0].set_ylabel("vd_tp1[0] [m/s]")
+                plt.legend()
+                axs5[1].plot(plot_data_buffer_no_SAC[:, 10], '-ob')
+                axs5[1].set_xlabel("t")
+                axs5[1].set_ylabel("vd_tp1[1] [m/s]")
+                plt.legend()
+                axs5[2].plot(plot_data_buffer_no_SAC[:, 11], '-ob')
+                axs5[2].set_xlabel("t")
+                axs5[2].set_ylabel("vd_tp1[2] [m/s]")
+                plt.legend()
+                plt.legend()
+                plt.savefig(output_dir_rendering + "/PIonly_vd_tp1_correctKF_Kp_01_Ki_001" + ".png", format="png",
+                            bbox_inches='tight')
+                plt.show()
+
+                fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(12, 12))
+                for ax in axs5:
+                    ax.grid(True)
+                axs5[0].plot(plot_data_buffer_no_SAC[:, 3] - plot_data_buffer_no_SAC[:, 0], '-ob')
+                axs5[0].set_xlabel("t")
+                axs5[0].set_ylabel("rd_tp1[0]-r_hat_tp1[0] [m]")
+                plt.legend()
+                axs5[1].plot(plot_data_buffer_no_SAC[:, 4] - plot_data_buffer_no_SAC[:, 1], '-ob')
+                axs5[1].set_xlabel("t")
+                axs5[1].set_ylabel("rd_tp1[1]-r_hat_tp1[1] [m]")
+                plt.legend()
+                axs5[2].plot(plot_data_buffer_no_SAC[:, 5] - plot_data_buffer_no_SAC[:, 2], '-ob')
+                axs5[2].set_xlabel("t")
+                axs5[2].set_ylabel("rd_tp1[2]-r_hat_tp1[2] [m]")
+                plt.legend()
+                plt.legend()
+                plt.savefig(output_dir_rendering + "/PIonly_rd_tp1_minus_r_hat_tp1_correctKF_Kp_01_Ki_001" + ".png", format="png",
+                            bbox_inches='tight')
+                plt.show()
+
+                fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(12, 12))
+                for ax in axs5:
+                    ax.grid(True)
+                axs5[0].plot(plot_data_buffer_no_SAC[:, 3], '-ob')
+                axs5[0].set_xlabel("t")
+                axs5[0].set_ylabel("rd_tp1[0] [m]")
+                plt.legend()
+                axs5[1].plot(plot_data_buffer_no_SAC[:, 4], '-ob')
+                axs5[1].set_xlabel("t")
+                axs5[1].set_ylabel("rd_tp1[1] [m]")
+                plt.legend()
+                axs5[2].plot(plot_data_buffer_no_SAC[:, 5], '-ob')
+                axs5[2].set_xlabel("t")
+                axs5[2].set_ylabel("rd_tp1[2] [m]")
+                plt.legend()
+                plt.legend()
+                plt.savefig(output_dir_rendering + "/PIonly_rd_tp1_correctKF_Kp_01_Ki_001_Kp_01_Ki_001" + ".png", format="png",
+                            bbox_inches='tight')
+                plt.show()
 
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(8, 12))
             plt.rcParams['font.family'] = 'Serif'
@@ -1057,7 +1134,7 @@ Robotic Manipulation" by Murry et al.
             axs1[2].set_xlabel("y[mm]")
             axs1[2].set_ylabel("z[mm]")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/test_position_both_" + str(self.n) + ".png", format="png",
+            plt.savefig(output_dir_rendering + "/test_position_both.png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1130,7 +1207,8 @@ Robotic Manipulation" by Murry et al.
             axs3[3].set_xlabel("t [ms]")
             axs3[3].set_ylabel("||r-rd||_2 [mm]")
             axs3[3].set_ylim([0, 12])
-            plt.savefig(output_dir_rendering + "/test_position_errors_both_" + str(self.n) + ".pdf", format="pdf",
+            plt.savefig(output_dir_rendering + "/test_position_errors_both_correctKF_Kp_01_Ki_001.pdf",
+                        format="pdf",
                         bbox_inches='tight')
             plt.show()
 
@@ -1159,7 +1237,7 @@ Robotic Manipulation" by Murry et al.
             axs4[2, 1].set_xlabel("t")
             axs4[2, 1].set_ylabel("dqc_5")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/test_dqc_" + str(self.n) + ".png", format="png", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/test_dqc.png", format="png", bbox_inches='tight')
             plt.show()
 
             fig4, axs4 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(8, 6))
@@ -1187,7 +1265,8 @@ Robotic Manipulation" by Murry et al.
             axs4[2, 1].set_xlabel("t")
             axs4[2, 1].set_ylabel("dqc_PID_5")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/test_dqc_PID_" + str(self.n) + ".png", format="png", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/test_dqc_PID.png", format="png",
+                        bbox_inches='tight')
             plt.show()
 
             fig4, axs4 = plt.subplots(3, 2, sharex=False, sharey=False, figsize=(8, 6))
@@ -1216,7 +1295,8 @@ Robotic Manipulation" by Murry et al.
             axs4[2, 1].set_ylabel("a[5]")
             plt.legend()
             plt.grid()
-            plt.savefig(output_dir_rendering + "/test_dq_SAC_" + str(self.n) + ".png", format="png", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/test_dq_SAC.png", format="png",
+                        bbox_inches='tight')
             plt.show()
 
             fig5, axs5 = plt.subplots(1, 1, sharex=False, sharey=False, figsize=(8, 6))
@@ -1225,7 +1305,8 @@ Robotic Manipulation" by Murry et al.
             axs5.set_ylabel("eta1*deltar")
             plt.legend()
             plt.grid()
-            plt.savefig(output_dir_rendering + "/test_rewards_" + str(self.n) + ".png", format="png", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/test_rewards.png", format="png",
+                        bbox_inches='tight')
             plt.show()
 
             fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(5, 10))
@@ -1244,7 +1325,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("reward_pz_t")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/test_rewards_components_" + str(self.n) + ".png", format="png",
+            plt.savefig(output_dir_rendering + "/test_rewards_components.png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1274,7 +1355,8 @@ Robotic Manipulation" by Murry et al.
             axs5[2, 1].set_xlabel("t")
             axs5[2, 1].set_ylabel("tau[5]")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/test_torques_" + str(self.n) + ".png", format="png", bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/test_torques.png", format="png",
+                        bbox_inches='tight')
             plt.show()
 
             fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(8, 10))
@@ -1293,7 +1375,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("r_hat_tp1[2] - rd_tp1[2]")
             plt.legend()
             axs5[2].grid()
-            plt.savefig(output_dir_rendering + "/test_position_errors_" + str(self.n) + ".png", format="png",
+            plt.savefig(output_dir_rendering + "/test_position_errors.png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1313,7 +1395,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("rd_t[2]")
             plt.legend()
             axs5[2].grid()
-            plt.savefig(output_dir_rendering + "/test_target_positions_" + str(self.n) + ".png", format="png",
+            plt.savefig(output_dir_rendering + "/test_target_positions.png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1333,7 +1415,8 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("diff rd_t[2]")
             plt.legend()
             axs5[2].grid()
-            plt.savefig(output_dir_rendering + "/test_manual_diff_target_position_" + str(self.n) + ".png", format="png",
+            plt.savefig(output_dir_rendering + "/test_manual_diff_target_position.png",
+                        format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1354,7 +1437,7 @@ Robotic Manipulation" by Murry et al.
             plt.legend()
             axs5[2].grid()
             plt.grid()
-            plt.savefig(output_dir_rendering + "/test_target_velocities_" + str(self.n) + ".png", format="png",
+            plt.savefig(output_dir_rendering + "/test_target_velocities.png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1372,7 +1455,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("r_hat_t[2]")
             axs5[2].legend()
             axs5[2].grid()
-            plt.savefig(output_dir_rendering + "/test_r_hat_" + str(self.n) + ".png", format="png",
+            plt.savefig(output_dir_rendering + "/test_r_hat.png", format="png",
                         bbox_inches='tight')
             plt.show()
 
