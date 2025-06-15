@@ -32,7 +32,17 @@ def plot_data(data, xaxis='Epoch', value="AverageEpRet", condition="Condition1",
     if isinstance(data, list):
         data = pd.concat(data, ignore_index=True)
     sns.set(style="darkgrid", font_scale=1.5)
-    sns.tsplot(data=data, time=xaxis, value=value, unit="Unit", condition=condition, ci='sd', **kwargs)
+    # sns.tsplot(data=, time=xaxis, value=value, unit="Unit", condition=condition, ci='sd', **kwargs)
+    sns.lineplot(
+        data=data,
+        x=xaxis,  # your time column
+        y=value,  # the value to plot
+        hue=condition,  # group by condition
+        units="Unit",  # repeated measures
+        estimator=None,  # no aggregation; plot each Unit
+        ci='sd'  # show standard deviation if you do want an aggregate
+    )
+
     """
     If you upgrade to any version of Seaborn greater than 0.8.1, switch from 
     tsplot to lineplot replacing L29 with:
@@ -165,7 +175,8 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
         plot_data(data, xaxis=xaxis, value=value, condition=condition, smooth=smooth, estimator=estimator,zorder=1)
     # plt.hlines(44.47124, 0, 10e4, 'k', linestyles="dashed", label='PID only')
     # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
-    plt.hlines( 107, 0, 1.632e6, 'k', linestyles="dashed", label='PI only')
+    # plt.hlines( 107, 0, 1.632e6, 'k', linestyles="dashed", label='PI only')
+    plt.hlines( 67.64, 0, 1.632e6, 'k', linestyles="dashdot", label='PI only')
     plt.legend()
     plt.savefig(all_logdirs[-1]+"/learning_curve", format="png", bbox_inches='tight',zorder=2)
     plt.show()
@@ -182,13 +193,14 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
     # Plot
     plt.figure(figsize=(6, 4))
     plt.plot(epochs, average_test_returns, label="Average Test Return", color="blue")
-    plt.hlines( 107, 0, 4000, 'k', linestyles="dashed", label='PI only')
+    # plt.hlines( 107, 0, 4000, 'k', linestyles="dashed", label='PI only')
+    plt.hlines( 67.64, 0, len(average_test_returns), 'k', linestyles="dashed", label='PI only')
     plt.xlabel("Number of Epochs", fontproperties=times_new_roman_font, fontsize=14)
     plt.ylabel("Average Test Return", fontproperties=times_new_roman_font, fontsize=14)
     # plt.title("Average Test Return vs Epochs", fontsize=14, fontproperties=times_new_roman_font)
     plt.xticks(fontproperties=times_new_roman_font, fontsize=12)
     plt.yticks(fontproperties=times_new_roman_font, fontsize=12)
-    plt.xlim([0,4000])
+    plt.xlim([0,len(average_test_returns)])
     plt.grid(True)
     plt.legend(prop=times_new_roman_font, fontsize=14)
     plt.tight_layout()
@@ -229,7 +241,7 @@ def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=Fa
     # plt.hlines(44.47124, 0, 10e4, 'k', linestyles="dashed", label='PID only')
     # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
     # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
-    plt.hlines( 107, 0, 1.632e6, 'k', linestyles="dashed", label='PI only')
+    plt.hlines( 67.64, 0, 1.632e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
     # plt.ylim([-5,10])
     plt.savefig(all_logdirs[-1]+"/AverageTestEpRet", format="png", bbox_inches='tight',zorder=2)
@@ -241,7 +253,8 @@ def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=Fa
     # plt.hlines(44.47124, 0, 10e4, 'k', linestyles="dashed", label='PID only')
     # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
     # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
-    plt.hlines( 107, 0, 1.632e6, 'k', linestyles="dashed", label='PI only')
+    # plt.hlines( 107, 0, 1.632e6, 'k', linestyles="dashed", label='PI only')
+    plt.hlines( 67.64, 0, 1.632e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
     # plt.ylim([-5,10])
     plt.savefig(all_logdirs[-1]+"/AverageEpRet", format="png", bbox_inches='tight',zorder=2)
