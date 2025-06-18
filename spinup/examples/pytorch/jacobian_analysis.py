@@ -228,7 +228,92 @@ plt.savefig(
     bbox_inches='tight')
 plt.show()
 
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Simulated dummy input data — replace with your real ones
+T = 136
+# np.random.seed(0)
+# J_true_list = [np.random.randn(3,6) for _ in range(T)]
+# J_tilde_list = [J + 0.05*np.random.randn(3,6) for J in J_true_list]
+# u_d_list = [np.random.randn(3) for _ in range(T)]
 
+# Simulation time step
+delta_t = 100/1000 #[s]
+
+# Initialize logs
+e_v_list = []
+e_v_norm_list = []
+e_r_list = []
+e_r_norm_list = []
+e_r_bound_list = []
+
+# Initialize cumulative position error
+e_r = np.zeros(3)
+e_r_bound = 0.0
+
+for k in range(T):
+    q = np.hstack((q_[k, :], np.zeros(3)))
+    dq = np.hstack((dq_[k, :], np.zeros(3)))
+    J_true = load_jacobian(robot_id_true, q, dq)
+    J = J_true[:3, :6]
+    J_biased = load_jacobian(robot_id_biased, q, dq)
+    J_tilde = J_biased[:3, :6]
+
+    u_d = drd_[k,:]
+
+    # Pseudoinverse of biased Jacobian
+    J_tilde_pinv = np.linalg.pinv(J_tilde)
+    P = J @ J_tilde_pinv
+    I = np.eye(3)
+
+    # Velocity error: e_v(k) = (I - P) u_d(k)
+    e_v = (I - P) @ u_d
+    e_v_norm = np.linalg.norm(e_v)
+
+    # Update cumulative position error and bound
+    e_r += e_v * delta_t
+    e_r_bound += e_v_norm * delta_t
+
+    # Log
+    e_v_list.append(e_v)
+    e_v_norm_list.append(e_v_norm)
+    e_r_list.append(e_r.copy())
+    e_r_norm_list.append(np.linalg.norm(e_r))
+    e_r_bound_list.append(e_r_bound)
+
+# Convert to arrays
+e_r_array = np.array(e_r_list)
+e_r_norm_list=np.array(e_r_norm_list)
+e_r_bound_list=np.array(e_r_bound_list)
+# ------------- Plot 1: Error Norm and Bound -------------
+plt.figure(figsize=(8, 4))
+plt.plot(e_r_norm_list*1000, label=r"$\|\mathbf{e}_r(k)\|$ (actual)", color='blue')
+plt.plot(e_r_bound_list*1000, label=r"Upper Bound $\sum \|\mathbf{e}_v(j)\| \Delta t$", color='red', linestyle='--')
+plt.xlabel("Timestep $k$")
+plt.ylabel("Position Error Norm [mm]")
+plt.title("Cumulative End-Effector Position Error and Theoretical Bound")
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+plt.savefig(
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/e_r_cumulative_upper_bound.pdf", format="pdf",
+    bbox_inches='tight')
+plt.show()
+
+# ------------- Plot 2: Position Error in XYZ -------------
+fig, axs = plt.subplots(3, 1, figsize=(8, 12), sharex=True)
+labels = ['x', 'y', 'z']
+for i in range(3):
+    axs[i].plot(e_r_array[:, i]*1000, "-o", label=rf"$e_{{r,{labels[i]}}}(k)$", color=f"C{i}")
+    axs[i].set_ylabel(f"{labels[i]} [mm]")
+    axs[i].legend()
+    axs[i].grid(True)
+axs[-1].set_xlabel("k")
+axs[0].set_title("Cumulative End-Effector Position Error Components")
+plt.tight_layout()
+plt.savefig(
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/e_r_cumulative.pdf", format="pdf",
+    bbox_inches='tight')
+plt.show()
 
 
 
