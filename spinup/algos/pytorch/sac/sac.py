@@ -564,7 +564,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             logger.log_tabular('TestEpRet', with_min_and_max=True)
             logger.log_tabular('EpLen', average_only=True)
             logger.log_tabular('TestEpLen', average_only=True)
-            logger.log_tabular('TotalEnvInteracts', t)
+            logger.log_tabular('TotalEnvInteracts', t+t_start_step_checkpoint)
             if not (t >= update_after and (t + 1) % update_every == 0):
                 q_info = dict(Q1Vals=np.zeros(1), Q2Vals=np.zeros(1))
                 logger.store(**q_info, LogPi=0, LossPi=0, LossQ=0, LossAlpha=0, Alpha=0, GradientlogAlpha=0)

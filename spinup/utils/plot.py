@@ -33,15 +33,16 @@ def plot_data(data, xaxis='Epoch', value="AverageEpRet", condition="Condition1",
         data = pd.concat(data, ignore_index=True)
     sns.set(style="darkgrid", font_scale=1.5)
     # sns.tsplot(data=, time=xaxis, value=value, unit="Unit", condition=condition, ci='sd', **kwargs)
-    sns.lineplot(
-        data=data,
-        x=xaxis,  # your time column
-        y=value,  # the value to plot
-        hue=condition,  # group by condition
-        units="Unit",  # repeated measures
-        estimator=None,  # no aggregation; plot each Unit
-        ci='sd'  # show standard deviation if you do want an aggregate
-    )
+    sns.lineplot(data=data, x=xaxis, y=value, hue=condition, ci='sd', **kwargs)
+    # sns.lineplot(
+    #     data=data,
+    #     x=xaxis,  # your time column
+    #     y=value,  # the value to plot
+    #     hue=condition,  # group by condition
+    #     units="Unit",  # repeated measures
+    #     estimator=None,  # no aggregation; plot each Unit
+    #     ci='sd'  # show standard deviation if you do want an aggregate
+    # )
 
     """
     If you upgrade to any version of Seaborn greater than 0.8.1, switch from 
@@ -176,11 +177,12 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
     # plt.hlines(44.47124, 0, 10e4, 'k', linestyles="dashed", label='PID only')
     # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
     # plt.hlines( 107, 0, 1.632e6, 'k', linestyles="dashed", label='PI only')
-    plt.hlines( 67.64, 0, 1.632e6, 'k', linestyles="dashdot", label='PI only')
+    plt.hlines( 45.98, 0, 1.632e6, 'k', linestyles="dashdot", label='PI only')
     plt.legend()
     plt.savefig(all_logdirs[-1]+"/learning_curve", format="png", bbox_inches='tight',zorder=2)
     plt.show()
-    
+
+
     # Register the specific Times New Roman font
     times_new_roman_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
     times_new_roman_font = font_manager.FontProperties(fname=times_new_roman_path)
@@ -192,9 +194,9 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
     epochs = range(1, len(average_test_returns) + 1)
     # Plot
     plt.figure(figsize=(6, 4))
-    plt.plot(epochs, average_test_returns, label="Average Test Return", color="blue")
+    plt.plot(epochs, average_test_returns, color="blue")
     # plt.hlines( 107, 0, 4000, 'k', linestyles="dashed", label='PI only')
-    plt.hlines( 67.64, 0, len(average_test_returns), 'k', linestyles="dashed", label='PI only')
+    plt.hlines( 45.98, 0, len(average_test_returns), 'k', linestyles="dashed", label='PI only')
     plt.xlabel("Number of Epochs", fontproperties=times_new_roman_font, fontsize=14)
     plt.ylabel("Average Test Return", fontproperties=times_new_roman_font, fontsize=14)
     # plt.title("Average Test Return vs Epochs", fontsize=14, fontproperties=times_new_roman_font)
@@ -206,6 +208,152 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
     plt.tight_layout()
     plt.savefig(all_logdirs[-1] + "/learning_curve", format="pdf")
     plt.show()
+
+    # Register the specific Times New Roman font
+    times_new_roman_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
+    times_new_roman_font = font_manager.FontProperties(fname=times_new_roman_path)
+    # Create DataFrame (assuming data[0] is available)
+    df = pd.DataFrame(data[0])
+    # Extract the series
+    average_test_returns = df.get("Alpha")
+    # Generate epoch indices
+    epochs = range(1, len(average_test_returns) + 1)
+    # Plot
+    plt.figure(figsize=(6, 4))
+    plt.plot(epochs, average_test_returns, color="blue")
+    plt.xlabel("Number of Epochs", fontproperties=times_new_roman_font, fontsize=14)
+    plt.ylabel("Alpha", fontproperties=times_new_roman_font, fontsize=14)
+    # plt.title("Average Test Return vs Epochs", fontsize=14, fontproperties=times_new_roman_font)
+    plt.xticks(fontproperties=times_new_roman_font, fontsize=12)
+    plt.yticks(fontproperties=times_new_roman_font, fontsize=12)
+    plt.xlim([0,len(average_test_returns)])
+    plt.grid(True)
+    plt.legend(prop=times_new_roman_font, fontsize=14)
+    plt.tight_layout()
+    plt.savefig(all_logdirs[-1] + "/Alpha_epoch", format="pdf")
+    plt.show()
+
+    # Register the specific Times New Roman font
+    times_new_roman_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
+    times_new_roman_font = font_manager.FontProperties(fname=times_new_roman_path)
+    # Create DataFrame (assuming data[0] is available)
+    df = pd.DataFrame(data[0])
+    # Extract the series
+    average_test_returns = df.get("AverageLogPi")
+    # Generate epoch indices
+    epochs = range(1, len(average_test_returns) + 1)
+    # Plot
+    plt.figure(figsize=(6, 4))
+    plt.plot(epochs, average_test_returns, color="blue")
+    plt.xlabel("Number of Epochs", fontproperties=times_new_roman_font, fontsize=14)
+    plt.ylabel("AverageLogPi", fontproperties=times_new_roman_font, fontsize=14)
+    # plt.title("Average Test Return vs Epochs", fontsize=14, fontproperties=times_new_roman_font)
+    plt.xticks(fontproperties=times_new_roman_font, fontsize=12)
+    plt.yticks(fontproperties=times_new_roman_font, fontsize=12)
+    plt.xlim([0,len(average_test_returns)])
+    plt.grid(True)
+    plt.legend(prop=times_new_roman_font, fontsize=14)
+    plt.tight_layout()
+    plt.savefig(all_logdirs[-1] + "/AverageLogPi_epoch", format="pdf")
+    plt.show()
+
+    # Register the specific Times New Roman font
+    times_new_roman_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
+    times_new_roman_font = font_manager.FontProperties(fname=times_new_roman_path)
+    # Create DataFrame (assuming data[0] is available)
+    df = pd.DataFrame(data[0])
+    # Extract the series
+    average_test_returns = df.get("AverageEpRet")
+    # Generate epoch indices
+    epochs = range(1, len(average_test_returns) + 1)
+    # Plot
+    plt.figure(figsize=(6, 4))
+    plt.plot(epochs, average_test_returns, color="blue")
+    plt.xlabel("Number of Epochs", fontproperties=times_new_roman_font, fontsize=14)
+    plt.ylabel("AverageEpRet", fontproperties=times_new_roman_font, fontsize=14)
+    plt.hlines( 45.98, 0, len(average_test_returns), 'k', linestyles="dashed", label='PI only')
+    # plt.title("Average Test Return vs Epochs", fontsize=14, fontproperties=times_new_roman_font)
+    plt.xticks(fontproperties=times_new_roman_font, fontsize=12)
+    plt.yticks(fontproperties=times_new_roman_font, fontsize=12)
+    plt.xlim([0,len(average_test_returns)])
+    plt.grid(True)
+    plt.legend(prop=times_new_roman_font, fontsize=14)
+    plt.tight_layout()
+    plt.savefig(all_logdirs[-1] + "/AverageEpRet_epoch", format="pdf")
+    plt.show()
+
+    # Register the specific Times New Roman font
+    times_new_roman_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
+    times_new_roman_font = font_manager.FontProperties(fname=times_new_roman_path)
+    # Create DataFrame (assuming data[0] is available)
+    df = pd.DataFrame(data[0])
+    # Extract the series
+    average_test_returns = df.get("LossAlpha")
+    # Generate epoch indices
+    epochs = range(1, len(average_test_returns) + 1)
+    # Plot
+    plt.figure(figsize=(6, 4))
+    plt.plot(epochs, average_test_returns, color="blue")
+    plt.xlabel("Number of Epochs", fontproperties=times_new_roman_font, fontsize=14)
+    plt.ylabel("LossAlpha", fontproperties=times_new_roman_font, fontsize=14)
+    # plt.title("Average Test Return vs Epochs", fontsize=14, fontproperties=times_new_roman_font)
+    plt.xticks(fontproperties=times_new_roman_font, fontsize=12)
+    plt.yticks(fontproperties=times_new_roman_font, fontsize=12)
+    plt.xlim([0,len(average_test_returns)])
+    plt.grid(True)
+    plt.legend(prop=times_new_roman_font, fontsize=14)
+    plt.tight_layout()
+    plt.savefig(all_logdirs[-1] + "/LossAlpha_epoch", format="pdf")
+    plt.show()
+
+    # Register the specific Times New Roman font
+    times_new_roman_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
+    times_new_roman_font = font_manager.FontProperties(fname=times_new_roman_path)
+    # Create DataFrame (assuming data[0] is available)
+    df = pd.DataFrame(data[0])
+    # Extract the series
+    average_test_returns = df.get("LossQ")
+    # Generate epoch indices
+    epochs = range(1, len(average_test_returns) + 1)
+    # Plot
+    plt.figure(figsize=(6, 4))
+    plt.plot(epochs, average_test_returns, color="blue")
+    plt.xlabel("Number of Epochs", fontproperties=times_new_roman_font, fontsize=14)
+    plt.ylabel("LossQ", fontproperties=times_new_roman_font, fontsize=14)
+    # plt.title("Average Test Return vs Epochs", fontsize=14, fontproperties=times_new_roman_font)
+    plt.xticks(fontproperties=times_new_roman_font, fontsize=12)
+    plt.yticks(fontproperties=times_new_roman_font, fontsize=12)
+    plt.xlim([0,len(average_test_returns)])
+    plt.grid(True)
+    plt.legend(prop=times_new_roman_font, fontsize=14)
+    plt.tight_layout()
+    plt.savefig(all_logdirs[-1] + "/LossQ_epoch", format="pdf")
+    plt.show()
+
+    # Register the specific Times New Roman font
+    times_new_roman_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
+    times_new_roman_font = font_manager.FontProperties(fname=times_new_roman_path)
+    # Create DataFrame (assuming data[0] is available)
+    df = pd.DataFrame(data[0])
+    # Extract the series
+    average_test_returns = df.get("AverageQ1Vals")
+    # Generate epoch indices
+    epochs = range(1, len(average_test_returns) + 1)
+    # Plot
+    plt.figure(figsize=(6, 4))
+    plt.plot(epochs, average_test_returns, color="blue")
+    plt.xlabel("Number of Epochs", fontproperties=times_new_roman_font, fontsize=14)
+    plt.ylabel("AverageQ1Vals", fontproperties=times_new_roman_font, fontsize=14)
+    # plt.title("Average Test Return vs Epochs", fontsize=14, fontproperties=times_new_roman_font)
+    plt.xticks(fontproperties=times_new_roman_font, fontsize=12)
+    plt.yticks(fontproperties=times_new_roman_font, fontsize=12)
+    plt.xlim([0,len(average_test_returns)])
+    plt.grid(True)
+    plt.legend(prop=times_new_roman_font, fontsize=14)
+    plt.tight_layout()
+    plt.savefig(all_logdirs[-1] + "/AverageQ1Vals_epoch", format="pdf")
+    plt.show()
+    print("")
 
 def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=False,
                font_scale=1.5, smooth=1, select=None, exclude=None, estimator='mean'):
@@ -241,7 +389,7 @@ def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=Fa
     # plt.hlines(44.47124, 0, 10e4, 'k', linestyles="dashed", label='PID only')
     # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
     # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
-    plt.hlines( 67.64, 0, 1.632e6, 'k', linestyles="dashed", label='PI only')
+    plt.hlines( 45.98, 0, 1.632e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
     # plt.ylim([-5,10])
     plt.savefig(all_logdirs[-1]+"/AverageTestEpRet", format="png", bbox_inches='tight',zorder=2)
@@ -254,7 +402,7 @@ def make_plots_alpha(all_logdirs, legend=None, xaxis=None, values=None, count=Fa
     # plt.hlines( 68.5, 0, 10e5, 'k', linestyles="dashed", label='PI only')
     # plt.hlines( 91, 0, 1.36e6, 'k', linestyles="dashed", label='PI only')
     # plt.hlines( 107, 0, 1.632e6, 'k', linestyles="dashed", label='PI only')
-    plt.hlines( 67.64, 0, 1.632e6, 'k', linestyles="dashed", label='PI only')
+    plt.hlines( 45.98, 0, 1.632e6, 'k', linestyles="dashed", label='PI only')
     plt.legend()
     # plt.ylim([-5,10])
     plt.savefig(all_logdirs[-1]+"/AverageEpRet", format="png", bbox_inches='tight',zorder=2)
@@ -359,9 +507,9 @@ def main():
                smooth=args.smooth, select=args.select, exclude=args.exclude,
                estimator=args.est)
 
-    make_plots_alpha(args.logdir, args.legend, args.xaxis, args.value, args.count,
-               smooth=args.smooth, select=args.select, exclude=args.exclude,
-               estimator=args.est)
+    # make_plots_alpha(args.logdir, args.legend, args.xaxis, args.value, args.count,
+    #            smooth=args.smooth, select=args.select, exclude=args.exclude,
+    #            estimator=args.est)
 
 if __name__ == "__main__":
     # exp_name = "Tworrv0_1"

@@ -71,9 +71,7 @@ arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URD
 
 
 
-def load_bags(file_name, save=False):
-    # Path to your bag file
-    bag_path = '/home/mahdi/bagfiles/experiments_HW274/'
+def load_bags(file_name,bag_path, save=False):
     # file_name = "SAC_1"
     topic_name='/PRIMITIVE_velocity_controller/dq_PID_messages'
     if save:
@@ -315,7 +313,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
     # ax.legend()
     # # Adjust layout
     # plt.tight_layout()
-    # plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_dq_measured_dq_simest.png".format(file_name), format="png",
+    # plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_dq_measured_dq_simest.png".format(file_name), format="png",
     #             bbox_inches='tight')
     # plt.show()
 
@@ -349,7 +347,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
     # Adjust layout
     plt.tight_layout()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_dq_desired_commanded.png".format(file_name),
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_dq_desired_commanded.png".format(file_name),
         format="png",
         bbox_inches='tight')
     plt.show()
@@ -372,12 +370,12 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
         ax.set_ylabel('Position')
         ax.grid(True)
         ax.legend()
-    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_q.png".format(file_name), format="png",
+    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_q.png".format(file_name), format="png",
                 bbox_inches='tight')
     plt.show()
 
     # Plot dq and dq_sim (Velocity)
-    fig2, axs2 = plt.subplots(3, 2, figsize=(12, 8))
+    fig2, axs2 = plt.subplots(3, 2, figsize=(16, 16))
     fig2.suptitle('Joint Velocities: Measured vs Simulated', fontsize=16)
     for i in range(6):
         ax = axs2[i // 2, i % 2]
@@ -388,18 +386,50 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
         ax.set_ylabel('Velocity')
         ax.grid(True)
         ax.legend()
-    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/{}_dq.png".format(file_name), format="png",
+    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_dq.png".format(file_name), format="png",
                 bbox_inches='tight')
+    plt.show()
+
+    # Plot dq and error dq (Velocity)
+    fig2, axs2 = plt.subplots(3, 2, figsize=(16, 16))
+    fig2.suptitle('Joint Velocities: Absolute Error Measured vs Simulated', fontsize=16)
+    for i in range(6):
+        ax = axs2[i // 2, i % 2]
+        ax.plot(closest_t_dq, abs(dq_sim[:, i] - dq[:, i]), '-sr')
+        ax.set_title(f'Joint {i + 1}')
+        ax.set_xlabel('Time step')
+        ax.set_ylabel('$|dq_{\t{sim}} - dq_{\t{measured}}|$')
+        ax.grid(True)
+        ax.set_ylim([0, 0.02])
+        ax.legend()
+    plt.savefig(
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_dq_abs_error.png".format(
+            file_name), format="png",
+        bbox_inches='tight')
+    plt.show()
+
+    # Plot dq and error q (Position)
+    fig2, axs2 = plt.subplots(3, 2, figsize=(16, 16))
+    fig2.suptitle('Joint Positions: Absolute Error Measured vs Simulated', fontsize=16)
+    for i in range(6):
+        ax = axs2[i // 2, i % 2]
+        ax.plot(closest_t_q, abs(q_sim[:, i] - q[:, i]), '-sr')
+        ax.set_title(f'Joint {i + 1}')
+        ax.set_xlabel('Time step')
+        ax.set_ylabel('$|q_{\t{sim}} - q_{\t{measured}}|$')
+        ax.grid(True)
+        ax.set_ylim([0, 0.04])
+        ax.legend()
+    plt.savefig(
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_q_abs_error.png".format(
+            file_name), format="png",
+        bbox_inches='tight')
     plt.show()
 
 
     return q, dq, q_sim, dq_sim
 
-def GP_mismatch_learning():
-    file_names = ["SAC_1", "SAC_2", "SAC_3"]
-    # file_names = ["SAC_1", "SAC_2", "SAC_3", "PIonly_1", "PIonly_2", "PIonly_3"]
-    base_path_extracted_data = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/"
-    plot_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/trainOnSAC1and2and3_testOnSAC3_trackingPhaseOnly/"
+def GP_mismatch_learning(file_names, base_path_extracted_data, plot_dir):
 
     q_list = []
     dq_list = []
@@ -430,9 +460,8 @@ def GP_mismatch_learning():
         # Let's say you have data from 3 iterations
         # q.shape = (3, T, DOF), assuming DOF = 1 for simplicity here
 
-        # Use 2 iterations for training, 1 for test
         train_ids = [0, 1, 2]
-        test_id = 2
+        test_id = 3
 
         # Concatenate across time
         X_train = np.concatenate([q_sim[train_ids], dq_sim[train_ids]], axis=-1).reshape(-1, 2)
@@ -480,6 +509,7 @@ def GP_mismatch_learning():
 
         def train_gp(train_x, train_y, noise_covar=None):
             likelihood = gpytorch.likelihoods.GaussianLikelihood()
+            likelihood.noise = torch.tensor(0.05)
             if noise_covar is not None:
                 likelihood.noise_covar.noise = torch.tensor(noise_covar)
             model = ExactGPModel(train_x, train_y, likelihood)
@@ -487,14 +517,14 @@ def GP_mismatch_learning():
             model.train()
             likelihood.train()
 
-            optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
             mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
 
             training_iter = 100
             losses = []
             for i in range(training_iter):
                 optimizer.zero_grad()
-                with gpytorch.settings.cholesky_jitter(1e-2):  # Try 1e-2 or even 1e-1
+                with gpytorch.settings.cholesky_jitter(1e-1):  # Try 1e-2 or even 1e-1
                     output = model(train_x)
                     loss = -mll(output, train_y)
                 # output = model(train_x)
@@ -640,26 +670,31 @@ def GP_mismatch_learning():
 
 
 if __name__ == '__main__':
-    # # file_names = ["SAC_1", "SAC_2", "SAC_3","PIonly_1", "PIonly_2", "PIonly_3"]
-    # # # file_names = ["SAC_1", "SAC_2", "SAC_3"]
-    # # # file_names = ["PIonly_1", "PIonly_2", "PIonly_3"]
-    # # # file_name = "PIonly_1"
-    # # for file_name in file_names:
-    # #     dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, save=True)
-    # #
-    # #     if file_name[0:3]=="SAC":
-    # #         q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=False)
-    # #     elif file_name[0:6]=="PIonly":
-    # #         q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=True)
-    # #
-    # #
-    # #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/{}_q.npy".format(file_name),q)
-    # #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/{}_dq.npy".format(file_name),dq)
-    # #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/{}_q_sim.npy".format(file_name),q_sim)
-    # #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/{}_dq_sim.npy".format(file_name),dq_sim)
+    # file_names = ["SAC_3", "SAC_4", "SAC_5"]
+    # for file_name in file_names:
+    #     bag_path = '/home/mahdi/bagfiles/experiments_HW284/'
+    #     dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name,bag_path, save=True)
     #
+    #     if file_name[0:3]=="SAC":
+    #         q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=False)
+    #     elif file_name[0:6]=="PIonly":
+    #         q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=True)
     #
-    # GP_mismatch_learning()
+    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_q.npy".format(file_name),q)
+    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_dq.npy".format(file_name),dq)
+    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_q_sim.npy".format(file_name),q_sim)
+    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_dq_sim.npy".format(file_name),dq_sim)
+
+
+    ####################################################################################################################
+    file_names = ["SAC_1", "SAC_3", "SAC_4", "SAC_5"]
+    # file_names = ["SAC_1", "SAC_2", "SAC_3", "PIonly_1", "PIonly_2", "PIonly_3"]
+    base_path_extracted_data = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/"
+    plot_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/trainOnSAC_1_3_4_testOnSAC_5_trackingPhaseOnly/"
+    GP_mismatch_learning(file_names, base_path_extracted_data, plot_dir)
+
+
+    ####################################################################################################################
     # Path to your bag file
     bag_path = '/home/mahdi/bagfiles/experiments_HW274/'
     # plot real system tracking errors

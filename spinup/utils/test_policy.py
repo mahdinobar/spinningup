@@ -143,6 +143,16 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True, 
         ep_len += 1
 
         if d or (ep_len == max_ep_len):
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/q.npy",
+            #         env.env.plot_data_buffer[:, :6])
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/dq.npy",
+            #         env.env.plot_data_buffer[:, 6:12])
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/rd.npy",
+            #         env.env.plot_data_buffer[:, 12:15])
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/drd.npy",
+            #         env.env.plot_data_buffer[:, 15:18])
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/r.npy",
+            #         env.env.plot_data_buffer[:, 18:21])
             if "Fep" in output_dir:
                 env.render(output_dir)
             if "Tworr" in output_dir:
