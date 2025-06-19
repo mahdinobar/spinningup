@@ -9,9 +9,9 @@ from spinup.algos.pytorch.sac.sac import load_checkpoint
 from spinup.utils.test_policy import load_policy_and_env, run_policy
 import os
 
-TRAIN=0
+TRAIN=1
 env_fn = lambda: gym.make('Fep-v0')
-exp_name = "Fep_HW_303_cont"
+exp_name = "Fep_HW_304"
 exp_name_checkpoint = "Fep_HW_301"
 Euler_server=False
 XPS_laptop=True
@@ -28,7 +28,7 @@ if __name__ == '__main__':
             os.makedirs(output_dir)
         logger_kwargs = dict(output_dir=output_dir, exp_name=exp_name)
         # to save checkpoint sac
-        sac(env_fn, ac_kwargs={}, seed=0, steps_per_epoch=136, epochs=3000, replay_size=1360000, gamma=0.99, polyak=0.995,
+        sac(env_fn, ac_kwargs={}, seed=0, steps_per_epoch=136, epochs=4000, replay_size=1360000, gamma=0.99, polyak=0.995,
             lr=0.001, alpha_init=0.1, batch_size=136, start_steps=13600, update_after=13600, update_every=136, num_test_episodes=2,
             max_ep_len=np.inf, logger_kwargs=logger_kwargs, save_freq=1, initial_actions="random", save_buffer=True, sample_mode = 1, automatic_entropy_tuning=True, save_checkpoint_switch=True)
 

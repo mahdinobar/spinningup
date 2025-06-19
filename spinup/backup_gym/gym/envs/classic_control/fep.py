@@ -74,10 +74,9 @@ arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/
 # pb.setTimeStep(timeStep=dt_pb_sim, physicsClientId=client_auxilary)
 # # # Set gravity
 # pb.setGravity(0, 0, -9.81, physicsClientId=client_auxilary)
+import os
 
-arm_biased_kinematics = pb.loadURDF(
-    "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc_biased_1.urdf",
-    useFixedBase=True, physicsClientId=physics_client)
+arm_biased_kinematics = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc_biased_3.urdf",useFixedBase=True, physicsClientId=physics_client)
 # arm_biased_kinematics = pb.loadURDF(
 #     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics_3.urdf",
 #     useFixedBase=True)
@@ -146,8 +145,8 @@ Robotic Manipulation" by Murry et al.
         self.reward_eta_v = 0
         self.reward_eta_ddqc = 0
         # TODO: User defined linear position gain
-        self.K_p = 0.1
-        self.K_i = 0.01
+        self.K_p = 1
+        self.K_i = 0.1
         self.K_d = 0
         self.korque_noise_max = 0.  # TODO
         self.viewer = None
@@ -384,7 +383,8 @@ Robotic Manipulation" by Murry et al.
                                                                          list(LinkState[2]),
                                                                          list(np.append(q_t[:6], [0, 0, 0])),
                                                                          list(np.append(dq_t[:6], [0, 0, 0])),
-                                                                         list(np.zeros(9)), physicsClientId=physics_client)
+                                                                         list(np.zeros(9)),
+                                                                         physicsClientId=physics_client)
 
                 J_t = np.asarray(linearJacobian)[:, :6]
                 Jpinv_t = self.pseudoInverseMat(J_t, ld=0.01)
@@ -425,9 +425,9 @@ Robotic Manipulation" by Murry et al.
                 if k_startup > 5000:
                     print("took too long for startup phase! Repeat the reset.")
                     restart_outer = True
-                    break #exit the inner while loop
-            if restart_outer==True:
-                continue #restart the reset
+                    break  # exit the inner while loop
+            if restart_outer == True:
+                continue  # restart the reset
             else:
                 break
 
@@ -619,9 +619,9 @@ Robotic Manipulation" by Murry et al.
             x_camera[i + 1] = x_camera[i] + self.vxd * dt_camera[i + 1]  # [m]
             y_camera[i + 1] = y_camera[i] + self.vyd * dt_camera[i + 1]  # [m]
             z_camera[i + 1] = z_camera[i] + self.vzd * dt_camera[i + 1]  # [m]
-        x_camera = x_camera + np.random.normal(loc=0.0, scale=0.0005, size=137) # [m]
+        x_camera = x_camera + np.random.normal(loc=0.0, scale=0.0005, size=137)  # [m]
         y_camera = y_camera + np.random.normal(loc=0.0, scale=0.001, size=137)  # [m]
-        z_camera = z_camera + np.random.normal(loc=0.0, scale=0.0005, size=137) # [m]
+        z_camera = z_camera + np.random.normal(loc=0.0, scale=0.0005, size=137)  # [m]
         X_camera = np.array([x_camera, y_camera, z_camera])
 
         # create a Kalman filter object
@@ -705,10 +705,56 @@ Robotic Manipulation" by Murry et al.
                        0,
                        0,
                        0]
+        # plot_data_t = [q_t[0],
+        #                q_t[1],
+        #                q_t[2],
+        #                q_t[3],
+        #                q_t[4],
+        #                q_t[5],
+        #                dq_t[0],
+        #                dq_t[1],
+        #                dq_t[2],
+        #                dq_t[3],
+        #                dq_t[4],
+        #                dq_t[5],
+        #                rd_t[0],
+        #                rd_t[1],
+        #                rd_t[2],
+        #                vd_t[0],
+        #                vd_t[1],
+        #                vd_t[2],
+        #                r_hat_t[0],
+        #                r_hat_t[1],
+        #                r_hat_t[2],
+        #                v_hat_t[0],
+        #                v_hat_t[1],
+        #                v_hat_t[2],
+        #                dqc_t_PID[0],
+        #                dqc_t_PID[1],
+        #                dqc_t_PID[2],
+        #                dqc_t_PID[3],
+        #                dqc_t_PID[4],
+        #                dqc_t_PID[5],
+        #                0,
+        #                0,
+        #                0,
+        #                tau_t[0],
+        #                tau_t[1],
+        #                tau_t[2],
+        #                tau_t[3],
+        #                tau_t[4],
+        #                tau_t[5],
+        #                0,
+        #                0,
+        #                0,
+        #                0,
+        #                0,
+        #                0]
         self.plot_data_buffer = plot_data_t
         return self.state
 
     def step(self, a):
+        print("0")
         # dqc_t_PID = self.state[21:27]
         # ATTENTION: here apply SAC action
         dqc_t = self.dqc_PID + a
@@ -727,7 +773,7 @@ Robotic Manipulation" by Murry et al.
         for _ in range(24):
             # default timestep is 1/240 second
             pb.stepSimulation(physicsClientId=physics_client)
-
+        print("1")
         # update time index
         self.k += 1  # Attention doublecheck
         rd_tp1 = np.array(
@@ -816,7 +862,7 @@ Robotic Manipulation" by Murry et al.
         # reward_ddqc_t = self.f_logistic(error_ddqc_t, self.lddqc)
         # reward_t = self.reward_eta_p * reward_p_t + self.reward_eta_v * reward_v_t + self.reward_eta_ddqc * reward_ddqc_t
         reward_t = self.reward_eta_p * reward_p_t  # + self.reward_eta_v * reward_v_t + self.reward_eta_ddqc * reward_ddqc_t
-
+        print("2")
         # Attention: use biased kinematics model for jacobian calculation
         [linearJacobian_tp1, angularJacobian_tp1] = pb.calculateJacobian(arm_biased_kinematics,
                                                                          10,
@@ -827,7 +873,7 @@ Robotic Manipulation" by Murry et al.
                                                                          list(np.append(self.dq[-1, :], [0, 0, 0])),
                                                                          list(np.zeros(9)),
                                                                          physicsClientId=physics_client)
-
+        print("3")
         [linearJacobian_TRUE_tp1, angularJacobian_TRUE_tp1] = pb.calculateJacobian(arm,
                                                                                    10,
                                                                                    list(LinkState_tp1[2]),
@@ -837,6 +883,7 @@ Robotic Manipulation" by Murry et al.
                                                                                                   [0, 0, 0])),
                                                                                    list(np.zeros(9)),
                                                                                    physicsClientId=physics_client)
+        print("4")
         J_tp1 = np.asarray(linearJacobian_tp1)[:, :6]
         Jpinv_tp1 = self.pseudoInverseMat(J_tp1, ld=0.01)
         J_tp1_TRUE = np.asarray(linearJacobian_TRUE_tp1)[:, :6]
@@ -921,10 +968,56 @@ Robotic Manipulation" by Murry et al.
                        a[3],
                        a[4],
                        a[5]]
+        # plot_data_t = [q_tp1[0],
+        #                q_tp1[1],
+        #                q_tp1[2],
+        #                q_tp1[3],
+        #                q_tp1[4],
+        #                q_tp1[5],
+        #                dq_tp1[0],
+        #                dq_tp1[1],
+        #                dq_tp1[2],
+        #                dq_tp1[3],
+        #                dq_tp1[4],
+        #                dq_tp1[5],
+        #                rd_tp1[0],
+        #                rd_tp1[1],
+        #                rd_tp1[2],
+        #                vd_tp1[0],
+        #                vd_tp1[1],
+        #                vd_tp1[2],
+        #                r_hat_tp1[0],
+        #                r_hat_tp1[1],
+        #                r_hat_tp1[2],
+        #                v_hat_tp1[0],
+        #                v_hat_tp1[1],
+        #                v_hat_tp1[2],
+        #                dqc_t[0],
+        #                dqc_t[1],
+        #                dqc_t[2],
+        #                dqc_t[3],
+        #                dqc_t[4],
+        #                dqc_t[5],
+        #                self.reward_eta_p * reward_p_t,
+        #                0,
+        #                0,
+        #                tau_tp1[0],
+        #                tau_tp1[1],
+        #                tau_tp1[2],
+        #                tau_tp1[3],
+        #                tau_tp1[4],
+        #                tau_tp1[5],
+        #                reward_px_t,
+        #                reward_py_t,
+        #                reward_pz_t,
+        #                rd_tp1_error[0],
+        #                rd_tp1_error[1],
+        #                rd_tp1_error[2]]
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
         # # # # TODO: so dirty code: uncomment when NOSAC for plots -- you need to take care of which random values you call by break points after first done in sac.py ... and cmment a too ...
         # plot_data_buffer_no_SAC=self.plot_data_buffer
-        # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_284/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
+        # # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_301_cont/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
+        # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
         # given action it returns 4-tuple (observation, reward, done, info)
         return (obs, reward_t, terminal, {})
 
@@ -1029,12 +1122,78 @@ Robotic Manipulation" by Murry et al.
         # np.save(
         #     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_" + str(
         #         self.n) + ".npy", self.plot_data_buffer)
+
         # render_test_buffer=False
         if render_test_buffer == True:
             # # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
             plot_data_buffer_no_SAC = np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_284/plot_data_buffer_no_SAC_correctKF.npy")
-            plots_PIonly = True
+                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_301_cont/plot_data_buffer_no_SAC.npy")
+            # plot_data_buffer_no_SAC = np.load(
+            #     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/plot_data_buffer_no_SAC.npy")
+            if True:
+                fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(8, 14))
+                plt.rcParams['font.family'] = 'Serif'
+                # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                #              abs(plot_data_buffer_no_SAC[:, 0] - plot_data_buffer_no_SAC[:, 3]) * 1000, '-ob',
+                #              label='without SAC')
+                axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                             abs(self.plot_data_buffer[:, 12] - self.plot_data_buffer[:, 18]) * 1000, '-ob',
+                             label='PI only')
+                # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(self.plot_data_buffer[:, 30]) * 1000, 'r:',
+                #              label='error bound with SAC')
+                # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(plot_data_buffer_no_SAC[:, 30]) * 1000, 'b:',
+                #              label='error bound without SAC')
+                axs3[0].set_xlabel("t [ms]")
+                axs3[0].set_ylabel("|x-xd| [mm]")
+                axs3[0].set_ylim([0, 12])
+                axs3[0].legend(loc="upper right")
+                # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                #              abs(plot_data_buffer_no_SAC[:, 1] - plot_data_buffer_no_SAC[:, 4]) * 1000, '-ob',
+                #              label='without SAC')
+                axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                             abs(self.plot_data_buffer[:, 13] - self.plot_data_buffer[:, 19]) * 1000, '-ob',
+                             label="PI only")
+                # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(self.plot_data_buffer[:, 31]) * 1000, 'r:',
+                #              label='error bound on with SAC')
+                # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(plot_data_buffer_no_SAC[:, 31]) * 1000, 'b:',
+                #              label='error bound on without SAC')
+                axs3[1].set_xlabel("t [ms]")
+                axs3[1].set_ylabel("|y-yd| [mm]")
+                axs3[1].set_ylim([0, 12])
+                # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                #              abs(plot_data_buffer_no_SAC[:, 2] - plot_data_buffer_no_SAC[:, 5]) * 1000, '-ob',
+                #              label='without SAC')
+                axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                             abs(self.plot_data_buffer[:, 14] - self.plot_data_buffer[:, 20]) * 1000, '-ob',
+                             label='PI only')
+                # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(self.plot_data_buffer[:, 32]) * 1000, 'r:',
+                #              label='error bound on with SAC')
+                # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(plot_data_buffer_no_SAC[:, 32]) * 1000, 'b:',
+                #              label='error bound on without SAC')
+                axs3[2].set_xlabel("t [ms]")
+                axs3[2].set_ylabel("|z-zd| [mm]")
+                axs3[2].set_ylim([0, 12])
+                # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                #              np.linalg.norm((plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
+                #                             axis=1) * 1000, '-ob', label='without SAC')
+                axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                             np.linalg.norm((self.plot_data_buffer[:, 12:15] - self.plot_data_buffer[:, 18:21]), ord=2,
+                                            axis=1) * 1000,
+                             '-ob', label='PIonly')
+                # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                #              np.linalg.norm(self.plot_data_buffer[:, 30:33], ord=2, axis=1) * 1000,
+                #              'r:', label='error bound on with SAC')
+                # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                #              np.linalg.norm(plot_data_buffer_no_SAC[:, 30:33], ord=2, axis=1) * 1000,
+                #              'b:', label='error bound on without SAC')
+                axs3[3].set_xlabel("t [ms]")
+                axs3[3].set_ylabel("||r-rd||_2 [mm]")
+                axs3[3].set_ylim([0, 12])
+                plt.savefig(
+                    "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/PI_only_error.pdf")
+                plt.show()
+
+            plots_PIonly = False
             if plots_PIonly == True:
                 fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(12, 12))
                 for ax in axs5:
@@ -1474,7 +1633,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_xlabel("t")
             axs5[2].set_ylabel("q[2]")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/test_q_02t" + str(self.n) + ".png", format="png",
+            plt.savefig(output_dir_rendering + "/test_q_02t.png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1492,7 +1651,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("q[5]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/test_q_35t" + str(self.n) + ".png", format="png",
+            plt.savefig(output_dir_rendering + "/test_q_35t.png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1510,7 +1669,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("dq[2]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/test_dq_02t" + str(self.n) + ".png", format="png",
+            plt.savefig(output_dir_rendering + "/test_dq_02t.png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1528,7 +1687,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("dq[5]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/test_dq_35t" + str(self.n) + ".png", format="png",
+            plt.savefig(output_dir_rendering + "/test_dq_35t.png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1546,7 +1705,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("dqc_PI[2]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/test_dqc_PI_02t" + str(self.n) + ".png", format="png",
+            plt.savefig(output_dir_rendering + "/test_dqc_PI_02t.png", format="png",
                         bbox_inches='tight')
             plt.show()
 
@@ -1564,7 +1723,7 @@ Robotic Manipulation" by Murry et al.
             axs5[2].set_ylabel("dqc_PI[5]")
             plt.legend()
             plt.legend()
-            plt.savefig(output_dir_rendering + "/test_dqc_PI_35t" + str(self.n) + ".png", format="png",
+            plt.savefig(output_dir_rendering + "/test_dqc_PI_35t.png", format="png",
                         bbox_inches='tight')
             plt.show()
             print("")
