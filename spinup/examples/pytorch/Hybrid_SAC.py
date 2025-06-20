@@ -11,7 +11,7 @@ import os
 
 TRAIN=0
 env_fn = lambda: gym.make('Fep-v0')
-exp_name = "Fep_HW_304"
+exp_name = "Fep_HW_305"
 exp_name_checkpoint = "Fep_HW_301"
 Euler_server=False
 XPS_laptop=True

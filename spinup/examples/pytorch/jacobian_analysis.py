@@ -57,11 +57,11 @@ urdf_path_ = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fe
 urdf_path_biased_ = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc_biased_3.urdf"
 robot_id_true = p.loadURDF(urdf_path_, useFixedBase=True)
 robot_id_biased = p.loadURDF(urdf_path_biased_, useFixedBase=True)
-q_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_q.npy")
-dq_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_dq.npy")
-rd_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_rd.npy")
-r_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_r.npy")
-drd_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_drd.npy")
+q_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_q.npy")
+dq_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_dq.npy")
+rd_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_rd.npy")
+r_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_r.npy")
+drd_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_drd.npy")
 
 
 T = 136
@@ -110,7 +110,7 @@ plt.title("Steady-State Position Error Bound Magnitude")
 plt.grid(True)
 plt.legend()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_r_ss_upper_bound.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_r_ss_upper_bound.pdf", format="pdf",
     bbox_inches='tight')
 
 # Subplots for XYZ components
@@ -134,7 +134,7 @@ axs[-1].set_xlabel("k")
 axs[0].set_title("Steady-State Position Error Vector Components")
 plt.tight_layout()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_r_ss.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_r_ss.pdf", format="pdf",
     bbox_inches='tight')
 plt.show()
 
@@ -181,7 +181,7 @@ plt.grid(True)
 plt.legend()
 plt.tight_layout()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_r_cumulative_upper_bound.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_r_cumulative_upper_bound.pdf", format="pdf",
     bbox_inches='tight')
 plt.show()
 
@@ -196,7 +196,7 @@ axs[-1].set_xlabel("k")
 axs[0].set_title("Cumulative End-Effector Position Error Components")
 plt.tight_layout()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_r_cumulative.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_r_cumulative.pdf", format="pdf",
     bbox_inches='tight')
 plt.show()
 
@@ -255,7 +255,7 @@ plt.grid(True)
 plt.legend()
 plt.tight_layout()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_v_bounds.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_v_bounds.pdf", format="pdf",
     bbox_inches='tight')
 plt.show()
 
@@ -278,16 +278,16 @@ axs[-1].set_xlabel("Timestep $k$")
 axs[0].set_title("Task-Space Velocity Error Components")
 plt.tight_layout()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_v.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_v.pdf", format="pdf",
     bbox_inches='tight')
 plt.show()
 
-np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_v_bounds.npy", e_v_bounds)
-np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_v_norms.npy", e_v_norms)
-np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_v_components.npy", e_v_components)
+np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_v_bounds.npy", e_v_bounds)
+np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_v_norms.npy", e_v_norms)
+np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_v_components.npy", e_v_components)
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-for k in range(0,136,10):
+for k in range(136):
     if k == 50:
         q = np.hstack((q_[k, :], np.zeros(3)))
         dq = np.hstack((dq_[k, :], np.zeros(3)))
@@ -350,80 +350,98 @@ for k in range(0,136,10):
         ax3.set_ylabel("Y")
         ax3.set_zlabel("Z")
         ax3.legend()
+        plt.savefig(
+            "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_3Derrors_k_{}.pdf".format(
+                str(k)), format="pdf",
+            bbox_inches='tight')
+        plt.show()
 
         # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        fig2 = plt.figure(figsize=(6, 12))
+        fig2 = plt.figure(figsize=(8, 14))
         # -----------------------------
         ax2 = fig2.add_subplot(3, 1, 1)
         circle = np.linspace(0, 2 * np.pi, 200)
         u_yz = np.vstack((np.zeros_like(circle), np.cos(circle), np.sin(circle))) / 100  # XZ plane
         deformed_yz = P @ u_yz
-        errors_yz = norm(u_yz - deformed_yz, axis=0)
-        ax2.plot(u_yz[1], u_yz[2], 'k--', label='Ideal (unit circle)')
-        ax2.plot(deformed_yz[1], deformed_yz[2], 'r-', label='Deformed')
-        sc = ax2.scatter(u_yz[1], u_yz[2], c=errors_yz, cmap='viridis', label='Error Magnitude')
-        plt.colorbar(sc, ax=ax2, label='Tracking Error')
+        errors_yz = norm(u_yz - deformed_yz, axis=0) * 1000
+        ax2.plot(u_yz[1], u_yz[2], 'k--', label='$\mathbf{u}$')
+        ax2.plot(deformed_yz[1], deformed_yz[2], color='m', linestyle='-',
+                 label='proj($\dot{\mathbf{p}}_{\t{achieved}}$,yz)')
+        sc = ax2.scatter(u_yz[1], u_yz[2], c=errors_yz, cmap='viridis')
+        plt.colorbar(sc, ax=ax2, label='Tracking Error [mm/s]')
         ax2.set_aspect('equal')
-        ax2.set_title("YZ Plane Deformation & Error (k={})".format(k))
-        ax2.set_xlabel("VY [m/s]")
-        ax2.set_ylabel("VZ [m/s]")
+        # ax2.set_title("YZ Plane Deformation & Error")
+        ax2.set_xlabel("$\mathbf{u}_y$ [m/s]")
+        ax2.set_ylabel("$\mathbf{u}_z$ [m/s]")
         ax2.grid(True)
-        ax2.quiver(0, 0, Vh[0,1]/np.linalg.norm(Vh[0,:]) / 100, Vh[0,2]/np.linalg.norm(Vh[0,:]) / 100, color='r', angles='xy', scale_units='xy', scale=1,
-                   label=f'proj(v1/|v1|,yz) (σ1={S[0]:.4f})')
-        ax2.quiver(0, 0, Vh[1,1]/np.linalg.norm(Vh[1,:]) / 100, Vh[1,2]/np.linalg.norm(Vh[1,:]) / 100, color='g', angles='xy', scale_units='xy', scale=1,
-                   label=f'proj(v2/|v2|,yz) (σ2={S[1]:.4f})')
-        ax2.quiver(0, 0, Vh[2,1]/np.linalg.norm(Vh[2,:]) / 100, Vh[2,2]/np.linalg.norm(Vh[2,:]) / 100, color='b', angles='xy', scale_units='xy', scale=1,
-                   label=f'proj(v3/|v3|,yz) (σ3={S[2]:.4f})')
-        ax2.legend(loc='upper right')
+        ax2.quiver(0, 0, Vh[0, 1] / np.linalg.norm(Vh[0, :]) / 100, Vh[0, 2] / np.linalg.norm(Vh[0, :]) / 100,
+                   color='r', angles='xy', scale_units='xy', scale=1,
+                   label=f'proj($v_1$,$yz$) ($\sigma_1$={S[0]:.3f})')
+        ax2.quiver(0, 0, Vh[1, 1] / np.linalg.norm(Vh[1, :]) / 100, Vh[1, 2] / np.linalg.norm(Vh[1, :]) / 100,
+                   color='g', angles='xy', scale_units='xy', scale=1,
+                   label=f'proj($v_2$,$yz$) ($\sigma_2$={S[1]:.3f})')
+        ax2.quiver(0, 0, Vh[2, 1] / np.linalg.norm(Vh[2, :]) / 100, Vh[2, 2] / np.linalg.norm(Vh[2, :]) / 100,
+                   color='b', angles='xy', scale_units='xy', scale=1,
+                   label=f'proj($v_3$,$yz$) ($\sigma_3$={S[2]:.3f})')
+        ax2.legend(loc='lower right')
         plt.tight_layout()
         ax3 = fig2.add_subplot(3, 1, 2)
         circle = np.linspace(0, 2 * np.pi, 200)
         u_xz = np.vstack((np.cos(circle), np.zeros_like(circle), np.sin(circle))) / 100  # XZ plane
         deformed_xz = P @ u_xz
-        errors_xz = norm(u_xz - deformed_xz, axis=0)
-        ax3.plot(u_xz[0], u_xz[2], 'k--', label='Ideal (unit circle)')
-        ax3.plot(deformed_xz[0], deformed_xz[2], 'r-', label='Deformed')
-        sc = ax3.scatter(u_xz[0], u_xz[2], c=errors_xz, cmap='viridis', label='Error Magnitude')
-        plt.colorbar(sc, ax=ax3, label='Tracking Error')
+        errors_xz = norm(u_xz - deformed_xz, axis=0) * 1000
+        ax3.plot(u_xz[0], u_xz[2], 'k--', label='$\mathbf{u}$')
+        ax3.plot(deformed_xz[0], deformed_xz[2], color='m', linestyle='-',
+                 label='proj($\dot{\mathbf{p}}_{\t{achieved}}$,xz)')
+        sc = ax3.scatter(u_xz[0], u_xz[2], c=errors_xz, cmap='viridis')
+        plt.colorbar(sc, ax=ax3, label='Tracking Error [mm/s]')
         ax3.set_aspect('equal')
-        ax3.set_title("XZ Plane Deformation & Error (k={})".format(k))
-        ax3.set_xlabel("VX [m/s]")
-        ax3.set_ylabel("VZ [m/s]")
+        # ax3.set_title("XZ Plane Deformation & Error")
+        ax3.set_xlabel("$\mathbf{u}_x$ [m/s]")
+        ax3.set_ylabel("$\mathbf{u}_z$ [m/s]")
         ax3.grid(True)
         v1_xz = Vh[0, :3]
         v2_xz = Vh[2, :3]
-        ax3.quiver(0, 0, Vh[0,0]/np.linalg.norm(Vh[0,:]) / 100, Vh[0,2]/np.linalg.norm(Vh[0,:]) / 100, color='r', angles='xy', scale_units='xy', scale=1,
-                   label=f'proj(v1/|v1|,xz) (σ1={S[0]:.4f})')
-        ax3.quiver(0, 0, Vh[1,0]/np.linalg.norm(Vh[1,:]) / 100, Vh[1,2]/np.linalg.norm(Vh[1,:]) / 100, color='g', angles='xy', scale_units='xy', scale=1,
-                   label=f'proj(v2/|v2|,xz) (σ2={S[1]:.4f})')
-        ax3.quiver(0, 0, Vh[2,0]/np.linalg.norm(Vh[2,:]) / 100, Vh[2,2]/np.linalg.norm(Vh[2,:]) / 100, color='b', angles='xy', scale_units='xy', scale=1,
-                   label=f'proj(v3/|v3|,xz) (σ3={S[2]:.4f})')
-        ax3.legend(loc='upper right')
+        ax3.quiver(0, 0, Vh[0, 0] / np.linalg.norm(Vh[0, :]) / 100, Vh[0, 2] / np.linalg.norm(Vh[0, :]) / 100,
+                   color='r', angles='xy', scale_units='xy', scale=1,
+                   label=f'proj($v_1$,$xz$) ($\sigma_1$={S[0]:.3f})')
+        ax3.quiver(0, 0, Vh[1, 0] / np.linalg.norm(Vh[1, :]) /
+                   100, Vh[1, 2] / np.linalg.norm(Vh[1, :]) / 100,
+                   color='g', angles='xy', scale_units='xy', scale=1,
+                   label=f'proj($v_2$,$xz$) ($\sigma_2$={S[1]:.3f})')
+        ax3.quiver(0, 0, Vh[2, 0] / np.linalg.norm(Vh[2, :]) / 100, Vh[2, 2] / np.linalg.norm(Vh[2, :]) / 100,
+                   color='b', angles='xy', scale_units='xy', scale=1,
+                   label=f'proj($v_3$,$xz$) ($\sigma_3$={S[2]:.3f})')
+        ax3.legend(loc='lower right')
         plt.tight_layout()
         ax4 = fig2.add_subplot(3, 1, 3)
         circle = np.linspace(0, 2 * np.pi, 200)
         u_xy = np.vstack((np.cos(circle), np.sin(circle), np.zeros_like(circle))) / 100  # XY plane
         deformed_xy = P @ u_xy
-        errors_xy = norm(u_xy - deformed_xy, axis=0)
-        ax4.plot(u_xy[0], u_xy[1], 'k--', label='Ideal (unit circle)')
-        ax4.plot(deformed_xy[0], deformed_xy[1], 'r-', label='Deformed')
-        sc = ax4.scatter(u_xy[0], u_xy[1], c=errors_xy, cmap='viridis', label='Error Magnitude')
-        plt.colorbar(sc, ax=ax4, label='Tracking Error')
+        errors_xy = norm(u_xy - deformed_xy, axis=0) * 1000
+        ax4.plot(u_xy[0], u_xy[1], 'k--', label='$\mathbf{u}$')
+        ax4.plot(deformed_xy[0], deformed_xy[1], color='m', linestyle='-',
+                 label='proj($\dot{\mathbf{p}}_{\t{achieved}}$,xy)')
+        sc = ax4.scatter(u_xy[0], u_xy[1], c=errors_xy, cmap='viridis')
+        plt.colorbar(sc, ax=ax4, label='Tracking Error [mm/s]')
         ax4.set_aspect('equal')
-        ax4.set_title("XY Plane Deformation & Error (k={})".format(k))
-        ax4.set_xlabel("VX [m/s]")
-        ax4.set_ylabel("VY [m/s]")
+        # ax4.set_title("XY Plane Deformation & Error")
+        ax4.set_xlabel("$\mathbf{u}_x$ [m/s]")
+        ax4.set_ylabel("$\mathbf{u}_y$ [m/s]")
         ax4.grid(True)
-        ax4.quiver(0, 0, Vh[0,0]/np.linalg.norm(Vh[0,:]) / 100, Vh[0,1]/np.linalg.norm(Vh[0,:]) / 100, color='r', angles='xy', scale_units='xy', scale=1,
-                   label=f'proj(v1/|v1|,xy) (σ1={S[0]:.4f})')
-        ax4.quiver(0, 0, Vh[1,0]/np.linalg.norm(Vh[1,:]) / 100, Vh[1,1]/np.linalg.norm(Vh[1,:]) / 100, color='g', angles='xy', scale_units='xy', scale=1,
-                   label=f'proj(v2/|v2|,xy) (σ2={S[1]:.4f})')
-        ax4.quiver(0, 0, Vh[2,0]/np.linalg.norm(Vh[2,:]) / 100, Vh[2,1]/np.linalg.norm(Vh[2,:]) / 100, color='b', angles='xy', scale_units='xy', scale=1,
-                   label=f'proj(v3/|v3|,xy) (σ3={S[2]:.4f})')
-        ax4.legend(loc='upper right')
+        ax4.quiver(0, 0, Vh[0, 0] / np.linalg.norm(Vh[0, :]) / 100, Vh[0, 1] / np.linalg.norm(Vh[0, :]) / 100,
+                   color='r', angles='xy', scale_units='xy', scale=1,
+                   label=f'proj($v_1$,$xy$) ($\sigma_1$={S[0]:.3f})')
+        ax4.quiver(0, 0, Vh[1, 0] / np.linalg.norm(Vh[1, :]) / 100, Vh[1, 1] / np.linalg.norm(Vh[1, :]) / 100,
+                   color='g', angles='xy', scale_units='xy', scale=1,
+                   label=f'proj($v_2$,$xy$) ($\sigma_2$={S[1]:.3f})')
+        ax4.quiver(0, 0, Vh[2, 0] / np.linalg.norm(Vh[2, :]) / 100, Vh[2, 1] / np.linalg.norm(Vh[2, :]) / 100,
+                   color='b', angles='xy', scale_units='xy', scale=1,
+                   label=f'proj($v_3$, $xy$) ($\sigma_3$ = {S[2]:.3f})')
+        ax4.legend(loc='lower right')
         plt.tight_layout()
         plt.savefig(
-            "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_model_errors_k_{}.pdf".format(
+            "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_model_errors_k_{}.pdf".format(
                 str(k)), format="pdf",
             bbox_inches='tight')
         plt.show()
