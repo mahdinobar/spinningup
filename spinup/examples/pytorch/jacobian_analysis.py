@@ -57,16 +57,16 @@ urdf_path_ = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fe
 urdf_path_biased_ = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc_biased_3.urdf"
 robot_id_true = p.loadURDF(urdf_path_, useFixedBase=True)
 robot_id_biased = p.loadURDF(urdf_path_biased_, useFixedBase=True)
-q_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/q.npy")
-dq_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/dq.npy")
-rd_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/rd.npy")
-r_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/r.npy")
-drd_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/drd.npy")
+q_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_q.npy")
+dq_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_dq.npy")
+rd_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_rd.npy")
+r_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_r.npy")
+drd_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_drd.npy")
 
 
 T = 136
-K_p = 0.1 * np.eye(3)
-K_i = 0.01 * np.eye(3)
+K_p = 1 * np.eye(3)
+K_i = 0.1 * np.eye(3)
 # Store outputs
 error_bounds = []
 e_r_ss_xyz = []
@@ -110,7 +110,7 @@ plt.title("Steady-State Position Error Bound Magnitude")
 plt.grid(True)
 plt.legend()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/e_r_ss_upper_bound.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_r_ss_upper_bound.pdf", format="pdf",
     bbox_inches='tight')
 
 # Subplots for XYZ components
@@ -134,7 +134,7 @@ axs[-1].set_xlabel("k")
 axs[0].set_title("Steady-State Position Error Vector Components")
 plt.tight_layout()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/e_r_ss.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_r_ss.pdf", format="pdf",
     bbox_inches='tight')
 plt.show()
 
@@ -181,7 +181,7 @@ plt.grid(True)
 plt.legend()
 plt.tight_layout()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/e_r_cumulative_upper_bound.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_r_cumulative_upper_bound.pdf", format="pdf",
     bbox_inches='tight')
 plt.show()
 
@@ -196,7 +196,7 @@ axs[-1].set_xlabel("k")
 axs[0].set_title("Cumulative End-Effector Position Error Components")
 plt.tight_layout()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/e_r_cumulative.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_r_cumulative.pdf", format="pdf",
     bbox_inches='tight')
 plt.show()
 
@@ -255,7 +255,7 @@ plt.grid(True)
 plt.legend()
 plt.tight_layout()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/e_v_bounds.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_v_bounds.pdf", format="pdf",
     bbox_inches='tight')
 plt.show()
 
@@ -278,9 +278,13 @@ axs[-1].set_xlabel("Timestep $k$")
 axs[0].set_title("Task-Space Velocity Error Components")
 plt.tight_layout()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/e_v.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_v.pdf", format="pdf",
     bbox_inches='tight')
 plt.show()
+
+np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_v_bounds.npy", e_v_bounds)
+np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_v_norms.npy", e_v_norms)
+np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_v_components.npy", e_v_components)
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for k in range(0,136,10):
@@ -419,7 +423,7 @@ for k in range(0,136,10):
         ax4.legend(loc='upper right')
         plt.tight_layout()
         plt.savefig(
-            "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/model_errors_k_{}.pdf".format(
+            "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_model_errors_k_{}.pdf".format(
                 str(k)), format="pdf",
             bbox_inches='tight')
         plt.show()
