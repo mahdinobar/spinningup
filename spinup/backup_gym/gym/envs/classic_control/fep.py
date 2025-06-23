@@ -587,11 +587,14 @@ Robotic Manipulation" by Murry et al.
         # P0 = np.asmatrix(np.diag([1, 4, 1]))
 
         # measurement noise covariance
-        R = np.array([[0.0625e-6, 0, 0], [0, 0.0625e-6, 0], [0, 0, 0.0625e-6]])  # [m^2]
+        # R = np.array([[0.0625e-6, 0, 0], [0, 0.0625e-6, 0], [0, 0, 0.0625e-6]])  # [m^2]
+        R = np.array([[0.25e-6, 0, 0], [0, 36e-6, 0], [0, 0, 0.01e-6]])  # [m^2]
         # process uncertainty covariance
-        Q = np.array([[0.01e-6, 0, 0], [0, 0.04e-6, 0], [0, 0, 0.02e-6]])  # #[m^2]
+        # Q = np.array([[0.01e-6, 0, 0], [0, 0.04e-6, 0], [0, 0, 0.02e-6]])  # #[m^2]
+        Q = np.array([[0.01e-6, 0, 0], [0, 0.04e-6, 0], [0, 0, 0.04e-6]])  # #[m^2]
         # initial covariance matrix
-        P0 = np.asmatrix(np.diag([0.04e-6, 0.09e-6, 0.04e-6]))
+        # P0 = np.asmatrix(np.diag([0.04e-6, 0.09e-6, 0.04e-6]))
+        P0 = np.asmatrix(np.diag([0.01e-6, 0.04e-6, 0.01e-6]))
 
         # Generate time stamp randomness of camera measurements
         time_randomness = np.random.normal(0, 32, 137).astype(int)
@@ -619,9 +622,9 @@ Robotic Manipulation" by Murry et al.
             x_camera[i + 1] = x_camera[i] + self.vxd * dt_camera[i + 1]  # [m]
             y_camera[i + 1] = y_camera[i] + self.vyd * dt_camera[i + 1]  # [m]
             z_camera[i + 1] = z_camera[i] + self.vzd * dt_camera[i + 1]  # [m]
-        x_camera = x_camera + np.random.normal(loc=0.0, scale=0.0005, size=137)  # [m]
-        y_camera = y_camera + np.random.normal(loc=0.0, scale=0.001, size=137)  # [m]
-        z_camera = z_camera + np.random.normal(loc=0.0, scale=0.0005, size=137)  # [m]
+        x_camera = x_camera + np.random.normal(loc=0.0, scale=0.0006, size=137) #+ np.random.normal(loc=0.0, scale=0.0005, size=137)  # [m]
+        y_camera = y_camera + np.random.normal(loc=0.0, scale=0.006, size=137) #+ np.random.normal(loc=0.0, scale=0.001, size=137)  # [m]
+        z_camera = z_camera + np.random.normal(loc=0.0, scale=0.0004, size=137) #+ np.random.normal(loc=0.0, scale=0.0005, size=137)  # [m]
         X_camera = np.array([x_camera, y_camera, z_camera])
 
         # create a Kalman filter object
@@ -1016,7 +1019,7 @@ Robotic Manipulation" by Murry et al.
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
         # # # # TODO: so dirty code: uncomment when NOSAC for plots -- you need to take care of which random values you call by break points after first done in sac.py ... and cmment a too ...
         # plot_data_buffer_no_SAC=self.plot_data_buffer
-        # # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_301_cont/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
+        # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
         # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
         # given action it returns 4-tuple (observation, reward, done, info)
         return (obs, reward_t, terminal, {})
@@ -1029,108 +1032,14 @@ Robotic Manipulation" by Murry et al.
         render_video = False  # TODO
         render_test_buffer = True
         render_training_buffer = False
-        if render_video == True:
-            # pb.disconnect(physics_client)
-            # render settings
-            # renderer = pb.ER_TINY_RENDERER  # p.ER_BULLET_HARDWARE_OPENGL
-            # _width = 224
-            # _height = 224
-            # _cam_dist = 1.3
-            # _cam_yaw = 15
-            # _cam_pitch = -30
-            # _cam_roll = 0
-            # camera_target_pos = [0.2, 0, 0.]
-            # _screen_width = 3840  # 1920
-            # _screen_height = 2160  # 1080
-            # physics_client_rendering = pb.connect(pb.GUI,
-            #                                       options='--mp4fps=10 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d' % (
-            #                                           _screen_width, _screen_height))
-            #
-            # dt = 1 / 10  # sec
-            # pb.setTimeStep(timeStep=dt, physicsClientId=physics_client_rendering)
-            # # physics_client = p.connect(p.GUI,options="--mp4fps=3 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d" % (screen_width, screen_height))
-            # # # Set gravity
-            # pb.setGravity(0, 0, -9.81, physicsClientId=physics_client_rendering)
-            # Load URDFs
-            # Load robot, target object and plane urdf
-            # /cluster/home/mnobar/code/spinningup
-            pb.setAdditionalSearchPath(pybullet_data.getDataPath())
-            pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
-                                 output_dir_rendering + "/simulation.mp4")  # added by Pierre
-            target_object = pb.loadURDF(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
-                useFixedBase=True, physicsClientId=physics_client)
-            conveyor_object = pb.loadURDF(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
-                useFixedBase=True, physicsClientId=physics_client)
-            plane = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
-                                useFixedBase=True, physicsClientId=physics_client)
-            # Initialise debug camera angle
-            pb.resetDebugVisualizerCamera(
-                cameraDistance=1.2,
-                cameraYaw=5,
-                cameraPitch=-30,
-                cameraTargetPosition=camera_target_pos,
-                physicsClientId=physics_client_rendering)
-            # pb.resetDebugVisualizerCamera(
-            #     cameraDistance=_cam_dist,
-            #     cameraYaw=_cam_yaw,
-            #     cameraPitch=_cam_pitch,
-            #     cameraTargetPosition=camera_target_pos,
-            #     physicsClientId=physics_client_rendering)
-            t = 0
-            rd_t = np.array([self.xd[t], self.yd[t], self.zd[t]])
-            vd_t = np.array([self.vxd[t], self.vyd[t], self.vzd[t]]) * 1000  # [m/s]
-            # Reset robot at the origin and move the target object to the goal position and orientation
-            pb.resetBasePositionAndOrientation(
-                arm, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]), physicsClientId=physics_client)
-            pb.resetBasePositionAndOrientation(
-                target_object, rd_t + [0, 0, -0.07], pb.getQuaternionFromEuler(
-                    np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])),
-                physicsClientId=physics_client)  # orient just for rendering
-            # set conveyer pose and orient
-            pb.resetBasePositionAndOrientation(
-                conveyor_object,
-                np.array([self.xd_init, self.yd_init, self.zd_init]) + np.array([-0.002, -0.18, -0.15]),
-                pb.getQuaternionFromEuler([0, 0, np.pi / 2 - 0.244978663]), physicsClientId=physics_client)
-            # Reset joint at initial angles
-            for i in range(6):
-                pb.resetJointState(arm, i, self.q_init[i], physicsClientId=physics_client)
-            # In Pybullet, gripper halves are controlled separately+we also deactivated the 7th joint too
-            for j in range(6, 9):
-                pb.resetJointState(arm, j, 0, physicsClientId=physics_client)
-            time.sleep(1)
-
-            for t in range(1, self.MAX_TIMESTEPS):
-                rd_t = np.array([self.xd[t], self.yd[t], self.zd[t]])
-                pb.resetBasePositionAndOrientation(
-                    target_object, rd_t + [0, 0, -0.07], pb.getQuaternionFromEuler(
-                        np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])), physicsClientId=physics_client)
-                dqc_t = self.plot_data_buffer[t, 12:18]
-                joint_velocities = list(dqc_t)
-                pb.setJointMotorControlArray(
-                    arm,
-                    [0, 1, 2, 3, 4, 5],
-                    controlMode=pb.VELOCITY_CONTROL,
-                    targetVelocities=joint_velocities,
-                    forces=[87, 87, 87, 87, 12, 12],
-                    physicsClientId=physics_client
-                )
-                # default timestep is 1/240 second
-                pb.stepSimulation(physicsClientId=physics_client)
-                time.sleep(0.01)
-        # np.save(
-        #     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_" + str(
-        #         self.n) + ".npy", self.plot_data_buffer)
-
         # render_test_buffer=False
         if render_test_buffer == True:
             # # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
             plot_data_buffer_no_SAC = np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_301_cont/plot_data_buffer_no_SAC.npy")
+                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/plot_data_buffer_no_SAC.npy")
             # plot_data_buffer_no_SAC = np.load(
             #     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/plot_data_buffer_no_SAC.npy")
-            if True:
+            if False:
                 fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(8, 14))
                 plt.rcParams['font.family'] = 'Serif'
                 # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100,
@@ -1193,67 +1102,67 @@ Robotic Manipulation" by Murry et al.
                     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/PI_only_error.pdf")
                 plt.show()
 
-            plots_PIonly = False
-            if plots_PIonly == True:
-                fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(12, 12))
-                for ax in axs5:
-                    ax.grid(True)
-                axs5[0].plot(plot_data_buffer_no_SAC[:, 9], '-ob')
-                axs5[0].set_xlabel("t")
-                axs5[0].set_ylabel("vd_tp1[0] [m/s]")
-                plt.legend()
-                axs5[1].plot(plot_data_buffer_no_SAC[:, 10], '-ob')
-                axs5[1].set_xlabel("t")
-                axs5[1].set_ylabel("vd_tp1[1] [m/s]")
-                plt.legend()
-                axs5[2].plot(plot_data_buffer_no_SAC[:, 11], '-ob')
-                axs5[2].set_xlabel("t")
-                axs5[2].set_ylabel("vd_tp1[2] [m/s]")
-                plt.legend()
-                plt.legend()
-                plt.savefig(output_dir_rendering + "/PIonly_vd_tp1" + ".png", format="png",
-                            bbox_inches='tight')
-                plt.show()
+                plots_PIonly = False
+                if plots_PIonly == True:
+                    fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(12, 12))
+                    for ax in axs5:
+                        ax.grid(True)
+                    axs5[0].plot(plot_data_buffer_no_SAC[:, 9], '-ob')
+                    axs5[0].set_xlabel("t")
+                    axs5[0].set_ylabel("vd_tp1[0] [m/s]")
+                    plt.legend()
+                    axs5[1].plot(plot_data_buffer_no_SAC[:, 10], '-ob')
+                    axs5[1].set_xlabel("t")
+                    axs5[1].set_ylabel("vd_tp1[1] [m/s]")
+                    plt.legend()
+                    axs5[2].plot(plot_data_buffer_no_SAC[:, 11], '-ob')
+                    axs5[2].set_xlabel("t")
+                    axs5[2].set_ylabel("vd_tp1[2] [m/s]")
+                    plt.legend()
+                    plt.legend()
+                    plt.savefig(output_dir_rendering + "/PIonly_vd_tp1" + ".png", format="png",
+                                bbox_inches='tight')
+                    plt.show()
 
-                fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(12, 12))
-                for ax in axs5:
-                    ax.grid(True)
-                axs5[0].plot(plot_data_buffer_no_SAC[:, 3] - plot_data_buffer_no_SAC[:, 0], '-ob')
-                axs5[0].set_xlabel("t")
-                axs5[0].set_ylabel("rd_tp1[0]-r_hat_tp1[0] [m]")
-                plt.legend()
-                axs5[1].plot(plot_data_buffer_no_SAC[:, 4] - plot_data_buffer_no_SAC[:, 1], '-ob')
-                axs5[1].set_xlabel("t")
-                axs5[1].set_ylabel("rd_tp1[1]-r_hat_tp1[1] [m]")
-                plt.legend()
-                axs5[2].plot(plot_data_buffer_no_SAC[:, 5] - plot_data_buffer_no_SAC[:, 2], '-ob')
-                axs5[2].set_xlabel("t")
-                axs5[2].set_ylabel("rd_tp1[2]-r_hat_tp1[2] [m]")
-                plt.legend()
-                plt.legend()
-                plt.savefig(output_dir_rendering + "/PIonly_rd_tp1_minus_r_hat_tp1" + ".png", format="png",
-                            bbox_inches='tight')
-                plt.show()
+                    fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(12, 12))
+                    for ax in axs5:
+                        ax.grid(True)
+                    axs5[0].plot(plot_data_buffer_no_SAC[:, 3] - plot_data_buffer_no_SAC[:, 0], '-ob')
+                    axs5[0].set_xlabel("t")
+                    axs5[0].set_ylabel("rd_tp1[0]-r_hat_tp1[0] [m]")
+                    plt.legend()
+                    axs5[1].plot(plot_data_buffer_no_SAC[:, 4] - plot_data_buffer_no_SAC[:, 1], '-ob')
+                    axs5[1].set_xlabel("t")
+                    axs5[1].set_ylabel("rd_tp1[1]-r_hat_tp1[1] [m]")
+                    plt.legend()
+                    axs5[2].plot(plot_data_buffer_no_SAC[:, 5] - plot_data_buffer_no_SAC[:, 2], '-ob')
+                    axs5[2].set_xlabel("t")
+                    axs5[2].set_ylabel("rd_tp1[2]-r_hat_tp1[2] [m]")
+                    plt.legend()
+                    plt.legend()
+                    plt.savefig(output_dir_rendering + "/PIonly_rd_tp1_minus_r_hat_tp1" + ".png", format="png",
+                                bbox_inches='tight')
+                    plt.show()
 
-                fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(12, 12))
-                for ax in axs5:
-                    ax.grid(True)
-                axs5[0].plot(plot_data_buffer_no_SAC[:, 3], '-ob')
-                axs5[0].set_xlabel("t")
-                axs5[0].set_ylabel("rd_tp1[0] [m]")
-                plt.legend()
-                axs5[1].plot(plot_data_buffer_no_SAC[:, 4], '-ob')
-                axs5[1].set_xlabel("t")
-                axs5[1].set_ylabel("rd_tp1[1] [m]")
-                plt.legend()
-                axs5[2].plot(plot_data_buffer_no_SAC[:, 5], '-ob')
-                axs5[2].set_xlabel("t")
-                axs5[2].set_ylabel("rd_tp1[2] [m]")
-                plt.legend()
-                plt.legend()
-                plt.savefig(output_dir_rendering + "/PIonly_rd_tp1" + ".png", format="png",
-                            bbox_inches='tight')
-                plt.show()
+                    fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(12, 12))
+                    for ax in axs5:
+                        ax.grid(True)
+                    axs5[0].plot(plot_data_buffer_no_SAC[:, 3], '-ob')
+                    axs5[0].set_xlabel("t")
+                    axs5[0].set_ylabel("rd_tp1[0] [m]")
+                    plt.legend()
+                    axs5[1].plot(plot_data_buffer_no_SAC[:, 4], '-ob')
+                    axs5[1].set_xlabel("t")
+                    axs5[1].set_ylabel("rd_tp1[1] [m]")
+                    plt.legend()
+                    axs5[2].plot(plot_data_buffer_no_SAC[:, 5], '-ob')
+                    axs5[2].set_xlabel("t")
+                    axs5[2].set_ylabel("rd_tp1[2] [m]")
+                    plt.legend()
+                    plt.legend()
+                    plt.savefig(output_dir_rendering + "/PIonly_rd_tp1" + ".png", format="png",
+                                bbox_inches='tight')
+                    plt.show()
 
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(8, 12))
             plt.rcParams['font.family'] = 'Serif'
@@ -1299,76 +1208,202 @@ Robotic Manipulation" by Murry et al.
                         bbox_inches='tight')
             plt.show()
 
-            # fig5, axs5 = plt.subplots(1, 1, sharex=False, sharey=False, figsize=(8, 6))
-            # t = np.linspace(0, 135, 136) / 10
-            # axs5.plot(t, self.plot_data_buffer[:, 1] * 1000, '-ob', MarkerSize=3, label="r_hat_tp1[1], [mm]")
-            # axs5.plot(t, self.plot_data_buffer[:, 4] * 1000, '-og', MarkerSize=3, label="rd_tp1[1], [mm]")
-            # axs5.set_xlabel("t")
-            # axs5.set_ylabel("y")
-            # plt.legend()
-            # plt.grid()
-            # axs5.set_xlim([0, 1.8])
-            # axs5.set_ylim([-250, -180])
-            # plt.savefig(output_dir_rendering + "/tmp_checcking_KF" + str(self.n) + ".png", format="png",
-            #             bbox_inches='tight')
-            # plt.show()
-
-            fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(8, 14))
-            plt.rcParams['font.family'] = 'Serif'
+            e_v_bounds=np.load(
+                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_v_bounds.npy"
+                )
+            e_v_norms=np.load(
+                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_v_norms.npy"
+                )
+            e_v_components=np.load(
+                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/SAC_e_v_components.npy"
+                )
+            e_v_bounds_PIonly=np.load(
+                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_v_bounds.npy"
+                )
+            e_v_norms_PIonly=np.load(
+                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_v_norms.npy"
+                )
+            e_v_components_PIonly=np.load(
+                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_v_components.npy"
+                )
+            fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 12))
+            plt.rcParams.update({
+                'font.size': 14,  # overall font size
+                'axes.labelsize': 16,  # x and y axis labels
+                'xtick.labelsize': 12,  # x-axis tick labels
+                'ytick.labelsize': 12,  # y-axis tick labels
+                'legend.fontsize': 12,  # legend text
+                'font.family': 'Serif'
+            })
             axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                         abs(plot_data_buffer_no_SAC[:, 0] - plot_data_buffer_no_SAC[:, 3]) * 1000, '-ob',
+                         abs(plot_data_buffer_no_SAC[:, 0] - plot_data_buffer_no_SAC[:, 3]) * 1000, '-ob', markersize=3,
                          label='without SAC')
             axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                         abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, '-or', label='with SAC')
-            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(self.plot_data_buffer[:, 30]) * 1000, 'r:',
-                         label='error bound with SAC')
-            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(plot_data_buffer_no_SAC[:, 30]) * 1000, 'b:',
-                         label='error bound without SAC')
-            axs3[0].set_xlabel("t [ms]")
-            axs3[0].set_ylabel("|x-xd| [mm]")
-            axs3[0].set_ylim([0, 12])
+                         abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, '-om', markersize=3,
+                         label='with SAC')
+            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         abs(e_v_components[:, 0]) * 1000 * 0.1,
+                         'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{SAC}}(t))[0]\||.\Delta t$")
+            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         abs(e_v_components_PIonly[:, 0]) * 1000 * 0.1,
+                         'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{PI}}(t))[0]\||.\Delta t$")
+            # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(self.plot_data_buffer[:, 30]) * 1000, 'r:',
+            #              label='error bound with SAC')
+            # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(plot_data_buffer_no_SAC[:, 30]) * 1000, 'b:',
+            #              label='error bound without SAC')
+            # axs3[0].set_xlabel("t [ms]")
+            axs3[0].set_ylabel("$|x-xd|$ [mm]")
+            axs3[0].set_ylim([0, 9])
             axs3[0].legend(loc="upper right")
             axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                         abs(plot_data_buffer_no_SAC[:, 1] - plot_data_buffer_no_SAC[:, 4]) * 1000, '-ob',
+                         abs(plot_data_buffer_no_SAC[:, 1] - plot_data_buffer_no_SAC[:, 4]) * 1000, '-ob', markersize=3,
                          label='without SAC')
             axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                         abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, '-or', label='with SAC')
-            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(self.plot_data_buffer[:, 31]) * 1000, 'r:',
-                         label='error bound on with SAC')
-            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(plot_data_buffer_no_SAC[:, 31]) * 1000, 'b:',
-                         label='error bound on without SAC')
-            axs3[1].set_xlabel("t [ms]")
-            axs3[1].set_ylabel("|y-yd| [mm]")
-            axs3[1].set_ylim([0, 12])
+                         abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, '-om', markersize=3,
+                         label='with SAC')
+            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         abs(e_v_components[:, 1]) * 1000 * 0.1,
+                         'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{SAC}}(t))[1]\||.\Delta t$")
+            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         abs(e_v_components_PIonly[:, 1]) * 1000 * 0.1,
+                         'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{PI}}(t))[1]\||.\Delta t$")
+            # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(self.plot_data_buffer[:, 31]) * 1000, 'r:',
+            #              label='error bound on with SAC')
+            # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(plot_data_buffer_no_SAC[:, 31]) * 1000, 'b:',
+            #              label='error bound on without SAC')
+            # axs3[1].set_xlabel("t [ms]")
+            axs3[1].set_ylabel("$|y-yd|$ [mm]")
+            axs3[1].set_ylim([0, 9])
             axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                         abs(plot_data_buffer_no_SAC[:, 2] - plot_data_buffer_no_SAC[:, 5]) * 1000, '-ob',
+                         abs(plot_data_buffer_no_SAC[:, 2] - plot_data_buffer_no_SAC[:, 5]) * 1000, '-ob', markersize=3,
                          label='without SAC')
             axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                         abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, '-or', label='with SAC')
-            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(self.plot_data_buffer[:, 32]) * 1000, 'r:',
-                         label='error bound on with SAC')
-            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(plot_data_buffer_no_SAC[:, 32]) * 1000, 'b:',
-                         label='error bound on without SAC')
-            axs3[2].set_xlabel("t [ms]")
-            axs3[2].set_ylabel("|z-zd| [mm]")
-            axs3[2].set_ylim([0, 12])
+                         abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, '-om', markersize=3,
+                         label='with SAC')
+            # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(self.plot_data_buffer[:, 32]) * 1000, 'r:',
+            #              label='error bound on with SAC')
+            # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(plot_data_buffer_no_SAC[:, 32]) * 1000, 'b:',
+            #              label='error bound on without SAC')
+            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         abs(e_v_components[:, 2]) * 1000 * 0.1,
+                         'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{SAC}}(t))[2]\||.\Delta t$")
+            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         abs(e_v_components_PIonly[:, 2]) * 1000 * 0.1,
+                         'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{PI}}(t))[2]\||.\Delta t$")
+            # axs3[2].set_xlabel("t [ms]")
+            axs3[2].set_ylabel("$|z-zd|$ [mm]")
+            axs3[2].set_ylim([0, 10])
+            # axs3[2].legend(loc="upper right")
             axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
                          np.linalg.norm((plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
-                                        axis=1) * 1000, '-ob', label='without SAC')
+                                        axis=1) * 1000, '-ob', markersize=3, label='without SAC')
             axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
                          np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2,
                                         axis=1) * 1000,
-                         '-or', label='with SAC')
+                         '-om', markersize=3, label='with SAC')
+            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+            #              np.linalg.norm(self.plot_data_buffer[:, 30:33], ord=2, axis=1) * 1000,
+            #              'r:', label='error bound on with SAC')
             axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                         np.linalg.norm(self.plot_data_buffer[:, 30:33], ord=2, axis=1) * 1000,
-                         'r:', label='error bound on with SAC')
+                         e_v_bounds * 1000 * 0.1,
+                         'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{\t{SAC}}(t))||.\Delta t$")
             axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                         np.linalg.norm(plot_data_buffer_no_SAC[:, 30:33], ord=2, axis=1) * 1000,
-                         'b:', label='error bound on without SAC')
+                         e_v_norms * 1000 * 0.1,
+                         'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{SAC}}(t))\||.\Delta t$")
+            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         e_v_bounds_PIonly * 1000 * 0.1,
+                         'b--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{\t{PI}}(t))||.\Delta t$")
+            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         e_v_norms_PIonly * 1000 * 0.1,
+                         'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{PI}}(t))\||.\Delta t$")
+            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+            #              np.linalg.norm(plot_data_buffer_no_SAC[:, 30:33], ord=2, axis=1) * 1000,
+            #              'b:', label='error bound on without SAC')
             axs3[3].set_xlabel("t [ms]")
-            axs3[3].set_ylabel("||r-rd||_2 [mm]")
-            axs3[3].set_ylim([0, 12])
+            axs3[3].set_ylabel("$||r-rd||_{2}$ [mm]")
+            axs3[3].set_ylim([0, 9])
+            axs3[3].legend(loc="upper right")
             plt.savefig(output_dir_rendering + "/test_position_errors_both.pdf",
+                        format="pdf",
+                        bbox_inches='tight')
+            plt.show()
+
+            fig3, axs3 = plt.subplots(1, 1, sharex=False, sharey=False, figsize=(8, 8))
+            plt.rcParams.update({
+                'font.size': 14,  # overall font size
+                'axes.labelsize': 16,  # x and y axis labels
+                'xtick.labelsize': 12,  # x-axis tick labels
+                'ytick.labelsize': 12,  # y-axis tick labels
+                'legend.fontsize': 12,  # legend text
+                'font.family': 'Serif'
+            })
+            axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                      np.linalg.norm((plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
+                                     axis=1) * 1000, '-ob', markersize=3, label='without SAC')
+            axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                      np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2,
+                                     axis=1) * 1000,
+                      '-om', markersize=3, label='with SAC')
+            axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                      e_v_bounds * 1000 * 0.1,
+                      'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{\t{SAC}}(t))||.\Delta t$")
+            axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                      e_v_norms * 1000 * 0.1,
+                      'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{SAC}}(t))\||.\Delta t$")
+            axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                      e_v_bounds_PIonly * 1000 * 0.1,
+                      'b--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{\t{PI}}(t))||.\Delta t$")
+            axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                      e_v_norms_PIonly * 1000 * 0.1,
+                      'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{PI}}(t))\||.\Delta t$")
+            axs3.set_xlabel("t [ms]")
+            axs3.set_ylabel("$||r-rd||_{2}$ [mm]")
+            # axs3.set_ylim([0, 9])
+            axs3.set_yscale("log")
+            axs3.set_ylim([5e-2, 9])  # Lower bound must be > 0
+            axs3.set_yticks([0.05, 0.5, 1, 2, 9])
+            axs3.set_yticks([0.05, 0.5, 1, 2, 9])
+            axs3.set_yticklabels(["0.1", "0.5", "1", "2", "9"])
+            axs3.legend(loc="upper left")
+            plt.savefig(output_dir_rendering + "/test_position_errors_both_total_log.pdf",
+                        format="pdf",
+                        bbox_inches='tight')
+            plt.show()
+
+            fig3, axs3 = plt.subplots(1, 1, sharex=False, sharey=False, figsize=(8, 8))
+            plt.rcParams.update({
+                'font.size': 14,  # overall font size
+                'axes.labelsize': 16,  # x and y axis labels
+                'xtick.labelsize': 12,  # x-axis tick labels
+                'ytick.labelsize': 12,  # y-axis tick labels
+                'legend.fontsize': 12,  # legend text
+                'font.family': 'Serif'
+            })
+            axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                      np.linalg.norm((plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
+                                     axis=1) * 1000, '-ob', markersize=3, label='without SAC')
+            axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                      np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2,
+                                     axis=1) * 1000,
+                      '-om', markersize=3, label='with SAC')
+            axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                      e_v_bounds * 1000 * 0.1,
+                      'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{\t{SAC}}(t))||.\Delta t$")
+            axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                      e_v_norms * 1000 * 0.1,
+                      'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{SAC}}(t))\||.\Delta t$")
+            axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                      e_v_bounds_PIonly * 1000 * 0.1,
+                      'b--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{\t{PI}}(t))||.\Delta t$")
+            axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                      e_v_norms_PIonly * 1000 * 0.1,
+                      'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{PI}}(t))\||.\Delta t$")
+            axs3.set_xlabel("t [ms]")
+            axs3.set_ylabel("$||r-rd||_{2}$ [mm]")
+            axs3.set_ylim([0, 9])
+            axs3.set_yticklabels(["0.1", "0.5", "1", "2", "9"])
+            axs3.legend(loc="upper left")
+            plt.savefig(output_dir_rendering + "/test_position_errors_both_total.pdf",
                         format="pdf",
                         bbox_inches='tight')
             plt.show()
@@ -1546,7 +1581,8 @@ Robotic Manipulation" by Murry et al.
             axs5[0].set_ylabel("rd_t[0]")
             plt.legend()
             axs5[0].grid()
-            axs5[1].plot(self.plot_data_buffer[:, 4], '-ob')
+            axs5[1].plot(self.plot_data_buffer[40:70, 1], '-or')
+            axs5[1].plot(self.plot_data_buffer[40:70, 4], '-og')
             axs5[1].set_xlabel("t")
             axs5[1].set_ylabel("rd_t[1]")
             plt.legend()
@@ -1914,6 +1950,101 @@ Robotic Manipulation" by Murry et al.
             plt.savefig(output_dir_rendering + "/buffer_states_q_3to5.pdf", format="png", bbox_inches='tight')
             plt.show()
             print("")
+
+        if render_video == True:
+            # pb.disconnect(physics_client)
+            # render settings
+            # renderer = pb.ER_TINY_RENDERER  # p.ER_BULLET_HARDWARE_OPENGL
+            # _width = 224
+            # _height = 224
+            # _cam_dist = 1.3
+            # _cam_yaw = 15
+            # _cam_pitch = -30
+            # _cam_roll = 0
+            # camera_target_pos = [0.2, 0, 0.]
+            # _screen_width = 3840  # 1920
+            # _screen_height = 2160  # 1080
+            # physics_client_rendering = pb.connect(pb.GUI,
+            #                                       options='--mp4fps=10 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d' % (
+            #                                           _screen_width, _screen_height))
+            #
+            # dt = 1 / 10  # sec
+            # pb.setTimeStep(timeStep=dt, physicsClientId=physics_client_rendering)
+            # # physics_client = p.connect(p.GUI,options="--mp4fps=3 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d" % (screen_width, screen_height))
+            # # # Set gravity
+            # pb.setGravity(0, 0, -9.81, physicsClientId=physics_client_rendering)
+            # Load URDFs
+            # Load robot, target object and plane urdf
+            # /cluster/home/mnobar/code/spinningup
+            pb.setAdditionalSearchPath(pybullet_data.getDataPath())
+            pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
+                                 output_dir_rendering + "/simulation.mp4")  # added by Pierre
+            target_object = pb.loadURDF(
+                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
+                useFixedBase=True, physicsClientId=physics_client)
+            conveyor_object = pb.loadURDF(
+                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
+                useFixedBase=True, physicsClientId=physics_client)
+            plane = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
+                                useFixedBase=True, physicsClientId=physics_client)
+            # Initialise debug camera angle
+            pb.resetDebugVisualizerCamera(
+                cameraDistance=1.2,
+                cameraYaw=5,
+                cameraPitch=-30,
+                cameraTargetPosition=camera_target_pos,
+                physicsClientId=physics_client_rendering)
+            # pb.resetDebugVisualizerCamera(
+            #     cameraDistance=_cam_dist,
+            #     cameraYaw=_cam_yaw,
+            #     cameraPitch=_cam_pitch,
+            #     cameraTargetPosition=camera_target_pos,
+            #     physicsClientId=physics_client_rendering)
+            t = 0
+            rd_t = np.array([self.xd[t], self.yd[t], self.zd[t]])
+            vd_t = np.array([self.vxd[t], self.vyd[t], self.vzd[t]]) * 1000  # [m/s]
+            # Reset robot at the origin and move the target object to the goal position and orientation
+            pb.resetBasePositionAndOrientation(
+                arm, [0, 0, 0], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]), physicsClientId=physics_client)
+            pb.resetBasePositionAndOrientation(
+                target_object, rd_t + [0, 0, -0.07], pb.getQuaternionFromEuler(
+                    np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])),
+                physicsClientId=physics_client)  # orient just for rendering
+            # set conveyer pose and orient
+            pb.resetBasePositionAndOrientation(
+                conveyor_object,
+                np.array([self.xd_init, self.yd_init, self.zd_init]) + np.array([-0.002, -0.18, -0.15]),
+                pb.getQuaternionFromEuler([0, 0, np.pi / 2 - 0.244978663]), physicsClientId=physics_client)
+            # Reset joint at initial angles
+            for i in range(6):
+                pb.resetJointState(arm, i, self.q_init[i], physicsClientId=physics_client)
+            # In Pybullet, gripper halves are controlled separately+we also deactivated the 7th joint too
+            for j in range(6, 9):
+                pb.resetJointState(arm, j, 0, physicsClientId=physics_client)
+            time.sleep(1)
+
+            for t in range(1, self.MAX_TIMESTEPS):
+                rd_t = np.array([self.xd[t], self.yd[t], self.zd[t]])
+                pb.resetBasePositionAndOrientation(
+                    target_object, rd_t + [0, 0, -0.07], pb.getQuaternionFromEuler(
+                        np.array([-np.pi, 0, 0]) + np.array([np.pi / 2, 0, 0])), physicsClientId=physics_client)
+                dqc_t = self.plot_data_buffer[t, 12:18]
+                joint_velocities = list(dqc_t)
+                pb.setJointMotorControlArray(
+                    arm,
+                    [0, 1, 2, 3, 4, 5],
+                    controlMode=pb.VELOCITY_CONTROL,
+                    targetVelocities=joint_velocities,
+                    forces=[87, 87, 87, 87, 12, 12],
+                    physicsClientId=physics_client
+                )
+                # default timestep is 1/240 second
+                pb.stepSimulation(physicsClientId=physics_client)
+                time.sleep(0.01)
+
+        # np.save(
+        #     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_" + str(
+        #         self.n) + ".npy", self.plot_data_buffer)
 
     def close(self):
         if self.viewer:

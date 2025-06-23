@@ -41,6 +41,7 @@ class SquashedGaussianMLPActor(nn.Module):
     def forward(self, obs, deterministic=False, with_logprob=True):
     # # uncomment to save model of actor for libtorch
     # def forward(self, obs, deterministic=True, with_logprob=False):
+
         # comment for libtorch Cpp save
         net_out = self.net(obs)
 
