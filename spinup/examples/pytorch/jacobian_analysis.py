@@ -57,11 +57,11 @@ urdf_path_ = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fe
 urdf_path_biased_ = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc_biased_3.urdf"
 robot_id_true = p.loadURDF(urdf_path_, useFixedBase=True)
 robot_id_biased = p.loadURDF(urdf_path_biased_, useFixedBase=True)
-q_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_q.npy")
-dq_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_dq.npy")
-rd_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_rd.npy")
-r_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_r.npy")
-drd_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_drd.npy")
+q_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_q.npy")
+dq_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_dq.npy")
+rd_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_rd.npy")
+r_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_r.npy")
+drd_ = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_drd.npy")
 
 
 T = 136
@@ -110,7 +110,7 @@ plt.title("Steady-State Position Error Bound Magnitude")
 plt.grid(True)
 plt.legend()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_r_ss_upper_bound.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_r_ss_upper_bound.pdf", format="pdf",
     bbox_inches='tight')
 
 # Subplots for XYZ components
@@ -134,7 +134,7 @@ axs[-1].set_xlabel("k")
 axs[0].set_title("Steady-State Position Error Vector Components")
 plt.tight_layout()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_r_ss.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_r_ss.pdf", format="pdf",
     bbox_inches='tight')
 plt.show()
 
@@ -181,7 +181,7 @@ plt.grid(True)
 plt.legend()
 plt.tight_layout()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_r_cumulative_upper_bound.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_r_cumulative_upper_bound.pdf", format="pdf",
     bbox_inches='tight')
 plt.show()
 
@@ -196,7 +196,7 @@ axs[-1].set_xlabel("k")
 axs[0].set_title("Cumulative End-Effector Position Error Components")
 plt.tight_layout()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_r_cumulative.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_r_cumulative.pdf", format="pdf",
     bbox_inches='tight')
 plt.show()
 
@@ -255,7 +255,7 @@ plt.grid(True)
 plt.legend()
 plt.tight_layout()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_v_bounds.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_bounds.pdf", format="pdf",
     bbox_inches='tight')
 plt.show()
 
@@ -278,13 +278,13 @@ axs[-1].set_xlabel("Timestep $k$")
 axs[0].set_title("Task-Space Velocity Error Components")
 plt.tight_layout()
 plt.savefig(
-    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_v.pdf", format="pdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v.pdf", format="pdf",
     bbox_inches='tight')
 plt.show()
 
-np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_v_bounds.npy", e_v_bounds)
-np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_v_norms.npy", e_v_norms)
-np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_e_v_components.npy", e_v_components)
+np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_bounds.npy", e_v_bounds)
+np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_norms.npy", e_v_norms)
+np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_components.npy", e_v_components)
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for k in range(136):
@@ -351,7 +351,7 @@ for k in range(136):
         ax3.set_zlabel("Z")
         ax3.legend()
         plt.savefig(
-            "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_3Derrors_k_{}.pdf".format(
+            "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_3Derrors_k_{}.pdf".format(
                 str(k)), format="pdf",
             bbox_inches='tight')
         plt.show()
@@ -441,7 +441,7 @@ for k in range(136):
         ax4.legend(loc='lower right')
         plt.tight_layout()
         plt.savefig(
-            "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_305/kinematics_error_bounds/PIonly_model_errors_k_{}.pdf".format(
+            "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_model_errors_k_{}.pdf".format(
                 str(k)), format="pdf",
             bbox_inches='tight')
         plt.show()
