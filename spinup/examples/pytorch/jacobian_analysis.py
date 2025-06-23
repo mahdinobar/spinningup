@@ -445,4 +445,57 @@ for k in range(136):
                 str(k)), format="pdf",
             bbox_inches='tight')
         plt.show()
+
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        k = 50
+        q = np.hstack((q_[k, :], np.zeros(3)))
+        dq = np.hstack((dq_[k, :], np.zeros(3)))
+        J_true = load_jacobian(robot_id_true, q, dq)
+        J = J_true[:3, :6]
+        J_biased = load_jacobian(robot_id_biased, q, dq)
+        J_tilde = J_biased[:3, :6]
+        P = J @ pinv(J_tilde)  # mismatch operator (3x3)
+        theta = np.linspace(0, 2 * np.pi, 100)
+        phi = np.linspace(0, np.pi, 50)
+        theta, phi = np.meshgrid(theta, phi)
+        x = np.cos(theta) * np.sin(phi) / 100
+        y = np.sin(theta) * np.sin(phi) / 100
+        z = np.cos(phi) / 100
+        unit_vectors = np.vstack((x.ravel(), y.ravel(), z.ravel())) / 100  # shape: (3, N)
+        deformed = P @ unit_vectors
+        errors = unit_vectors - deformed
+        error_norms = norm(errors, axis=0)
+        error_field = error_norms.reshape(x.shape) * 1000
+        x_def = deformed[0].reshape(x.shape)
+        y_def = deformed[1].reshape(y.shape)
+        z_def = deformed[2].reshape(z.shape)
+        fig = plt.figure(figsize=(8, 6))
+        ax2 = fig.add_subplot(111, projection='3d')
+        plt.rcParams.update({
+            'font.size': 14,  # overall font size
+            'axes.labelsize': 16,  # x and y axis labels
+            'xtick.labelsize': 12,  # x-axis tick labels
+            'ytick.labelsize': 12,  # y-axis tick labels
+            'legend.fontsize': 12,  # legend text
+            'font.family': 'Serif'
+        })
+        surf = ax2.plot_surface(x, y, z, facecolors=plt.cm.viridis(error_field / np.max(error_field)),
+                                rstride=1, cstride=1, antialiased=False, alpha=0.9)
+        m = plt.cm.ScalarMappable(cmap=plt.cm.viridis)
+        m.set_array(error_field)
+        fig.colorbar(m, ax=ax2, shrink=0.5, label='Tracking Error Magnitude [mm/s]')
+        # ax2.set_title("Tracking Error Magnitude Across Directions")
+        ax2.set_xlabel("$\mathbf{u}_{x}$ [m/s]")
+        ax2.set_ylabel("$\mathbf{u}_{y}$ [m/s]")
+        ax2.set_zlabel("$\mathbf{u}_{z}$ [m/s]")
+        ax2.set_xticks([-1 / 100, 0, 1 / 100])
+        ax2.set_yticks([-1 / 100, 0, 1 / 100])
+        ax2.set_zticks([-1 / 100, 0, 1 / 100])
+        ax2.view_init(elev=30, azim=45)
+        plt.savefig(
+            "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_3Derrors_k_{}.pdf".format(
+                str(k)), format="pdf",
+            bbox_inches='tight')
+        plt.show()
+
 print("")
