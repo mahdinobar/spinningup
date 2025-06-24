@@ -762,7 +762,7 @@ Robotic Manipulation" by Murry et al.
         # print("0")
         # dqc_t_PID = self.state[21:27]
         # ATTENTION: here apply SAC action
-        dqc_t = self.dqc_PID + a
+        dqc_t = self.dqc_PID #+ a
         # TODO check
         # command joint speeds (only 6 joints)
         pb.setJointMotorControlArray(
@@ -1340,6 +1340,12 @@ Robotic Manipulation" by Murry et al.
                     data_list.append(arr)
                 data = np.stack(data_list, axis=2)
 
+                data_list_PIonly = []
+                for n in range(5):
+                    arr = np.load(output_dir_rendering + f"/PIonly_plot_data_buffer_episode_{n}.npy")
+                    data_list_PIonly.append(arr)
+                data_PIonly = np.stack(data_list_PIonly, axis=2)
+
                 fig3, axs3 = plt.subplots(1, 1, sharex=False, sharey=False, figsize=(8, 8))
                 plt.rcParams.update({
                     'font.size': 14,  # overall font size
@@ -1349,9 +1355,18 @@ Robotic Manipulation" by Murry et al.
                     'legend.fontsize': 12,  # legend text
                     'font.family': 'Serif'
                 })
-                axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                          np.linalg.norm((plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
-                                         axis=1) * 1000, '-ob', markersize=3, label='without SAC')
+                l2_data = np.linalg.norm((data_PIonly[:, 0:3, :] - data_PIonly[:, 3:6, :]), ord=2, axis=1)  # shape: (136, 5)
+                # Compute mean and SEM across the 5 sequences
+                mean_l2_PIonly = np.mean(l2_data, axis=1) * 1000  # shape: (136,)
+                sem_l2_PIonly = np.std(l2_data, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
+                # Compute 95% confidence interval bounds
+                ci_upper_PIonly = mean_l2_PIonly + 1.96 * sem_l2_PIonly
+                ci_lower_PIonly = mean_l2_PIonly - 1.96 * sem_l2_PIonly
+                # Plot with confidence interval as shaded area
+                axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100, mean_l2_PIonly, '-ob', markersize=3,
+                          label='mean L2 norm without SAC')
+                axs3.fill_between(np.arange(self.MAX_TIMESTEPS) * 100, ci_lower_PIonly, ci_upper_PIonly, color='b', alpha=0.3,
+                                  label='95% CI without SAC')
 
                 l2_data = np.linalg.norm((data[:, 0:3, :] - data[:, 3:6, :]), ord=2, axis=1)  # shape: (136, 5)
                 # Compute mean and SEM across the 5 sequences
@@ -1361,9 +1376,10 @@ Robotic Manipulation" by Murry et al.
                 ci_upper = mean_l2 + 1.96 * sem_l2
                 ci_lower = mean_l2 - 1.96 * sem_l2
                 # Plot with confidence interval as shaded area
-                axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100, mean_l2, '-om', markersize=3, label='mean L2 norm with SAC')
-                axs3.fill_between(np.arange(self.MAX_TIMESTEPS) * 100, ci_lower, ci_upper, color='m', alpha=0.3, label='95% CI')
-
+                axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100, mean_l2, '-om', markersize=3,
+                          label='mean L2 norm with SAC')
+                axs3.fill_between(np.arange(self.MAX_TIMESTEPS) * 100, ci_lower, ci_upper, color='m', alpha=0.3,
+                                  label='95% CI with SAC')
                 axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
                           e_v_bounds * 1000 * 0.1,
                           'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{\t{SAC}}(t))||.\Delta t$")
@@ -1378,10 +1394,71 @@ Robotic Manipulation" by Murry et al.
                           'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{PI}}(t))\||.\Delta t$")
                 axs3.set_xlabel("t [ms]")
                 axs3.set_ylabel("$||r-rd||_{2}$ [mm]")
-                axs3.set_ylim([0, 9])
+                axs3.set_ylim([0, 8])
                 # axs3.set_yticklabels(["0.1", "0.5", "1", "2", "9"])
-                axs3.legend(loc="upper left")
+                axs3.legend(loc="upper center")
                 plt.savefig(output_dir_rendering + "/test_position_errors_both_total_withCI.pdf",
+                            format="pdf",
+                            bbox_inches='tight')
+                plt.show()
+
+                fig3, axs3 = plt.subplots(1, 1, sharex=False, sharey=False, figsize=(8, 8))
+                plt.rcParams.update({
+                    'font.size': 14,  # overall font size
+                    'axes.labelsize': 16,  # x and y axis labels
+                    'xtick.labelsize': 12,  # x-axis tick labels
+                    'ytick.labelsize': 12,  # y-axis tick labels
+                    'legend.fontsize': 12,  # legend text
+                    'font.family': 'Serif'
+                })
+                l2_data = np.linalg.norm((data_PIonly[:, 0:3, :] - data_PIonly[:, 3:6, :]), ord=2,
+                                         axis=1)  # shape: (136, 5)
+                # Compute mean and SEM across the 5 sequences
+                mean_l2_PIonly = np.mean(l2_data, axis=1) * 1000  # shape: (136,)
+                sem_l2_PIonly = np.std(l2_data, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
+                # Compute 95% confidence interval bounds
+                ci_upper_PIonly = mean_l2_PIonly + 1.96 * sem_l2_PIonly
+                ci_lower_PIonly = mean_l2_PIonly - 1.96 * sem_l2_PIonly
+                # Plot with confidence interval as shaded area
+                axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100, mean_l2_PIonly, '-ob', markersize=3,
+                          label='mean L2 norm without SAC')
+                axs3.fill_between(np.arange(self.MAX_TIMESTEPS) * 100, ci_lower_PIonly, ci_upper_PIonly, color='b',
+                                  alpha=0.3,
+                                  label='95% CI without SAC')
+
+                l2_data = np.linalg.norm((data[:, 0:3, :] - data[:, 3:6, :]), ord=2, axis=1)  # shape: (136, 5)
+                # Compute mean and SEM across the 5 sequences
+                mean_l2 = np.mean(l2_data, axis=1) * 1000  # shape: (136,)
+                sem_l2 = np.std(l2_data, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
+                # Compute 95% confidence interval bounds
+                ci_upper = mean_l2 + 1.96 * sem_l2
+                ci_lower = mean_l2 - 1.96 * sem_l2
+                # Plot with confidence interval as shaded area
+                axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100, mean_l2, '-om', markersize=3,
+                          label='mean L2 norm with SAC')
+                axs3.fill_between(np.arange(self.MAX_TIMESTEPS) * 100, ci_lower, ci_upper, color='m', alpha=0.3,
+                                  label='95% CI with')
+                axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                          e_v_bounds * 1000 * 0.1,
+                          'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{\t{SAC}}(t))||.\Delta t$")
+                axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                          e_v_norms * 1000 * 0.1,
+                          'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{SAC}}(t))\||.\Delta t$")
+                axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                          e_v_bounds_PIonly * 1000 * 0.1,
+                          'b--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{\t{PI}}(t))||.\Delta t$")
+                axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                          e_v_norms_PIonly * 1000 * 0.1,
+                          'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{PI}}(t))\||.\Delta t$")
+                axs3.set_xlabel("t [ms]")
+                axs3.set_ylabel("$||r-rd||_{2}$ [mm]")
+                axs3.set_yscale("log")
+                axs3.set_ylim([7e-2, 8])  # Lower bound must be > 0
+                axs3.set_yticks([0.1, 0.5, 1, 2, 3, 8])
+                axs3.set_yticks([0.1, 0.5, 1, 2, 3, 8])
+                axs3.set_yticklabels(["0.1", "0.5", "1", "2", "3", "9"])
+                axs3.legend(loc="lower right")
+                plt.savefig(output_dir_rendering + "/test_position_errors_both_total_withCI_log.pdf",
                             format="pdf",
                             bbox_inches='tight')
                 plt.show()
