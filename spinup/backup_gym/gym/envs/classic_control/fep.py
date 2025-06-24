@@ -759,7 +759,7 @@ Robotic Manipulation" by Murry et al.
         return self.state
 
     def     step(self, a):
-        print("0")
+        # print("0")
         # dqc_t_PID = self.state[21:27]
         # ATTENTION: here apply SAC action
         dqc_t = self.dqc_PID + a
@@ -778,7 +778,7 @@ Robotic Manipulation" by Murry et al.
         for _ in range(24):
             # default timestep is 1/240 second
             pb.stepSimulation(physicsClientId=physics_client)
-        print("1")
+        # print("1")
         # update time index
         self.k += 1  # Attention doublecheck
         rd_tp1 = np.array(
@@ -867,7 +867,7 @@ Robotic Manipulation" by Murry et al.
         # reward_ddqc_t = self.f_logistic(error_ddqc_t, self.lddqc)
         # reward_t = self.reward_eta_p * reward_p_t + self.reward_eta_v * reward_v_t + self.reward_eta_ddqc * reward_ddqc_t
         reward_t = self.reward_eta_p * reward_p_t  # + self.reward_eta_v * reward_v_t + self.reward_eta_ddqc * reward_ddqc_t
-        print("2")
+        # print("2")
         # Attention: use biased kinematics model for jacobian calculation
         [linearJacobian_tp1, angularJacobian_tp1] = pb.calculateJacobian(arm_biased_kinematics,
                                                                          10,
@@ -878,7 +878,7 @@ Robotic Manipulation" by Murry et al.
                                                                          list(np.append(self.dq[-1, :], [0, 0, 0])),
                                                                          list(np.zeros(9)),
                                                                          physicsClientId=physics_client)
-        print("3")
+        # print("3")
         [linearJacobian_TRUE_tp1, angularJacobian_TRUE_tp1] = pb.calculateJacobian(arm,
                                                                                    10,
                                                                                    list(LinkState_tp1[2]),
@@ -888,7 +888,7 @@ Robotic Manipulation" by Murry et al.
                                                                                                   [0, 0, 0])),
                                                                                    list(np.zeros(9)),
                                                                                    physicsClientId=physics_client)
-        print("4")
+        # print("4")
         J_tp1 = np.asarray(linearJacobian_tp1)[:, :6]
         Jpinv_tp1 = self.pseudoInverseMat(J_tp1, ld=0.01)
         J_tp1_TRUE = np.asarray(linearJacobian_TRUE_tp1)[:, :6]
@@ -1023,7 +1023,7 @@ Robotic Manipulation" by Murry et al.
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
         # # # # TODO: so dirty code: uncomment when NOSAC for plots -- you need to take care of which random values you call by break points after first done in sac.py ... and cmment a too ...
         # plot_data_buffer_no_SAC=self.plot_data_buffer
-        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_308/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
         # given action it returns 4-tuple (observation, reward, done, info)
         return (obs, reward_t, terminal, {})
@@ -1040,7 +1040,7 @@ Robotic Manipulation" by Murry et al.
         if render_test_buffer == True:
             # # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
             plot_data_buffer_no_SAC = np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_308/plot_data_buffer_no_SAC.npy")
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/plot_data_buffer_no_SAC.npy")
             # plot_data_buffer_no_SAC = np.load(
             #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/plot_data_buffer_no_SAC.npy")
             if False:
@@ -1213,22 +1213,22 @@ Robotic Manipulation" by Murry et al.
             plt.show()
 
             e_v_bounds=np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_308/kinematics_error_bounds/SAC_e_v_bounds.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_bounds.npy"
                 )
             e_v_norms=np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_308/kinematics_error_bounds/SAC_e_v_norms.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_norms.npy"
                 )
             e_v_components=np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_308/kinematics_error_bounds/SAC_e_v_components.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_components.npy"
                 )
             e_v_bounds_PIonly=np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_308/kinematics_error_bounds/PIonly_e_v_bounds.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_bounds.npy"
                 )
             e_v_norms_PIonly=np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_308/kinematics_error_bounds/PIonly_e_v_norms.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_norms.npy"
                 )
             e_v_components_PIonly=np.load(
-                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_308/kinematics_error_bounds/PIonly_e_v_components.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_components.npy"
                 )
             fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 12))
             plt.rcParams.update({
@@ -1332,6 +1332,62 @@ Robotic Manipulation" by Murry et al.
                         bbox_inches='tight')
             plt.show()
 
+            # uncomment for plotting multiple episodes
+            if True:
+                data_list = []
+                for n in range(5):
+                    arr = np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy")
+                    data_list.append(arr)
+                data = np.stack(data_list, axis=2)
+
+                fig3, axs3 = plt.subplots(1, 1, sharex=False, sharey=False, figsize=(8, 8))
+                plt.rcParams.update({
+                    'font.size': 14,  # overall font size
+                    'axes.labelsize': 16,  # x and y axis labels
+                    'xtick.labelsize': 12,  # x-axis tick labels
+                    'ytick.labelsize': 12,  # y-axis tick labels
+                    'legend.fontsize': 12,  # legend text
+                    'font.family': 'Serif'
+                })
+                axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                          np.linalg.norm((plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
+                                         axis=1) * 1000, '-ob', markersize=3, label='without SAC')
+
+                l2_data = np.linalg.norm((data[:, 0:3, :] - data[:, 3:6, :]), ord=2, axis=1)  # shape: (136, 5)
+                # Compute mean and SEM across the 5 sequences
+                mean_l2 = np.mean(l2_data, axis=1) * 1000  # shape: (136,)
+                sem_l2 = np.std(l2_data, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
+                # Compute 95% confidence interval bounds
+                ci_upper = mean_l2 + 1.96 * sem_l2
+                ci_lower = mean_l2 - 1.96 * sem_l2
+                # Plot with confidence interval as shaded area
+                axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100, mean_l2, '-om', markersize=3, label='mean L2 norm with SAC')
+                axs3.fill_between(np.arange(self.MAX_TIMESTEPS) * 100, ci_lower, ci_upper, color='m', alpha=0.3, label='95% CI')
+
+                axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                          e_v_bounds * 1000 * 0.1,
+                          'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{\t{SAC}}(t))||.\Delta t$")
+                axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                          e_v_norms * 1000 * 0.1,
+                          'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{SAC}}(t))\||.\Delta t$")
+                axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                          e_v_bounds_PIonly * 1000 * 0.1,
+                          'b--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{\t{PI}}(t))||.\Delta t$")
+                axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                          e_v_norms_PIonly * 1000 * 0.1,
+                          'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{PI}}(t))\||.\Delta t$")
+                axs3.set_xlabel("t [ms]")
+                axs3.set_ylabel("$||r-rd||_{2}$ [mm]")
+                axs3.set_ylim([0, 9])
+                # axs3.set_yticklabels(["0.1", "0.5", "1", "2", "9"])
+                axs3.legend(loc="upper left")
+                plt.savefig(output_dir_rendering + "/test_position_errors_both_total_withCI.pdf",
+                            format="pdf",
+                            bbox_inches='tight')
+                plt.show()
+
+
+
             fig3, axs3 = plt.subplots(1, 1, sharex=False, sharey=False, figsize=(8, 8))
             plt.rcParams.update({
                 'font.size': 14,  # overall font size
@@ -1405,7 +1461,7 @@ Robotic Manipulation" by Murry et al.
             axs3.set_xlabel("t [ms]")
             axs3.set_ylabel("$||r-rd||_{2}$ [mm]")
             axs3.set_ylim([0, 9])
-            axs3.set_yticklabels(["0.1", "0.5", "1", "2", "9"])
+            # axs3.set_yticklabels(["0.1", "0.5", "1", "2", "9"])
             axs3.legend(loc="upper left")
             plt.savefig(output_dir_rendering + "/test_position_errors_both_total.pdf",
                         format="pdf",

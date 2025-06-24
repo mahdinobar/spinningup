@@ -100,7 +100,7 @@ def load_pytorch_policy(fpath, itr, deterministic=False):
     model = torch.load(fname)
     # make function for producing an action given a single state
     def get_action(x):
-        start_time = time.time()
+        # start_time = time.time()
         with torch.no_grad():
             # comment for libtorch Cpp save
             x = torch.as_tensor(x,dtype=torch.float32)
@@ -110,8 +110,8 @@ def load_pytorch_policy(fpath, itr, deterministic=False):
             # x = torch.as_tensor(x, dtype=torch.double)
             # action = model.act(x, deterministic=True)
 
-            end_time=time.time()
-            print("dt=", (end_time - start_time)*1000 , " [ms]\n")
+            # end_time=time.time()
+            # print("dt=", (end_time - start_time)*1000 , " [ms]\n")
 
             # trace_script_module = torch.jit.trace(model, x)
             # trace_script_module.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_37/pyt_save/tracedModel.pt")
@@ -144,58 +144,24 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True, 
 
         if d or (ep_len == max_ep_len):
 
-            # os.makedirs("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_308/kinematics_error_bounds", exist_ok=True)
-            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_308/kinematics_error_bounds/PIonly_q.npy",
+            # os.makedirs("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds", exist_ok=True)
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_q.npy",
             #         env.env.plot_data_buffer[:, :6])
-            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_308/kinematics_error_bounds/PIonly_dq.npy",
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_dq.npy",
             #         env.env.plot_data_buffer[:, 6:12])
-            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_308/kinematics_error_bounds/PIonly_rd.npy",
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_rd.npy",
             #         env.env.plot_data_buffer[:, 12:15])
-            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_308/kinematics_error_bounds/PIonly_drd.npy",
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_drd.npy",
             #         env.env.plot_data_buffer[:, 15:18])
-            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_308/kinematics_error_bounds/PIonly_r.npy",
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_r.npy",
             #         env.env.plot_data_buffer[:, 18:21])
-            
-            if "Fep" in output_dir:
+            if num_episodes ==1:
                 env.render(output_dir)
-            if "Tworr" in output_dir:
-                # plotting for planar (modify for others)
-                # np.save(
-                #     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/no_SAC_0_12/no_SAC_plot_data_buffer.npy",
-                #     env.plot_data_buffer)
-                no_SAC_plot_data_buffer = np.load(
-                    "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/no_SAC_0_12/no_SAC_plot_data_buffer.npy")
-                plt.figure(1)
-                plt.rcParams["font.family"] = "Times New Roman"
-                plt.plot(env.plot_data_buffer[:, 2], env.plot_data_buffer[:, 3], 'r--', label='rd: desired traj')
-                plt.plot(env.plot_data_buffer[:, 0], env.plot_data_buffer[:, 1], 'b',
-                         label='r_hat: FK estimated traj with Hybrid controller')
-                plt.plot(no_SAC_plot_data_buffer[:, 0], no_SAC_plot_data_buffer[:, 1], 'k',
-                         label='no_SAC_r_hat: FK estimated traj with PID only controller')
-                # plt.rcParams["font.family"] = "sans-serif"
-                # plt.rcParams["font.serif"] = "Times New Roman"
-                plt.xlabel("x")
-                plt.ylabel("y")
-                plt.legend()
-                plt.savefig(output_dir + "/position.png", format="png", bbox_inches='tight')
-                plt.show()
-                plt.figure(2)
-                plt.rcParams["font.family"] = "Times New Roman"
-                plt.plot(env.plot_data_buffer[:, 6], env.plot_data_buffer[:, 7], 'r--', label='vd: desired traj',
-                         marker=".", markersize=30)
-                plt.plot(env.plot_data_buffer[:, 4], env.plot_data_buffer[:, 5], 'b', label='v_hat: FK estimated traj')
-                plt.plot(no_SAC_plot_data_buffer[:, 4], no_SAC_plot_data_buffer[:, 5], 'k',
-                         label='no_SAC_v_hat: FK estimated traj with PID only controller')
-
-                # plt.rcParams["font.family"] = "sans-serif"
-                # plt.rcParams["font.serif"] = "Times New Roman"
-                plt.xlabel("vx")
-                plt.ylabel("vy")
-                plt.legend()
-                plt.savefig(output_dir + "/velocity.png", format="png", bbox_inches='tight')
-                plt.show()
+            elif num_episodes > 1:
+                np.save(output_dir + "/plot_data_buffer_episode_{}".format(str(n)), env.unwrapped.plot_data_buffer)
+                if n==num_episodes-1:
+                    env.render(output_dir)
             n += 1
-
             logger.store(EpRet=ep_ret, EpLen=ep_len)
             print('Episode %d \t EpRet %.3f \t EpLen %d' % (n, ep_ret, ep_len))
             o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
