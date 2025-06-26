@@ -200,56 +200,55 @@ Robotic Manipulation" by Murry et al.
         #     self.model_dq.eval()
         #     self.likelihood_dq.eval()
 
-        # # Initialize lists to hold models and scalers for all joints
-        # self.input_scalers = []
-        # self.target_scalers_q = []
+        # Initialize lists to hold models and scalers for all joints
+        self.input_scalers = []
+        self.target_scalers_q = []
         # self.target_scalers_dq = []
-        # self.models_q = []
-        # self.likelihoods_q = []
+        self.models_q = []
+        self.likelihoods_q = []
         # self.models_dq = []
-        # self.likelihoods_dq = []
-        # # GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/trainOnSAC1and2PI1and2and3_testOnSAC3_trackingPhaseOnly/"
-        # GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/trainOnSAC1and2and3_testOnSAC3_trackingPhaseOnly/"
-        # GP_input_dim=2
-        # for joint_number in range(6):
-        #     # Load scalers
-        #     input_scaler = joblib.load(GP_dir+f'input_scaler{joint_number}.pkl')
-        #     target_scaler_q = joblib.load(GP_dir+f'target_scaler_q{joint_number}.pkl')
-        #     target_scaler_dq = joblib.load(GP_dir+f'target_scaler_dq{joint_number}.pkl')
-        #
-        #     # Instantiate and load model for q
-        #     likelihood_q = gpytorch.likelihoods.GaussianLikelihood()
-        #     model_q = GPModel(train_x_shape=(1, GP_input_dim), likelihood=likelihood_q)
-        #     checkpoint_q = torch.load(
-        #         GP_dir+f'gp_model_q{joint_number}.pth')
-        #     model_q.load_state_dict(checkpoint_q['model_state_dict'])
-        #     likelihood_q.load_state_dict(checkpoint_q['likelihood_state_dict'])
-        #     input_scaler = checkpoint_q['input_scaler']  # overwrite with trained one
-        #     target_scaler_q = checkpoint_q['target_scaler']
-        #
-        #     model_q.eval()
-        #     likelihood_q.eval()
-        #
-        #     # Instantiate and load model for dq
-        #     likelihood_dq = gpytorch.likelihoods.GaussianLikelihood()
-        #     model_dq = GPModel(train_x_shape=(1, GP_input_dim), likelihood=likelihood_dq)
-        #     checkpoint_dq = torch.load(
-        #         GP_dir+f'gp_model_dq{joint_number}.pth')
-        #     model_dq.load_state_dict(checkpoint_dq['model_state_dict'])
-        #     likelihood_dq.load_state_dict(checkpoint_dq['likelihood_state_dict'])
-        #     target_scaler_dq = checkpoint_dq['target_scaler']
-        #
-        #     model_dq.eval()
-        #     likelihood_dq.eval()
-        #
-        #     # Append to lists
-        #     self.input_scalers.append(input_scaler)
-        #     self.target_scalers_q.append(target_scaler_q)
-        #     self.target_scalers_dq.append(target_scaler_dq)
-        #     self.models_q.append(model_q)
-        #     self.likelihoods_q.append(likelihood_q)
-        #     self.models_dq.append(model_dq)
-        #     self.likelihoods_dq.append(likelihood_dq)
+        self.likelihoods_dq = []
+        # GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/trainOnSAC1and2PI1and2and3_testOnSAC3_trackingPhaseOnly/"
+        GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
+        GP_input_dim=2
+        for joint_number in range(6):
+            # Load scalers
+            input_scaler = joblib.load(GP_dir+f'input_scaler{joint_number}.pkl')
+            target_scaler_q = joblib.load(GP_dir+f'target_scaler_q{joint_number}.pkl')
+            # target_scaler_dq = joblib.load(GP_dir+f'target_scaler_dq{joint_number}.pkl')
+
+            # Instantiate and load model for q
+            likelihood_q = gpytorch.likelihoods.GaussianLikelihood()
+            model_q = GPModel(train_x_shape=(1, GP_input_dim), likelihood=likelihood_q)
+            checkpoint_q = torch.load(
+                GP_dir+f'gp_model_q{joint_number}.pth')
+            model_q.load_state_dict(checkpoint_q['model_state_dict'])
+            likelihood_q.load_state_dict(checkpoint_q['likelihood_state_dict'])
+            input_scaler = checkpoint_q['input_scaler']  # overwrite with trained one
+            target_scaler_q = checkpoint_q['target_scaler']
+
+            model_q.eval()
+            likelihood_q.eval()
+
+            # # Instantiate and load model for dq
+            # likelihood_dq = gpytorch.likelihoods.GaussianLikelihood()
+            # model_dq = GPModel(train_x_shape=(1, GP_input_dim), likelihood=likelihood_dq)
+            # checkpoint_dq = torch.load(
+            #     GP_dir+f'gp_model_dq{joint_number}.pth')
+            # model_dq.load_state_dict(checkpoint_dq['model_state_dict'])
+            # likelihood_dq.load_state_dict(checkpoint_dq['likelihood_state_dict'])
+            # target_scaler_dq = checkpoint_dq['target_scaler']
+            # model_dq.eval()
+            # likelihood_dq.eval()
+
+            # Append to lists
+            self.input_scalers.append(input_scaler)
+            self.target_scalers_q.append(target_scaler_q)
+            # self.target_scalers_dq.append(target_scaler_dq)
+            self.models_q.append(model_q)
+            self.likelihoods_q.append(likelihood_q)
+            # self.models_dq.append(model_dq)
+            # self.likelihoods_dq.append(likelihood_dq)
 
     def pseudoInverseMat(self, A, ld):
         # Input: Any m-by-n matrix, and a damping factor.
@@ -807,38 +806,38 @@ Robotic Manipulation" by Murry et al.
         # add dq measurement noise
         dq_tp1 = np.array(dq_tp1)[:6] + np.random.normal(loc=0.0, scale=0.004, size=6)
 
-        # #########################################################################
-        # # ----- q and dq Mismatch Compensation -----
-        # for i in range(6):
-        #     self.models_q[i].eval()
-        #     self.models_dq[i].eval()
-        #     self.likelihoods_q[i].eval()
-        #     self.likelihoods_dq[i].eval()
-        #     X_test = np.array([q_tp1[i], dq_tp1[i]]).reshape(-1, 2)
-        #     X_test = self.input_scalers[i].transform(X_test)
-        #     X_test = torch.tensor(X_test, dtype=torch.float32)
-        #     with torch.no_grad(), gpytorch.settings.fast_pred_var():
-        #         pred_q = self.likelihoods_q[i](self.models_q[i](X_test))
-        #         pred_dq = self.likelihoods_dq[i](self.models_dq[i](X_test))
-        #         mean_q = pred_q.mean.numpy()
-        #         mean_dq = pred_dq.mean.numpy()
-        #         std_q = pred_q.variance.sqrt().numpy()
-        #         std_dq = pred_dq.variance.sqrt().numpy()
-        #         # Uncomment when Normalizing
-        #         mean_q = self.target_scalers_q[i].inverse_transform(mean_q.reshape(-1, 1)).flatten()
-        #         std_q = std_q * self.target_scalers_q[i].scale_[0]  # only scale, don't shift
-        #         mean_dq = self.target_scalers_dq[i].inverse_transform(mean_dq.reshape(-1, 1)).flatten()
-        #         std_dq = std_dq * self.target_scalers_dq[i].scale_[0]  # only scale, don't shift
-        #     # TODO
-        #     if ~np.isnan(mean_q):
-        #         q_tp1[i] = q_tp1[i] + mean_q
-        #     else:
-        #         print("mean_q[{}] is nan!".format(i))
-        #     if ~np.isnan(mean_dq):
-        #         dq_tp1[i] = dq_tp1[i] + mean_dq
-        #     else:
-        #         print("mean_dq[{}] is nan!".format(i))
-        # #########################################################################
+        #########################################################################
+        # ----- q and dq Mismatch Compensation -----
+        for i in range(6):
+            self.models_q[i].eval()
+            # self.models_dq[i].eval()
+            self.likelihoods_q[i].eval()
+            # self.likelihoods_dq[i].eval()
+            X_test = np.array([q_tp1[i], dq_tp1[i]]).reshape(-1, 2)
+            X_test = self.input_scalers[i].transform(X_test)
+            X_test = torch.tensor(X_test, dtype=torch.float32)
+            with torch.no_grad(), gpytorch.settings.fast_pred_var():
+                pred_q = self.likelihoods_q[i](self.models_q[i](X_test))
+                # pred_dq = self.likelihoods_dq[i](self.models_dq[i](X_test))
+                mean_q = pred_q.mean.numpy()
+                # mean_dq = pred_dq.mean.numpy()
+                std_q = pred_q.variance.sqrt().numpy()
+                # std_dq = pred_dq.variance.sqrt().numpy()
+                # Uncomment when Normalizing
+                mean_q = self.target_scalers_q[i].inverse_transform(mean_q.reshape(-1, 1)).flatten()
+                std_q = std_q * self.target_scalers_q[i].scale_[0]  # only scale, don't shift
+                # mean_dq = self.target_scalers_dq[i].inverse_transform(mean_dq.reshape(-1, 1)).flatten()
+                # std_dq = std_dq * self.target_scalers_dq[i].scale_[0]  # only scale, don't shift
+            # TODO
+            if ~np.isnan(mean_q):
+                q_tp1[i] = q_tp1[i] + mean_q
+            else:
+                print("mean_q[{}] is nan!!".format(i))
+            # if ~np.isnan(mean_dq):
+            #     dq_tp1[i] = dq_tp1[i] + mean_dq
+            # else:
+            #     print("mean_dq[{}] is nan!".format(i))
+        #########################################################################
 
         # add tau measurement noise and bias
         tau_tp1 = np.array(tau_tp1)[:6]  # + np.random.normal(loc=0.0, scale=0.08, size=6) #+ np.array(

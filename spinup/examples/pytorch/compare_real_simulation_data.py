@@ -906,9 +906,9 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
 if __name__ == '__main__':
     # file_names = ["SAC_1","SAC_2","SAC_3","SAC_4","SAC_5", "PIonly_1", "PIonly_2", "PIonly_3", "PIonly_4", "PIonly_5"]
     # file_names = ["PIonly_4"]
-    file_names = ["SAC_4"]
+    file_names = ["SAC_5"]
     for file_name in file_names:
-        bag_path = '/home/mahdi/bagfiles/experiments_HW309/'
+        bag_path = '/home/mahdi/bagfiles/experiments_HW309/dqPIandSAC_command_update_100Hz/'
         # dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, bag_path, save=True)
         dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star  = load_bags(file_name, bag_path, save=True)
 

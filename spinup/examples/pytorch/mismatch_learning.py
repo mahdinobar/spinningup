@@ -313,12 +313,19 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
     # ax.legend()
     # # Adjust layout
     # plt.tight_layout()
-    # plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_dq_measured_dq_simest.png".format(file_name), format="png",
+    # plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_dq_measured_dq_simest.png".format(file_name), format="png",
     #             bbox_inches='tight')
     # plt.show()
 
     fig, axes = plt.subplots(3, 2, figsize=(12, 8))  # 3 rows, 2 columns
-    plt.rcParams['font.family'] = 'Serif'
+    plt.rcParams.update({
+        'font.size': 14,  # overall font size
+        'axes.labelsize': 16,  # x and y axis labels
+        'xtick.labelsize': 12,  # x-axis tick labels
+        'ytick.labelsize': 12,  # y-axis tick labels
+        'legend.fontsize': 12,  # legend text
+        'font.family': 'Serif'
+    })
     # Flatten axes array for easy indexing
     axes = axes.flatten()
     # Plot for each joint (0 to 5)
@@ -347,7 +354,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
     # Adjust layout
     plt.tight_layout()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_dq_desired_commanded.png".format(file_name),
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_dq_desired_commanded.png".format(file_name),
         format="png",
         bbox_inches='tight')
     plt.show()
@@ -359,7 +366,14 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
     q_sim = np.array(q_sim)[:,:6]
     # Plot q and q_sim (Position)
     fig1, axs1 = plt.subplots(3, 2, figsize=(12, 8))
-    plt.rcParams['font.family'] = 'Serif'
+    plt.rcParams.update({
+        'font.size': 14,  # overall font size
+        'axes.labelsize': 16,  # x and y axis labels
+        'xtick.labelsize': 12,  # x-axis tick labels
+        'ytick.labelsize': 12,  # y-axis tick labels
+        'legend.fontsize': 12,  # legend text
+        'font.family': 'Serif'
+    })
     fig1.suptitle('Joint Positions: Measured vs Simulated', fontsize=16)
     for i in range(6):
         ax = axs1[i // 2, i % 2]
@@ -370,7 +384,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
         ax.set_ylabel('Position')
         ax.grid(True)
         ax.legend()
-    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_q.png".format(file_name), format="png",
+    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_q.png".format(file_name), format="png",
                 bbox_inches='tight')
     plt.show()
 
@@ -386,7 +400,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
         ax.set_ylabel('Velocity')
         ax.grid(True)
         ax.legend()
-    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_dq.png".format(file_name), format="png",
+    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_dq.png".format(file_name), format="png",
                 bbox_inches='tight')
     plt.show()
 
@@ -395,15 +409,15 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
     fig2.suptitle('Joint Velocities: Absolute Error Measured vs Simulated', fontsize=16)
     for i in range(6):
         ax = axs2[i // 2, i % 2]
-        ax.plot(closest_t_dq, abs(dq_sim[:, i] - dq[:, i]), '-sr')
+        ax.plot(closest_t_dq, abs(dq_sim[:, i] - dq[:, i])*180/np.pi, '-sr')
         ax.set_title(f'Joint {i + 1}')
         ax.set_xlabel('Time step')
-        ax.set_ylabel('$|dq_{\t{sim}} - dq_{\t{measured}}|$')
+        ax.set_ylabel('$|dq_{\t{sim}} - dq_{\t{measured}}|$ [deg/s]')
         ax.grid(True)
-        ax.set_ylim([0, 0.02])
+        ax.set_ylim([0, 3])
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_dq_abs_error.png".format(
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_dq_abs_error.png".format(
             file_name), format="png",
         bbox_inches='tight')
     plt.show()
@@ -413,15 +427,15 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
     fig2.suptitle('Joint Positions: Absolute Error Measured vs Simulated', fontsize=16)
     for i in range(6):
         ax = axs2[i // 2, i % 2]
-        ax.plot(closest_t_q, abs(q_sim[:, i] - q[:, i]), '-sr')
+        ax.plot(closest_t_q, abs(q_sim[:, i] - q[:, i])*180/np.pi, '-sr')
         ax.set_title(f'Joint {i + 1}')
         ax.set_xlabel('Time step')
-        ax.set_ylabel('$|q_{\t{sim}} - q_{\t{measured}}|$')
+        ax.set_ylabel('$|q_{\t{sim}} - q_{\t{measured}}|$ [deg]')
         ax.grid(True)
-        ax.set_ylim([0, 0.04])
+        ax.set_ylim([0, 5])
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_q_abs_error.png".format(
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_q_abs_error.png".format(
             file_name), format="png",
         bbox_inches='tight')
     plt.show()
@@ -585,65 +599,71 @@ def GP_mismatch_learning(file_names, base_path_extracted_data, plot_dir):
         q_real = q[test_id].reshape(-1)
         dq_real = dq[test_id].reshape(-1)
         plt.figure(figsize=(12, 8))
-        plt.rcParams['font.family'] = 'Serif'
-        # --- q ---
+        plt.rcParams.update({
+            'font.size': 14,  # overall font size
+            'axes.labelsize': 16,  # x and y axis labels
+            'xtick.labelsize': 12,  # x-axis tick labels
+            'ytick.labelsize': 12,  # y-axis tick labels
+            'legend.fontsize': 12,  # legend text
+            'font.family': 'Serif'
+        })        # --- q ---
         plt.subplot(2, 2, 1)
-        plt.plot(timesteps, q_real, label="Real q[{}]".format(str(joint_number)), color="g", linewidth=1, marker="o",
+        plt.plot(timesteps, np.rad2deg(q_real), label="Real q[{}]".format(str(joint_number)), color="g", linewidth=1, marker="o",
                  markersize=4)
-        plt.plot(timesteps, q_sim_test, label="Simulated q[{}]".format(str(joint_number)), color="b", linewidth=1,
+        plt.plot(timesteps, np.rad2deg(q_sim_test), label="Simulated q[{}]".format(str(joint_number)), color="b", linewidth=1,
                  marker="o", markersize=2)
-        plt.plot(timesteps, q_corrected, label="Corrected q (GP)", color="m", linewidth=1, marker="o", markersize=2)
-        plt.fill_between(timesteps, q_corrected - std_q, q_corrected + std_q, color="m", alpha=0.15,
+        plt.plot(timesteps, np.rad2deg(q_corrected), label="Corrected q (GP)", color="m", linewidth=1, marker="o", markersize=2)
+        plt.fill_between(timesteps, np.rad2deg(q_corrected - std_q), np.rad2deg(q_corrected + std_q), color="m", alpha=0.15,
                          label="Uncertainty")
-        plt.title("Joint {} Positions".format(str(joint_number)))
+        plt.title("Joint {} Positions".format(str(joint_number+1)))
         plt.xlabel("k")
-        plt.ylabel("q")
+        plt.ylabel("q [deg]")
         plt.legend()
         plt.subplot(2, 2, 3)
-        plt.plot(timesteps, abs(q_real - q_corrected),
+        plt.plot(timesteps, np.rad2deg(abs(q_real - q_corrected)),
                  label="$|q_{{real}}[{}]-q_{{corrected}}[{}]|$".format(str(joint_number), str(joint_number)), color="m",
                  linewidth=1, marker="o", markersize=4)
-        plt.plot(timesteps, abs(q_real - q_sim_test),
+        plt.plot(timesteps, np.rad2deg(abs(q_real - q_sim_test)),
                  label="$|q_{{real}}[{}]-q_{{sim}}[{}]|$".format(str(joint_number), str(joint_number)), color="b",
                  linewidth=1, marker="o", markersize=2)
-        plt.fill_between(timesteps, np.clip(abs(q_real - q_corrected) - std_q, a_min=0, a_max=None),
-                         np.clip(abs(q_real - q_corrected) + std_q, a_min=0, a_max=None), color="m", alpha=0.15,
+        plt.fill_between(timesteps, np.clip(np.rad2deg(abs(q_real - q_corrected) - std_q), a_min=0, a_max=None),
+                         np.clip(np.rad2deg(abs(q_real - q_corrected) + std_q), a_min=0, a_max=None), color="m", alpha=0.15,
                          label="Uncertainty")
-        plt.title("Joint {} Position Errors".format(str(joint_number)))
+        plt.title("Joint {} Position Errors".format(str(joint_number+1)))
         plt.xlabel("k")
-        plt.ylabel("q abs error")
+        plt.ylabel("q abs error [deg]")
         plt.legend()
         # --- dq ---
         plt.subplot(2, 2, 2)
-        plt.plot(timesteps, dq_real, label="Real dq[{}]".format(str(joint_number)), color="g", linewidth=1, marker="o",
+        plt.plot(timesteps, np.rad2deg(dq_real), label="Real dq[{}]".format(str(joint_number)), color="g", linewidth=1, marker="o",
                  markersize=4)
-        plt.plot(timesteps, dq_sim_test, label="Simulated dq[{}]".format(str(joint_number)), color="b", linewidth=1,
+        plt.plot(timesteps, np.rad2deg(dq_sim_test), label="Simulated dq[{}]".format(str(joint_number)), color="b", linewidth=1,
                  marker="o", markersize=2)
-        plt.plot(timesteps, dq_corrected, label="Corrected dq (GP)", color="m", linewidth=1, marker="o", markersize=2)
-        plt.fill_between(timesteps, dq_corrected - std_dq, dq_corrected + std_dq, color="m", alpha=0.15,
+        plt.plot(timesteps, np.rad2deg(dq_corrected), label="Corrected dq (GP)", color="m", linewidth=1, marker="o", markersize=2)
+        plt.fill_between(timesteps, np.rad2deg(dq_corrected - std_dq), np.rad2deg(dq_corrected + std_dq), color="m", alpha=0.15,
                          label="Uncertainty")
-        plt.title("Joint {} Speeds".format(str(joint_number)))
+        plt.title("Joint {} Speeds".format(str(joint_number+1)))
         plt.xlabel("k")
-        plt.ylabel("dq")
+        plt.ylabel("dq [deg/s]")
         plt.legend()
         plt.tight_layout()
         plt.subplot(2, 2, 4)
-        plt.plot(timesteps, abs(dq_real - dq_corrected),
+        plt.plot(timesteps, np.rad2deg(abs(dq_real - dq_corrected)),
                  label="$|dq_{{real}}[{}]-dq_{{corrected}}[{}]|$".format(str(joint_number), str(joint_number)),
                  color="m", linewidth=1, marker="o", markersize=4)
-        plt.plot(timesteps, abs(dq_real - dq_sim_test),
+        plt.plot(timesteps, np.rad2deg(abs(dq_real - dq_sim_test)),
                  label="$|dq_{{real}}[{}]-dq_{{sim}}[{}]|$".format(str(joint_number), str(joint_number)), color="b",
                  linewidth=1, marker="o", markersize=2)
-        plt.fill_between(timesteps, np.clip(abs(dq_real - dq_corrected) - std_dq, a_min=0, a_max=None),
-                         np.clip(abs(dq_real - dq_corrected) + std_dq, a_min=0, a_max=None), color="m", alpha=0.15,
+        plt.fill_between(timesteps, np.clip(np.rad2deg(abs(dq_real - dq_corrected) - std_dq), a_min=0, a_max=None),
+                         np.clip(np.rad2deg(abs(dq_real - dq_corrected) + std_dq), a_min=0, a_max=None), color="m", alpha=0.15,
                          label="Uncertainty")
-        plt.title("Joint {} Speed Errors".format(str(joint_number)))
+        plt.title("Joint {} Speed Errors".format(str(joint_number+1)))
         plt.xlabel("k")
-        plt.ylabel("dq abs error")
+        plt.ylabel("dq abs error [deg/s]")
         plt.legend()
         plt.savefig(
-            plot_dir+"joint_{}_normalized_GP.png".format(
-                str(joint_number)), format="png",
+            plot_dir+"joint_{}_normalized_GP.pdf".format(
+                str(joint_number)), format="pdf",
             bbox_inches='tight')
         plt.show()
 
@@ -670,31 +690,31 @@ def GP_mismatch_learning(file_names, base_path_extracted_data, plot_dir):
 
 
 if __name__ == '__main__':
-    file_names = ["SAC_1","PIonly_1"]
-    for file_name in file_names:
-        bag_path = '/home/mahdi/bagfiles/experiments_HW309/'
-        dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name,bag_path, save=True)
-
-        if file_name[0:3]=="SAC":
-            q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=False)
-        elif file_name[0:6]=="PIonly":
-            q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=True)
-
-        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_q.npy".format(file_name),q)
-        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_dq.npy".format(file_name),dq)
-        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_q_sim.npy".format(file_name),q_sim)
-        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_dq_sim.npy".format(file_name),dq_sim)
-
-
-    ####################################################################################################################
-    file_names = ["SAC_1", "SAC_3", "SAC_4", "SAC_5"]
+    # file_names = ["PIonly_1"]
+    # for file_name in file_names:
+    #     bag_path = '/home/mahdi/bagfiles/experiments_HW309/dqPIandSAC_command_update_100Hz/'
+    #     dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name,bag_path, save=True)
+    #
+    #     if file_name[0:3]=="SAC":
+    #         q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=False)
+    #     elif file_name[0:6]=="PIonly":
+    #         q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=True)
+    #
+    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_q.npy".format(file_name),q)
+    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_dq.npy".format(file_name),dq)
+    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_q_sim.npy".format(file_name),q_sim)
+    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_dq_sim.npy".format(file_name),dq_sim)
+    #
+    #
+    # ####################################################################################################################
+    file_names = ["SAC_1", "SAC_2", "SAC_3", "SAC_5"]
     # file_names = ["SAC_1", "SAC_2", "SAC_3", "PIonly_1", "PIonly_2", "PIonly_3"]
-    base_path_extracted_data = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/"
-    plot_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/trainOnSAC_1_3_4_testOnSAC_5_trackingPhaseOnly/"
+    base_path_extracted_data = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/"
+    plot_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
     GP_mismatch_learning(file_names, base_path_extracted_data, plot_dir)
 
 
-    ####################################################################################################################
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # Path to your bag file
     bag_path = '/home/mahdi/bagfiles/experiments_HW274/'
     # plot real system tracking errors
@@ -743,7 +763,14 @@ if __name__ == '__main__':
         'font.family': 'Serif'
     })
     fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(8, 16))
-    plt.rcParams['font.family'] = 'Serif'
+    plt.rcParams.update({
+        'font.size': 14,  # overall font size
+        'axes.labelsize': 16,  # x and y axis labels
+        'xtick.labelsize': 12,  # x-axis tick labels
+        'ytick.labelsize': 12,  # y-axis tick labels
+        'legend.fontsize': 12,  # legend text
+        'font.family': 'Serif'
+    })
     axs3[0].plot(target_times_PIonly,
                  abs(ee_pose_PIonly[closest_idx_ee_pose_PIonly, 1] - r_star_PIonly[
                      closest_idx_r_star_PIonly, 1]) * 1000, '-ob',
