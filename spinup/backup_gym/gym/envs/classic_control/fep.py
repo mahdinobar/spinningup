@@ -1293,7 +1293,7 @@ Robotic Manipulation" by Murry et al.
             # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(plot_data_buffer_no_SAC[:, 30]) * 1000, 'b:',
             #              label='error bound without SAC')
             # axs3[0].set_xlabel("t [s]")
-            axs3[0].set_ylabel("$|x-xd|$ [mm]")
+            axs3[0].set_ylabel("$|x-x^*|$ [mm]")
             axs3[0].set_ylim([0, 8])
             axs3[0].legend(loc="upper left")
             data_list = []
@@ -1349,7 +1349,7 @@ Robotic Manipulation" by Murry et al.
             # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(plot_data_buffer_no_SAC[:, 31]) * 1000, 'b:',
             #              label='error bound on without SAC')
             # axs3[1].set_xlabel("t [s]")
-            axs3[1].set_ylabel("$|y-yd|$ [mm]")
+            axs3[1].set_ylabel("$|y-y^*|$ [mm]")
             axs3[1].set_ylim([0, 8])
             axs3[1].legend(loc="upper left")
             data_list = []
@@ -1405,7 +1405,7 @@ Robotic Manipulation" by Murry et al.
                          abs(e_v_components_PIonly[:, 2]) * 1000 * 0.1,
                          'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{PI}}(t))[2]\||.\Delta t$")
             # axs3[2].set_xlabel("t [s]")
-            axs3[2].set_ylabel("$|z-zd|$ [mm]")
+            axs3[2].set_ylabel("$|z-z^*|$ [mm]")
             axs3[2].set_ylim([0, 8])
             axs3[2].legend(loc="upper left")
             # axs3[2].legend(loc="upper left")
@@ -1471,7 +1471,7 @@ Robotic Manipulation" by Murry et al.
             #              np.linalg.norm(plot_data_buffer_no_SAC[:, 30:33], ord=2, axis=1) * 1000,
             #              'b:', label='error bound on without SAC')
             axs3[3].set_xlabel("t [s]")
-            axs3[3].set_ylabel("$||r-rd||_{2}$ [mm]")
+            axs3[3].set_ylabel("$||\mathbf{p}-\mathbf{p}^*||_{2}$ [mm]")
             axs3[3].set_ylim([0, 8])
             axs3[3].legend(loc="upper left")
             plt.savefig(output_dir_rendering + "/test_position_errors_both.pdf",
