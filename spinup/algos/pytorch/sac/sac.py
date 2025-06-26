@@ -281,7 +281,7 @@ def sac(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
                 alpha_optimizer=alpha_optimizer,
                 save_dir=checkpoint_dir+"/"
             )
-            log_alpha = torch.tensor([np.log(alpha)], requires_grad=True, device=device)
+            log_alpha = torch.tensor([np.log(alpha.item())], requires_grad=True, device=device)
 
         else:
             t_start_step_checkpoint = 0

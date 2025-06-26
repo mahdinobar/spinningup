@@ -671,12 +671,20 @@ def GP_mismatch_learning(file_names, base_path_extracted_data, plot_dir):
         joblib.dump(target_scaler_q, plot_dir+'target_scaler_q{}.pkl'.format(str(joint_number)))
         joblib.dump(target_scaler_dq, plot_dir+'target_scaler_dq{}.pkl'.format(str(joint_number)))
         # Save q model
+        # torch.save({
+        #     'model_state_dict': model_q.state_dict(),
+        #     'likelihood_state_dict': likelihood_q.state_dict(),
+        #     'input_scaler': input_scaler,
+        #     'target_scaler': target_scaler_q,
+        # }, plot_dir+'gp_model_q{}.pth'.format(str(joint_number)))
+
         torch.save({
             'model_state_dict': model_q.state_dict(),
             'likelihood_state_dict': likelihood_q.state_dict(),
             'input_scaler': input_scaler,
             'target_scaler': target_scaler_q,
-        }, plot_dir+'gp_model_q{}.pth'.format(str(joint_number)))
+            'train_x_shape': (1, GP_input_dim),  # ← save this!
+        }, plot_dir + f'gp_model_q{joint_number}.pth')
 
         # Save dq model
         torch.save({
