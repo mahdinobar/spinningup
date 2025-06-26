@@ -758,11 +758,11 @@ Robotic Manipulation" by Murry et al.
         self.plot_data_buffer = plot_data_t
         return self.state
 
-    def     step(self, a):
+    def step(self, a):
         # print("0")
         # dqc_t_PID = self.state[21:27]
         # ATTENTION: here apply SAC action
-        dqc_t = self.dqc_PID #+ a
+        dqc_t = self.dqc_PID + a
         # TODO check
         # command joint speeds (only 6 joints)
         pb.setJointMotorControlArray(
@@ -1024,8 +1024,9 @@ Robotic Manipulation" by Murry et al.
         # # # # TODO: so dirty code: uncomment when NOSAC for plots -- you need to take care of which random values you call by break points after first done in sac.py ... and cmment a too ...
         # plot_data_buffer_no_SAC=self.plot_data_buffer
         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
-        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
-        # given action it returns 4-tuple (observation, reward, done, info)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/PIonly_plot_data_buffer.npy",self.plot_data_buffer)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/PIonly_state_buffer.npy",self.state_buffer)
+        # # given action it returns 4-tuple (observation, reward, done, info)
         return (obs, reward_t, terminal, {})
 
     def _terminal(self):
@@ -1230,7 +1231,7 @@ Robotic Manipulation" by Murry et al.
             e_v_components_PIonly=np.load(
                 "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_components.npy"
                 )
-            fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 12))
+            fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 14))
             plt.rcParams.update({
                 'font.size': 14,  # overall font size
                 'axes.labelsize': 16,  # x and y axis labels
@@ -1239,94 +1240,240 @@ Robotic Manipulation" by Murry et al.
                 'legend.fontsize': 12,  # legend text
                 'font.family': 'Serif'
             })
-            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                         abs(plot_data_buffer_no_SAC[:, 0] - plot_data_buffer_no_SAC[:, 3]) * 1000, '-ob', markersize=3,
-                         label='without SAC')
-            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                         abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, '-om', markersize=3,
-                         label='with SAC')
-            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+            data_list = []
+            for n in range(5):
+                arr = np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy")
+                data_list.append(arr)
+            data = np.stack(data_list, axis=2)
+            data_ = abs(data[:, 0, :] - data[:, 3, :])
+            # Compute mean and SEM across the 5 sequences
+            mean_ = np.mean(data_, axis=1) * 1000  # shape: (136,)
+            sem_ = np.std(data_, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
+            # Compute 95% confidence interval bounds
+            ci_upper_ = mean_ + 1.96 * sem_
+            ci_lower_ = mean_ - 1.96 * sem_
+            data_list_PIonly = []
+            for n in range(5):
+                arr = np.load(output_dir_rendering + f"/PIonly_plot_data_buffer_episode_{n}.npy")
+                data_list_PIonly.append(arr)
+            data_PIonly = np.stack(data_list_PIonly, axis=2)
+            data_ = abs(data_PIonly[:, 0, :] - data_PIonly[:, 3, :])  # shape: (136, 5)
+            # Compute mean and SEM across the 5 sequences
+            mean_PIonly_ = np.mean(data_, axis=1) * 1000  # shape: (136,)
+            sem_PIonly = np.std(data_, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
+            # Compute 95% confidence interval bounds
+            ci_upper_PIonly_ = mean_PIonly_ + 1.96 * sem_PIonly
+            ci_lower_PIonly_ = mean_PIonly_ - 1.96 * sem_PIonly
+            # Plot with confidence interval as shaded area
+            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, mean_PIonly_, '-ob', markersize=3,
+                         label='mean without SAC')
+            axs3[0].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower_PIonly_, ci_upper_PIonly_,
+                                 color='b',
+                                 alpha=0.3,
+                                 label='95% CI without SAC')
+            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, mean_, '-om', markersize=3,
+                         label='mean with SAC')
+            axs3[0].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower_, ci_upper_, color='m',
+                                 alpha=0.3,
+                                 label='95% CI with SAC')
+            # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
+            #              abs(plot_data_buffer_no_SAC[:, 0] - plot_data_buffer_no_SAC[:, 3]) * 1000, '-ob', markersize=3,
+            #              label='without SAC')
+            # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
+            #              abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, '-om', markersize=3,
+            #              label='with SAC')
+            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
                          abs(e_v_components[:, 0]) * 1000 * 0.1,
-                         'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{SAC}}(t))[0]\||.\Delta t$")
-            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{SAC}}(t))[0]\||.\Delta t$")
+            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
                          abs(e_v_components_PIonly[:, 0]) * 1000 * 0.1,
-                         'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{PI}}(t))[0]\||.\Delta t$")
-            # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(self.plot_data_buffer[:, 30]) * 1000, 'r:',
+                         'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{PI}}(t))[0]\||.\Delta t$")
+            # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(self.plot_data_buffer[:, 30]) * 1000, 'r:',
             #              label='error bound with SAC')
-            # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(plot_data_buffer_no_SAC[:, 30]) * 1000, 'b:',
+            # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(plot_data_buffer_no_SAC[:, 30]) * 1000, 'b:',
             #              label='error bound without SAC')
-            # axs3[0].set_xlabel("t [ms]")
+            # axs3[0].set_xlabel("t [s]")
             axs3[0].set_ylabel("$|x-xd|$ [mm]")
-            axs3[0].set_ylim([0, 9])
-            axs3[0].legend(loc="upper right")
-            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                         abs(plot_data_buffer_no_SAC[:, 1] - plot_data_buffer_no_SAC[:, 4]) * 1000, '-ob', markersize=3,
-                         label='without SAC')
-            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                         abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, '-om', markersize=3,
-                         label='with SAC')
-            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+            axs3[0].set_ylim([0, 8])
+            axs3[0].legend(loc="upper left")
+            data_list = []
+            for n in range(5):
+                arr = np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy")
+                data_list.append(arr)
+            data = np.stack(data_list, axis=2)
+            data_ = abs(data[:, 1, :] - data[:, 4, :])
+            # Compute mean and SEM across the 5 sequences
+            mean_ = np.mean(data_, axis=1) * 1000  # shape: (136,)
+            sem_ = np.std(data_, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
+            # Compute 95% confidence interval bounds
+            ci_upper_ = mean_ + 1.96 * sem_
+            ci_lower_ = mean_ - 1.96 * sem_
+            data_list_PIonly = []
+            for n in range(5):
+                arr = np.load(output_dir_rendering + f"/PIonly_plot_data_buffer_episode_{n}.npy")
+                data_list_PIonly.append(arr)
+            data_PIonly = np.stack(data_list_PIonly, axis=2)
+            data_ = abs(data_PIonly[:, 1, :] - data_PIonly[:, 4, :])
+            # Compute mean and SEM across the 5 sequences
+            mean_PIonly_ = np.mean(data_, axis=1) * 1000  # shape: (136,)
+            sem_PIonly = np.std(data_, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
+            # Compute 95% confidence interval bounds
+            ci_upper_PIonly_ = mean_PIonly_ + 1.96 * sem_PIonly
+            ci_lower_PIonly_ = mean_PIonly_ - 1.96 * sem_PIonly
+            # Plot with confidence interval as shaded area
+            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, mean_PIonly_, '-ob', markersize=3,
+                         label='')
+            axs3[1].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower_PIonly_, ci_upper_PIonly_,
+                                 color='b',
+                                 alpha=0.3,
+                                 label='')
+            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, mean_, '-om', markersize=3,
+                         label='')
+            axs3[1].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower_, ci_upper_, color='m',
+                                 alpha=0.3,
+                                 label='')
+            # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
+            #              abs(plot_data_buffer_no_SAC[:, 1] - plot_data_buffer_no_SAC[:, 4]) * 1000, '-ob', markersize=3,
+            #              label='without SAC')
+            # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
+            #              abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, '-om', markersize=3,
+            #              label='with SAC')
+            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
                          abs(e_v_components[:, 1]) * 1000 * 0.1,
-                         'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{SAC}}(t))[1]\||.\Delta t$")
-            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{SAC}}(t))[1]\||.\Delta t$")
+            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
                          abs(e_v_components_PIonly[:, 1]) * 1000 * 0.1,
-                         'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{PI}}(t))[1]\||.\Delta t$")
-            # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(self.plot_data_buffer[:, 31]) * 1000, 'r:',
+                         'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{PI}}(t))[1]\||.\Delta t$")
+            # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(self.plot_data_buffer[:, 31]) * 1000, 'r:',
             #              label='error bound on with SAC')
-            # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(plot_data_buffer_no_SAC[:, 31]) * 1000, 'b:',
+            # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(plot_data_buffer_no_SAC[:, 31]) * 1000, 'b:',
             #              label='error bound on without SAC')
-            # axs3[1].set_xlabel("t [ms]")
+            # axs3[1].set_xlabel("t [s]")
             axs3[1].set_ylabel("$|y-yd|$ [mm]")
-            axs3[1].set_ylim([0, 9])
-            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                         abs(plot_data_buffer_no_SAC[:, 2] - plot_data_buffer_no_SAC[:, 5]) * 1000, '-ob', markersize=3,
-                         label='without SAC')
-            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                         abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, '-om', markersize=3,
-                         label='with SAC')
-            # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(self.plot_data_buffer[:, 32]) * 1000, 'r:',
+            axs3[1].set_ylim([0, 8])
+            axs3[1].legend(loc="upper left")
+            data_list = []
+            for n in range(5):
+                arr = np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy")
+                data_list.append(arr)
+            data = np.stack(data_list, axis=2)
+            data_ = abs(data[:, 2, :] - data[:, 5, :])
+            # Compute mean and SEM across the 5 sequences
+            mean_ = np.mean(data_, axis=1) * 1000  # shape: (136,)
+            sem_ = np.std(data_, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
+            # Compute 95% confidence interval bounds
+            ci_upper_ = mean_ + 1.96 * sem_
+            ci_lower_ = mean_ - 1.96 * sem_
+            data_list_PIonly = []
+            for n in range(5):
+                arr = np.load(output_dir_rendering + f"/PIonly_plot_data_buffer_episode_{n}.npy")
+                data_list_PIonly.append(arr)
+            data_PIonly = np.stack(data_list_PIonly, axis=2)
+            data_ = abs(data_PIonly[:, 2, :] - data_PIonly[:, 5, :])
+            # Compute mean and SEM across the 5 sequences
+            mean_PIonly_ = np.mean(data_, axis=1) * 1000  # shape: (136,)
+            sem_PIonly = np.std(data_, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
+            # Compute 95% confidence interval bounds
+            ci_upper_PIonly_ = mean_PIonly_ + 1.96 * sem_PIonly
+            ci_lower_PIonly_ = mean_PIonly_ - 1.96 * sem_PIonly
+            # Plot with confidence interval as shaded area
+            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, mean_PIonly_, '-ob', markersize=3,
+                         label='')
+            axs3[2].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower_PIonly_, ci_upper_PIonly_,
+                                 color='b',
+                                 alpha=0.3,
+                                 label='')
+            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, mean_, '-om', markersize=3,
+                         label='')
+            axs3[2].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower_, ci_upper_, color='m',
+                                 alpha=0.3,
+                                 label='')
+            # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
+            #              abs(plot_data_buffer_no_SAC[:, 2] - plot_data_buffer_no_SAC[:, 5]) * 1000, '-ob', markersize=3,
+            #              label='without SAC')
+            # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
+            #              abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, '-om', markersize=3,
+            #              label='with SAC')
+            # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(self.plot_data_buffer[:, 32]) * 1000, 'r:',
             #              label='error bound on with SAC')
-            # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100, abs(plot_data_buffer_no_SAC[:, 32]) * 1000, 'b:',
+            # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(plot_data_buffer_no_SAC[:, 32]) * 1000, 'b:',
             #              label='error bound on without SAC')
-            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
                          abs(e_v_components[:, 2]) * 1000 * 0.1,
-                         'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{SAC}}(t))[2]\||.\Delta t$")
-            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{SAC}}(t))[2]\||.\Delta t$")
+            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
                          abs(e_v_components_PIonly[:, 2]) * 1000 * 0.1,
-                         'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{PI}}(t))[2]\||.\Delta t$")
-            # axs3[2].set_xlabel("t [ms]")
+                         'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{PI}}(t))[2]\||.\Delta t$")
+            # axs3[2].set_xlabel("t [s]")
             axs3[2].set_ylabel("$|z-zd|$ [mm]")
-            axs3[2].set_ylim([0, 10])
-            # axs3[2].legend(loc="upper right")
-            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                         np.linalg.norm((plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
-                                        axis=1) * 1000, '-ob', markersize=3, label='without SAC')
-            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
-                         np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2,
-                                        axis=1) * 1000,
-                         '-om', markersize=3, label='with SAC')
-            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+            axs3[2].set_ylim([0, 8])
+            axs3[2].legend(loc="upper left")
+            # axs3[2].legend(loc="upper left")
+            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
+            #              np.linalg.norm((plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
+            #                             axis=1) * 1000, '-ob', markersize=3, label='without SAC')
+            data_list = []
+            for n in range(5):
+                arr = np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy")
+                data_list.append(arr)
+            data = np.stack(data_list, axis=2)
+            l2_data = np.linalg.norm((data[:, 0:3, :] - data[:, 3:6, :]), ord=2, axis=1)  # shape: (136, 5)
+            # Compute mean and SEM across the 5 sequences
+            mean_l2 = np.mean(l2_data, axis=1) * 1000  # shape: (136,)
+            sem_l2 = np.std(l2_data, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
+            # Compute 95% confidence interval bounds
+            ci_upper = mean_l2 + 1.96 * sem_l2
+            ci_lower = mean_l2 - 1.96 * sem_l2
+            data_list_PIonly = []
+            for n in range(5):
+                arr = np.load(output_dir_rendering + f"/PIonly_plot_data_buffer_episode_{n}.npy")
+                data_list_PIonly.append(arr)
+            data_PIonly = np.stack(data_list_PIonly, axis=2)
+            l2_data = np.linalg.norm((data_PIonly[:, 0:3, :] - data_PIonly[:, 3:6, :]), ord=2,
+                                     axis=1)  # shape: (136, 5)
+            # Compute mean and SEM across the 5 sequences
+            mean_l2_PIonly = np.mean(l2_data, axis=1) * 1000  # shape: (136,)
+            sem_l2_PIonly = np.std(l2_data, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
+            # Compute 95% confidence interval bounds
+            ci_upper_PIonly = mean_l2_PIonly + 1.96 * sem_l2_PIonly
+            ci_lower_PIonly = mean_l2_PIonly - 1.96 * sem_l2_PIonly
+            # Plot with confidence interval as shaded area
+            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, mean_l2_PIonly, '-ob', markersize=3,
+                         label="")
+            axs3[3].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower_PIonly, ci_upper_PIonly,
+                                 color='b',
+                                 alpha=0.3,
+                                 label="")
+            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
+            #              np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2,
+            #                             axis=1) * 1000,
+            #              '-om', markersize=3, label='with SAC')
+            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, mean_l2, '-om', markersize=3,
+                         label="")
+            axs3[3].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower, ci_upper, color='m', alpha=0.3,
+                                 label="")
+            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
             #              np.linalg.norm(self.plot_data_buffer[:, 30:33], ord=2, axis=1) * 1000,
             #              'r:', label='error bound on with SAC')
-            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
                          e_v_bounds * 1000 * 0.1,
-                         'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{\t{SAC}}(t))||.\Delta t$")
-            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{{SAC}}(t))||.\Delta t$")
+            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
                          e_v_norms * 1000 * 0.1,
-                         'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{SAC}}(t))\||.\Delta t$")
-            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         'm:', label="")
+            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
                          e_v_bounds_PIonly * 1000 * 0.1,
-                         'b--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{\t{PI}}(t))||.\Delta t$")
-            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         'b--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{{PI}}(t))||.\Delta t$")
+            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
                          e_v_norms_PIonly * 1000 * 0.1,
-                         'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{\t{PI}}(t))\||.\Delta t$")
-            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100,
+                         'b:', label="")
+            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
             #              np.linalg.norm(plot_data_buffer_no_SAC[:, 30:33], ord=2, axis=1) * 1000,
             #              'b:', label='error bound on without SAC')
-            axs3[3].set_xlabel("t [ms]")
+            axs3[3].set_xlabel("t [s]")
             axs3[3].set_ylabel("$||r-rd||_{2}$ [mm]")
-            axs3[3].set_ylim([0, 9])
-            axs3[3].legend(loc="upper right")
+            axs3[3].set_ylim([0, 8])
+            axs3[3].legend(loc="upper left")
             plt.savefig(output_dir_rendering + "/test_position_errors_both.pdf",
                         format="pdf",
                         bbox_inches='tight')
@@ -1345,7 +1492,6 @@ Robotic Manipulation" by Murry et al.
                     arr = np.load(output_dir_rendering + f"/PIonly_plot_data_buffer_episode_{n}.npy")
                     data_list_PIonly.append(arr)
                 data_PIonly = np.stack(data_list_PIonly, axis=2)
-
                 fig3, axs3 = plt.subplots(1, 1, sharex=False, sharey=False, figsize=(8, 8))
                 plt.rcParams.update({
                     'font.size': 14,  # overall font size
@@ -1437,7 +1583,7 @@ Robotic Manipulation" by Murry et al.
                 axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100, mean_l2, '-om', markersize=3,
                           label='mean L2 norm with SAC')
                 axs3.fill_between(np.arange(self.MAX_TIMESTEPS) * 100, ci_lower, ci_upper, color='m', alpha=0.3,
-                                  label='95% CI with')
+                                  label='95% CI with SAC')
                 axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100,
                           e_v_bounds * 1000 * 0.1,
                           'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{\t{SAC}}(t))||.\Delta t$")

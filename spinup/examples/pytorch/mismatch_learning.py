@@ -313,7 +313,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
     # ax.legend()
     # # Adjust layout
     # plt.tight_layout()
-    # plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_dq_measured_dq_simest.png".format(file_name), format="png",
+    # plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_dq_measured_dq_simest.png".format(file_name), format="png",
     #             bbox_inches='tight')
     # plt.show()
 
@@ -347,7 +347,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
     # Adjust layout
     plt.tight_layout()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_dq_desired_commanded.png".format(file_name),
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_dq_desired_commanded.png".format(file_name),
         format="png",
         bbox_inches='tight')
     plt.show()
@@ -370,7 +370,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
         ax.set_ylabel('Position')
         ax.grid(True)
         ax.legend()
-    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_q.png".format(file_name), format="png",
+    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_q.png".format(file_name), format="png",
                 bbox_inches='tight')
     plt.show()
 
@@ -386,7 +386,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
         ax.set_ylabel('Velocity')
         ax.grid(True)
         ax.legend()
-    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_dq.png".format(file_name), format="png",
+    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_dq.png".format(file_name), format="png",
                 bbox_inches='tight')
     plt.show()
 
@@ -403,7 +403,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
         ax.set_ylim([0, 0.02])
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_dq_abs_error.png".format(
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_dq_abs_error.png".format(
             file_name), format="png",
         bbox_inches='tight')
     plt.show()
@@ -421,7 +421,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
         ax.set_ylim([0, 0.04])
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_q_abs_error.png".format(
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_q_abs_error.png".format(
             file_name), format="png",
         bbox_inches='tight')
     plt.show()
@@ -670,26 +670,26 @@ def GP_mismatch_learning(file_names, base_path_extracted_data, plot_dir):
 
 
 if __name__ == '__main__':
-    # file_names = ["SAC_3", "SAC_4", "SAC_5"]
-    # for file_name in file_names:
-    #     bag_path = '/home/mahdi/bagfiles/experiments_HW284/'
-    #     dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name,bag_path, save=True)
-    #
-    #     if file_name[0:3]=="SAC":
-    #         q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=False)
-    #     elif file_name[0:6]=="PIonly":
-    #         q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=True)
-    #
-    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_q.npy".format(file_name),q)
-    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_dq.npy".format(file_name),dq)
-    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_q_sim.npy".format(file_name),q_sim)
-    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/{}_dq_sim.npy".format(file_name),dq_sim)
+    file_names = ["SAC_1","PIonly_1"]
+    for file_name in file_names:
+        bag_path = '/home/mahdi/bagfiles/experiments_HW309/'
+        dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name,bag_path, save=True)
+
+        if file_name[0:3]=="SAC":
+            q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=False)
+        elif file_name[0:6]=="PIonly":
+            q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=True)
+
+        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_q.npy".format(file_name),q)
+        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_dq.npy".format(file_name),dq)
+        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_q_sim.npy".format(file_name),q_sim)
+        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/{}_dq_sim.npy".format(file_name),dq_sim)
 
 
     ####################################################################################################################
     file_names = ["SAC_1", "SAC_3", "SAC_4", "SAC_5"]
     # file_names = ["SAC_1", "SAC_2", "SAC_3", "PIonly_1", "PIonly_2", "PIonly_3"]
-    base_path_extracted_data = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_284/"
+    base_path_extracted_data = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/"
     plot_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/trainOnSAC_1_3_4_testOnSAC_5_trackingPhaseOnly/"
     GP_mismatch_learning(file_names, base_path_extracted_data, plot_dir)
 

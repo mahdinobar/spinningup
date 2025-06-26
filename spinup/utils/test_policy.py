@@ -159,7 +159,7 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True, 
                 env.render(output_dir)
             elif num_episodes > 1:
                 # np.save(output_dir + "/plot_data_buffer_episode_{}".format(str(n)), env.unwrapped.plot_data_buffer)
-                np.save(output_dir + "/PIonly_plot_data_buffer_episode_{}".format(str(n)), env.unwrapped.plot_data_buffer)
+                # np.save(output_dir + "/PIonly_plot_data_buffer_episode_{}".format(str(n)), env.unwrapped.plot_data_buffer)
                 if n==num_episodes-1:
                     env.render(output_dir)
             n += 1
