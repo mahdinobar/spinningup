@@ -1238,7 +1238,7 @@ Robotic Manipulation" by Murry et al.
                 'xtick.labelsize': 12,  # x-axis tick labels
                 'ytick.labelsize': 12,  # y-axis tick labels
                 'legend.fontsize': 12,  # legend text
-                'font.family': 'Serif'
+                'font.family': 'Times'
             })
             data_list = []
             for n in range(5):
