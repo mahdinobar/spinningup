@@ -136,9 +136,9 @@ Robotic Manipulation" by Murry et al.
         np.random.seed(seed)
         self.seed(seed=seed)
         # TODO: reward params
-        self.lpx = 600
-        self.lpy = 600
-        self.lpz = 600
+        self.lpx = 1200
+        self.lpy = 1200
+        self.lpz = 1200
         self.lv = 10
         self.lddqc = 1
         self.reward_eta_p = 1
@@ -209,7 +209,9 @@ Robotic Manipulation" by Murry et al.
         # self.models_dq = []
         self.likelihoods_dq = []
         # GP_dir = "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/mismatch_learning/trainOnSAC1and2PI1and2and3_testOnSAC3_trackingPhaseOnly/"
-        GP_dir = "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
+        # GP_dir = "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
+        GP_dir = "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
+        # GP_dir = "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
         GP_input_dim=2
         for joint_number in range(6):
             # Load scalers
