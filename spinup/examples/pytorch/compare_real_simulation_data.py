@@ -221,7 +221,7 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
     if PIonly==False:
         sim_plot_data_buffer=np.load(
             "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/SAC_plot_data_buffer.npy")
-        sim_state_buffer= np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/SAC_state_buffer.npy"        )
+        sim_state_buffer= np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/SAC_state_buffer.npy")
     elif PIonly==True:
         sim_plot_data_buffer=np.load(
             "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/PIonly_plot_data_buffer.npy")
