@@ -220,12 +220,12 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
     # file_name= file_name+"_240Hz_"
     if PIonly==False:
         sim_plot_data_buffer=np.load(
-            "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/SAC_plot_data_buffer.npy")
-        sim_state_buffer= np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/SAC_state_buffer.npy"        )
+            "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/SAC_plot_data_buffer.npy")
+        sim_state_buffer= np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/SAC_state_buffer.npy"        )
     elif PIonly==True:
         sim_plot_data_buffer=np.load(
-            "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/PIonly_plot_data_buffer.npy")
-        sim_state_buffer= np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/PIonly_state_buffer.npy"        )
+            "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/PIonly_plot_data_buffer.npy")
+        sim_state_buffer= np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/PIonly_state_buffer.npy"        )
 
     # Attentions (remove redundant initial data of some topics based on absolute ROS timestamp; conside dq_PI as base)
     idx_init_dq_measured = np.argwhere(abs(dq_PI[0, 0] - dq_measured[:, 0]) < 1e-3)
@@ -348,7 +348,7 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
     # ax.legend()
     # # Adjust layout
     # plt.tight_layout()
-    # plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_dq_measured_dq_simest.pdf".format(file_name), format="pdf",
+    # plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_dq_measured_dq_simest.png".format(file_name), format="png",
     #             bbox_inches='tight')
     # plt.show()
 
@@ -382,11 +382,12 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
     # Adjust layout
     plt.tight_layout()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_dq_desired_commanded.pdf".format(
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_dq_desired_commanded.png".format(
             file_name),
-        format="pdf",
+        format="png",
         bbox_inches='tight')
     plt.show()
+
 
     dq = dq_measured[closest_idx_dq, 1:7]
     q = q_measured[closest_idx_q, 1:7]
@@ -399,15 +400,151 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
     for i in range(6):
         ax = axs1[i // 2, i % 2]
         ax.plot(closest_t_q, q[:, i], '-og', label='Measured q')
-        ax.plot(closest_t_PI, q_sim[:, i], '-ob', label='Simulated q_sim', markersize=2)
+        ax.plot(closest_t_PI, q_sim[:, i], '-ob', label='Simulated q_sim + mismatch correction', markersize=2)
         ax.set_title(f'Joint {i + 1}')
         ax.set_xlabel('Time step')
         ax.set_ylabel('Position')
         ax.grid(True)
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_q.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_q.png".format(
+            file_name), format="png",
+        bbox_inches='tight')
+    plt.show()
+
+    dq = dq_measured[closest_idx_dq, 1:7]
+    q = q_measured[closest_idx_q, 1:7]
+    dq_sim = np.array(dq_sim)[:, :6]
+    q_sim_=sim_state_buffer[:94, 3:9]
+    # Plot q and q_sim (Position)
+    fig1, axs1 = plt.subplots(3, 2, figsize=(12, 8))
+    plt.rcParams['font.family'] = 'Serif'
+    fig1.suptitle('Joint Positions: Measured vs Simulated', fontsize=16)
+    for i in range(6):
+        ax = axs1[i // 2, i % 2]
+        ax.plot(closest_t_q, q[:, i], '-og', label='Measured q')
+        ax.plot(closest_t_PI[10:], q_sim_[:, i], '-ob', label='pybullet HW312 q_tp1+q_mismatch', markersize=2)
+        ax.set_title(f'Joint {i + 1}')
+        ax.set_xlabel('Time step')
+        ax.set_ylabel('Position')
+        ax.grid(True)
+        ax.legend()
+    plt.savefig(
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_q_compare_pybulletHW312Simulation.png".format(
+            file_name), format="png",
+        bbox_inches='tight')
+    plt.show()
+
+
+    input_scalers = []
+    target_scalers_q = []
+    models_q = []
+    likelihoods_q = []
+    likelihoods_dq = []
+    GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
+    GP_input_dim = 2
+    for joint_number in range(6):
+        # Load scalers
+        input_scaler = joblib.load(GP_dir + f'input_scaler{joint_number}.pkl')
+        target_scaler_q = joblib.load(GP_dir + f'target_scaler_q{joint_number}.pkl')
+        # Instantiate and load model for q
+        likelihood_q = gpytorch.likelihoods.GaussianLikelihood()
+
+        class ExactGPModel(gpytorch.models.ExactGP):
+            def __init__(self, train_x, train_y, likelihood):
+                super().__init__(train_x, train_y, likelihood)
+                self.mean_module = gpytorch.means.ConstantMean()
+                # covar_module = gpytorch.kernels.ScaleKernel(
+                #     gpytorch.kernels.RBFKernel()
+                # )
+                self.covar_module = gpytorch.kernels.ScaleKernel(
+                    gpytorch.kernels.RBFKernel() +
+                    gpytorch.kernels.MaternKernel(nu=2.5)
+                )
+
+            def forward(self, x):
+                mean_x = self.mean_module(x)
+                covar_x = self.covar_module(x)
+                return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
+
+        # model_q = GPModel(train_x_shape=(1, GP_input_dim), likelihood=likelihood_q)
+        train_x_placeholder = torch.zeros((1, GP_input_dim))
+        train_y_placeholder = torch.zeros((1,))
+        model_q = ExactGPModel(train_x_placeholder, train_y_placeholder, likelihood_q)
+        checkpoint_q = torch.load(
+            GP_dir + f'gp_model_q{joint_number}.pth')
+        model_q.load_state_dict(checkpoint_q['model_state_dict'])
+        likelihood_q.load_state_dict(checkpoint_q['likelihood_state_dict'])
+        input_scaler = checkpoint_q['input_scaler']  # overwrite with trained one
+        target_scaler_q = checkpoint_q['target_scaler']
+        model_q.eval()
+        likelihood_q.eval()
+        device = torch.device('cpu')
+        model_q.to(device)
+        likelihood_q.to(device)
+        # Append to lists
+        input_scalers.append(input_scaler)
+        target_scalers_q.append(target_scaler_q)
+        # target_scalers_dq.append(target_scaler_dq)
+        models_q.append(model_q)
+        likelihoods_q.append(likelihood_q)
+    #########################################################################
+    # ----- q and dq Mismatch Compensation -----
+    for i in range(6):
+        models_q[i].eval()
+        # models_dq[i].eval()
+        likelihoods_q[i].eval()
+        # likelihoods_dq[i].eval()
+        # TODO ????????????
+        X_test = np.array([q_sim[i], dq_sim[i]]).reshape(-1, 2)
+        X_test = input_scalers[i].transform(X_test)
+        X_test = torch.tensor(X_test, dtype=torch.float32)
+        device = torch.device('cpu')  # or 'cuda' if you're using GPU
+        X_test = X_test.to(device)
+        with torch.no_grad(), gpytorch.settings.fast_pred_var():
+            models_q[i].to(device)
+            likelihoods_q[i].to(device)
+            pred_q = likelihoods_q[i](models_q[i](X_test))
+            # pred_dq = likelihoods_dq[i](models_dq[i](X_test))
+            mean_q = pred_q.mean.numpy()
+            # mean_dq = pred_dq.mean.numpy()
+            std_q = pred_q.variance.sqrt().numpy()
+            # std_dq = pred_dq.variance.sqrt().numpy()
+            # Uncomment when Normalizing
+            mean_q = target_scalers_q[i].inverse_transform(mean_q.reshape(-1, 1)).flatten()
+            std_q = std_q * target_scalers_q[i].scale_[0]  # only scale, don't shift
+            # mean_dq = target_scalers_dq[i].inverse_transform(mean_dq.reshape(-1, 1)).flatten()
+            # std_dq = std_dq * target_scalers_dq[i].scale_[0]  # only scale, don't shift
+        # TODO
+        if ~np.isnan(mean_q):
+            q_sim[i] = q_sim[i] + mean_q
+        else:
+            print("mean_q[{}] is nan!!".format(i))
+        # if ~np.isnan(mean_dq):
+        #     dq_tp1[i] = dq_tp1[i] + mean_dq
+        # else:
+        #     print("mean_dq[{}] is nan!".format(i))
+    #########################################################################
+    dq = dq_measured[closest_idx_dq, 1:7]
+    q = q_measured[closest_idx_q, 1:7]
+    dq_sim = np.array(dq_sim)[:, :6]
+    q_sim = np.array(q_sim)[:, :6]
+    # Plot q and q_sim (Position)
+    fig1, axs1 = plt.subplots(3, 2, figsize=(12, 8))
+    plt.rcParams['font.family'] = 'Serif'
+    fig1.suptitle('Joint Positions: Measured vs Simulated', fontsize=16)
+    for i in range(6):
+        ax = axs1[i // 2, i % 2]
+        ax.plot(closest_t_q, q[:, i], '-og', label='Measured q')
+        ax.plot(closest_t_PI, q_sim[:, i], '-ob', label='Simulated q_sim + mismatch correction', markersize=2)
+        ax.set_title(f'Joint {i + 1}')
+        ax.set_xlabel('Time step')
+        ax.set_ylabel('Position')
+        ax.grid(True)
+        ax.legend()
+    plt.savefig(
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_q_mismatch_comp_2.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -424,8 +561,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.grid(True)
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_dq.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_dq.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -442,8 +579,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.set_ylim([0, 0.05])
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_dq_abs_error.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_dq_abs_error.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -460,8 +597,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.set_ylim([0, 0.1])
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_q_abs_error.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_q_abs_error.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -485,8 +622,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.set_ylim([-10.1, 10.1])
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_dq_error.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_dq_error.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
     # Plot dq and error q (Position)
@@ -509,8 +646,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.set_ylim([-4.1, 4.1])
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_q_error.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_q_error.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -539,8 +676,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.set_ylim([-2, 4])
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_compare_dq_PI.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_compare_dq_PI.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -568,8 +705,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.set_ylim([-24, 24])
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_compare_dq_SAC.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_compare_dq_SAC.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -608,8 +745,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.set_ylim([-5, 4])
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_compare_delta_p.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_compare_delta_p.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -637,8 +774,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         # ax.set_ylim([-5, 4])
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_compare_p_star.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_compare_p_star.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -666,8 +803,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         # ax.set_ylim([-5, 4])
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_compare_p_hat_EE.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_compare_p_hat_EE.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -695,8 +832,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.grid(True)
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_compare_dq_test.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_compare_dq_test.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -723,8 +860,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.grid(True)
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_compare_q_test.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_compare_q_test.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -753,8 +890,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.grid(True)
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_compare_dq_PI_err.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_compare_dq_PI_err.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -781,8 +918,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.grid(True)
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_compare_dq_SAC_err.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_compare_dq_SAC_err.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -801,8 +938,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.grid(True)
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_compare_delta_p_err.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_compare_delta_p_err.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -820,8 +957,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.grid(True)
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_compare_p_star_err.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_compare_p_star_err.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -839,8 +976,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.grid(True)
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_compare_p_hat_EE_err.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_compare_p_hat_EE_err.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -867,8 +1004,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.grid(True)
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_compare_q_test_err.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_compare_q_test_err.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -895,8 +1032,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.grid(True)
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/{}_compare_dq_test_err.pdf".format(
-            file_name), format="pdf",
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_compare_dq_test_err.png".format(
+            file_name), format="png",
         bbox_inches='tight')
     plt.show()
 
@@ -906,9 +1043,9 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
 if __name__ == '__main__':
     # file_names = ["SAC_1","SAC_2","SAC_3","SAC_4","SAC_5", "PIonly_1", "PIonly_2", "PIonly_3", "PIonly_4", "PIonly_5"]
     # file_names = ["PIonly_4"]
-    file_names = ["SAC_5"]
+    file_names = ["SAC_1"]
     for file_name in file_names:
-        bag_path = '/home/mahdi/bagfiles/experiments_HW309/dqPIandSAC_command_update_100Hz/'
+        bag_path = '/home/mahdi/bagfiles/experiments_HW312/'
         # dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, bag_path, save=True)
         dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star  = load_bags(file_name, bag_path, save=True)
 
