@@ -394,20 +394,20 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
     dq_sim = np.array(dq_sim)[:, :6]
     q_sim = np.array(q_sim)[:, :6]
     # Plot q and q_sim (Position)
-    fig1, axs1 = plt.subplots(3, 2, figsize=(12, 8))
+    fig1, axs1 = plt.subplots(3, 2, figsize=(12, 16))
     plt.rcParams['font.family'] = 'Serif'
-    fig1.suptitle('Joint Positions: Measured vs Simulated', fontsize=16)
+    # fig1.suptitle('Joint Positions: Measured vs Simulated', fontsize=16)
     for i in range(6):
         ax = axs1[i // 2, i % 2]
         ax.plot(closest_t_q, q[:, i], '-og', label='Measured q')
-        ax.plot(closest_t_PI, q_sim[:, i], '-ob', label='Simulated q_sim + mismatch correction', markersize=2)
+        ax.plot(closest_t_PI, q_sim[:, i], '-ob', label='Sim q (no mismatch comp.)', markersize=2)
         ax.set_title(f'Joint {i + 1}')
-        ax.set_xlabel('Time step')
-        ax.set_ylabel('Position')
+        ax.set_xlabel('t [ms]')
+        ax.set_ylabel('q[{}] [rad]'.format(i))
         ax.grid(True)
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_q.png".format(
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_q_qSimRaw.png".format(
             file_name), format="png",
         bbox_inches='tight')
     plt.show()
@@ -415,22 +415,22 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
     dq = dq_measured[closest_idx_dq, 1:7]
     q = q_measured[closest_idx_q, 1:7]
     dq_sim = np.array(dq_sim)[:, :6]
-    q_sim_=sim_state_buffer[:94, 3:9]
+    q_sim_ = sim_state_buffer[:94, 3:9]
     # Plot q and q_sim (Position)
-    fig1, axs1 = plt.subplots(3, 2, figsize=(12, 8))
+    fig1, axs1 = plt.subplots(3, 2, figsize=(12, 16))
     plt.rcParams['font.family'] = 'Serif'
-    fig1.suptitle('Joint Positions: Measured vs Simulated', fontsize=16)
+    # fig1.suptitle('Joint Positions: Measured vs Simulated', fontsize=16)
     for i in range(6):
         ax = axs1[i // 2, i % 2]
         ax.plot(closest_t_q, q[:, i], '-og', label='Measured q')
-        ax.plot(closest_t_PI[10:], q_sim_[:, i], '-ob', label='pybullet HW312 q_tp1+q_mismatch', markersize=2)
+        ax.plot(closest_t_PI[10:], q_sim_[:, i], '-sk', label='Sim HW312 State Buffer', markersize=2)
         ax.set_title(f'Joint {i + 1}')
-        ax.set_xlabel('Time step')
-        ax.set_ylabel('Position')
+        ax.set_xlabel('t [ms]')
+        ax.set_ylabel('q[{}] [rad]'.format(i))
         ax.grid(True)
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_q_compare_pybulletHW312Simulation.png".format(
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_qReal_qSimHW312StateBuffer.png".format(
             file_name), format="png",
         bbox_inches='tight')
     plt.show()
@@ -489,61 +489,63 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         models_q.append(model_q)
         likelihoods_q.append(likelihood_q)
     #########################################################################
-    # ----- q and dq Mismatch Compensation -----
-    for i in range(6):
-        models_q[i].eval()
-        # models_dq[i].eval()
-        likelihoods_q[i].eval()
-        # likelihoods_dq[i].eval()
-        # TODO ????????????
-        X_test = np.array([q_sim[i], dq_sim[i]]).reshape(-1, 2)
-        X_test = input_scalers[i].transform(X_test)
-        X_test = torch.tensor(X_test, dtype=torch.float32)
-        device = torch.device('cpu')  # or 'cuda' if you're using GPU
-        X_test = X_test.to(device)
-        with torch.no_grad(), gpytorch.settings.fast_pred_var():
-            models_q[i].to(device)
-            likelihoods_q[i].to(device)
-            pred_q = likelihoods_q[i](models_q[i](X_test))
-            # pred_dq = likelihoods_dq[i](models_dq[i](X_test))
-            mean_q = pred_q.mean.numpy()
-            # mean_dq = pred_dq.mean.numpy()
-            std_q = pred_q.variance.sqrt().numpy()
-            # std_dq = pred_dq.variance.sqrt().numpy()
-            # Uncomment when Normalizing
-            mean_q = target_scalers_q[i].inverse_transform(mean_q.reshape(-1, 1)).flatten()
-            std_q = std_q * target_scalers_q[i].scale_[0]  # only scale, don't shift
-            # mean_dq = target_scalers_dq[i].inverse_transform(mean_dq.reshape(-1, 1)).flatten()
-            # std_dq = std_dq * target_scalers_dq[i].scale_[0]  # only scale, don't shift
-        # TODO
-        if ~np.isnan(mean_q):
-            q_sim[i] = q_sim[i] + mean_q
-        else:
-            print("mean_q[{}] is nan!!".format(i))
-        # if ~np.isnan(mean_dq):
-        #     dq_tp1[i] = dq_tp1[i] + mean_dq
-        # else:
-        #     print("mean_dq[{}] is nan!".format(i))
+    q_sim_corrected=q_sim
+    for k in range(104):
+        # ----- q and dq Mismatch Compensation -----
+        for i in range(6):
+            models_q[i].eval()
+            # models_dq[i].eval()
+            likelihoods_q[i].eval()
+            # likelihoods_dq[i].eval()
+            # TODO ????????????
+            X_test = np.array([q_sim[k,i], dq_sim[k,i]]).reshape(-1, 2)
+            X_test = input_scalers[i].transform(X_test)
+            X_test = torch.tensor(X_test, dtype=torch.float32)
+            device = torch.device('cpu')  # or 'cuda' if you're using GPU
+            X_test = X_test.to(device)
+            with torch.no_grad(), gpytorch.settings.fast_pred_var():
+                models_q[i].to(device)
+                likelihoods_q[i].to(device)
+                pred_q = likelihoods_q[i](models_q[i](X_test))
+                # pred_dq = likelihoods_dq[i](models_dq[i](X_test))
+                mean_q = pred_q.mean.numpy()
+                # mean_dq = pred_dq.mean.numpy()
+                std_q = pred_q.variance.sqrt().numpy()
+                # std_dq = pred_dq.variance.sqrt().numpy()
+                # Uncomment when Normalizing
+                mean_q = target_scalers_q[i].inverse_transform(mean_q.reshape(-1, 1)).flatten()
+                std_q = std_q * target_scalers_q[i].scale_[0]  # only scale, don't shift
+                # mean_dq = target_scalers_dq[i].inverse_transform(mean_dq.reshape(-1, 1)).flatten()
+                # std_dq = std_dq * target_scalers_dq[i].scale_[0]  # only scale, don't shift
+            # TODO
+            if ~np.isnan(mean_q):
+                q_sim_corrected[k,i] = q_sim_corrected[k,i] + mean_q
+            else:
+                print("mean_q[{}] is nan!!".format(i))
+            # if ~np.isnan(mean_dq):
+            #     dq_tp1[i] = dq_tp1[i] + mean_dq
+            # else:
+            #     print("mean_dq[{}] is nan!".format(i))
     #########################################################################
     dq = dq_measured[closest_idx_dq, 1:7]
     q = q_measured[closest_idx_q, 1:7]
     dq_sim = np.array(dq_sim)[:, :6]
-    q_sim = np.array(q_sim)[:, :6]
+    q_sim_corrected = np.array(q_sim_corrected)[:, :6]
     # Plot q and q_sim (Position)
-    fig1, axs1 = plt.subplots(3, 2, figsize=(12, 8))
+    fig1, axs1 = plt.subplots(3, 2, figsize=(12, 16))
     plt.rcParams['font.family'] = 'Serif'
-    fig1.suptitle('Joint Positions: Measured vs Simulated', fontsize=16)
+    # fig1.suptitle('Joint Positions: Measured vs Simulated', fontsize=16)
     for i in range(6):
         ax = axs1[i // 2, i % 2]
         ax.plot(closest_t_q, q[:, i], '-og', label='Measured q')
-        ax.plot(closest_t_PI, q_sim[:, i], '-ob', label='Simulated q_sim + mismatch correction', markersize=2)
+        ax.plot(closest_t_PI[10:], q_sim_corrected[10:, i], '-or', label='Simulated q_sim + mismatch correction', markersize=2)
         ax.set_title(f'Joint {i + 1}')
-        ax.set_xlabel('Time step')
-        ax.set_ylabel('Position')
+        ax.set_xlabel('t [ms]')
+        ax.set_ylabel('q[{}] [rad]'.format(i))
         ax.grid(True)
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_q_mismatch_comp_2.png".format(
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/{}_qReal_qSimMismatchComp.png".format(
             file_name), format="png",
         bbox_inches='tight')
     plt.show()

@@ -463,12 +463,12 @@ def GP_mismatch_learning(file_names, base_path_extracted_data, plot_dir):
         q_sim_list.append(q_sim[arg_tracking_phase_init:arg_tracking_phase_init+arg_tracking_phase_length,:])
         dq_sim_list.append(dq_sim[arg_tracking_phase_init:arg_tracking_phase_init+arg_tracking_phase_length,:])
 
-    for joint_number in range(6):
+    for joint_idx in range(6):
         # Stack into arrays of shape (3, T, DOF)
-        q = np.stack(q_list, axis=0)[:,:,joint_number]
-        dq = np.stack(dq_list, axis=0)[:,:,joint_number]
-        q_sim = np.stack(q_sim_list, axis=0)[:,:,joint_number]
-        dq_sim = np.stack(dq_sim_list, axis=0)[:,:,joint_number]
+        q = np.stack(q_list, axis=0)[:,:,joint_idx]
+        dq = np.stack(dq_list, axis=0)[:,:,joint_idx]
+        q_sim = np.stack(q_sim_list, axis=0)[:,:,joint_idx]
+        dq_sim = np.stack(dq_sim_list, axis=0)[:,:,joint_idx]
 
         # ----- STEP 1: Load Your Data -----
         # Let's say you have data from 3 iterations
@@ -476,7 +476,7 @@ def GP_mismatch_learning(file_names, base_path_extracted_data, plot_dir):
 
         train_ids = [0, 1, 2]
         test_id = 3
-
+        GP_input_dim=2
         # Concatenate across time
         X_train = np.concatenate([q_sim[train_ids], dq_sim[train_ids]], axis=-1).reshape(-1, 2)
         X_test = np.concatenate([q_sim[test_id], dq_sim[test_id]], axis=-1).reshape(-1, 2)
@@ -608,75 +608,75 @@ def GP_mismatch_learning(file_names, base_path_extracted_data, plot_dir):
             'font.family': 'Serif'
         })        # --- q ---
         plt.subplot(2, 2, 1)
-        plt.plot(timesteps, np.rad2deg(q_real), label="Real q[{}]".format(str(joint_number)), color="g", linewidth=1, marker="o",
+        plt.plot(timesteps, np.rad2deg(q_real), label="Real q[{}]".format(str(joint_idx)), color="g", linewidth=1, marker="o",
                  markersize=4)
-        plt.plot(timesteps, np.rad2deg(q_sim_test), label="Simulated q[{}]".format(str(joint_number)), color="b", linewidth=1,
+        plt.plot(timesteps, np.rad2deg(q_sim_test), label="Simulated q[{}]".format(str(joint_idx)), color="b", linewidth=1,
                  marker="o", markersize=2)
         plt.plot(timesteps, np.rad2deg(q_corrected), label="Corrected q (GP)", color="m", linewidth=1, marker="o", markersize=2)
         plt.fill_between(timesteps, np.rad2deg(q_corrected - std_q), np.rad2deg(q_corrected + std_q), color="m", alpha=0.15,
                          label="Uncertainty")
-        plt.title("Joint {} Positions".format(str(joint_number+1)))
+        plt.title("Joint {} Positions".format(str(joint_idx+1)))
         plt.xlabel("k")
         plt.ylabel("q [deg]")
         plt.legend()
         plt.subplot(2, 2, 3)
         plt.plot(timesteps, np.rad2deg(abs(q_real - q_corrected)),
-                 label="$|q_{{real}}[{}]-q_{{corrected}}[{}]|$".format(str(joint_number), str(joint_number)), color="m",
+                 label="$|q_{{real}}[{}]-q_{{corrected}}[{}]|$".format(str(joint_idx), str(joint_idx)), color="m",
                  linewidth=1, marker="o", markersize=4)
         plt.plot(timesteps, np.rad2deg(abs(q_real - q_sim_test)),
-                 label="$|q_{{real}}[{}]-q_{{sim}}[{}]|$".format(str(joint_number), str(joint_number)), color="b",
+                 label="$|q_{{real}}[{}]-q_{{sim}}[{}]|$".format(str(joint_idx), str(joint_idx)), color="b",
                  linewidth=1, marker="o", markersize=2)
         plt.fill_between(timesteps, np.clip(np.rad2deg(abs(q_real - q_corrected) - std_q), a_min=0, a_max=None),
                          np.clip(np.rad2deg(abs(q_real - q_corrected) + std_q), a_min=0, a_max=None), color="m", alpha=0.15,
                          label="Uncertainty")
-        plt.title("Joint {} Position Errors".format(str(joint_number+1)))
+        plt.title("Joint {} Position Errors".format(str(joint_idx+1)))
         plt.xlabel("k")
         plt.ylabel("q abs error [deg]")
         plt.legend()
         # --- dq ---
         plt.subplot(2, 2, 2)
-        plt.plot(timesteps, np.rad2deg(dq_real), label="Real dq[{}]".format(str(joint_number)), color="g", linewidth=1, marker="o",
+        plt.plot(timesteps, np.rad2deg(dq_real), label="Real dq[{}]".format(str(joint_idx)), color="g", linewidth=1, marker="o",
                  markersize=4)
-        plt.plot(timesteps, np.rad2deg(dq_sim_test), label="Simulated dq[{}]".format(str(joint_number)), color="b", linewidth=1,
+        plt.plot(timesteps, np.rad2deg(dq_sim_test), label="Simulated dq[{}]".format(str(joint_idx)), color="b", linewidth=1,
                  marker="o", markersize=2)
         plt.plot(timesteps, np.rad2deg(dq_corrected), label="Corrected dq (GP)", color="m", linewidth=1, marker="o", markersize=2)
         plt.fill_between(timesteps, np.rad2deg(dq_corrected - std_dq), np.rad2deg(dq_corrected + std_dq), color="m", alpha=0.15,
                          label="Uncertainty")
-        plt.title("Joint {} Speeds".format(str(joint_number+1)))
+        plt.title("Joint {} Speeds".format(str(joint_idx+1)))
         plt.xlabel("k")
         plt.ylabel("dq [deg/s]")
         plt.legend()
         plt.tight_layout()
         plt.subplot(2, 2, 4)
         plt.plot(timesteps, np.rad2deg(abs(dq_real - dq_corrected)),
-                 label="$|dq_{{real}}[{}]-dq_{{corrected}}[{}]|$".format(str(joint_number), str(joint_number)),
+                 label="$|dq_{{real}}[{}]-dq_{{corrected}}[{}]|$".format(str(joint_idx), str(joint_idx)),
                  color="m", linewidth=1, marker="o", markersize=4)
         plt.plot(timesteps, np.rad2deg(abs(dq_real - dq_sim_test)),
-                 label="$|dq_{{real}}[{}]-dq_{{sim}}[{}]|$".format(str(joint_number), str(joint_number)), color="b",
+                 label="$|dq_{{real}}[{}]-dq_{{sim}}[{}]|$".format(str(joint_idx), str(joint_idx)), color="b",
                  linewidth=1, marker="o", markersize=2)
         plt.fill_between(timesteps, np.clip(np.rad2deg(abs(dq_real - dq_corrected) - std_dq), a_min=0, a_max=None),
                          np.clip(np.rad2deg(abs(dq_real - dq_corrected) + std_dq), a_min=0, a_max=None), color="m", alpha=0.15,
                          label="Uncertainty")
-        plt.title("Joint {} Speed Errors".format(str(joint_number+1)))
+        plt.title("Joint {} Speed Errors".format(str(joint_idx+1)))
         plt.xlabel("k")
         plt.ylabel("dq abs error [deg/s]")
         plt.legend()
         plt.savefig(
             plot_dir+"joint_{}_normalized_GP.pdf".format(
-                str(joint_number)), format="pdf",
+                str(joint_idx)), format="pdf",
             bbox_inches='tight')
         plt.show()
 
-        joblib.dump(input_scaler, plot_dir+'input_scaler{}.pkl'.format(str(joint_number)))
-        joblib.dump(target_scaler_q, plot_dir+'target_scaler_q{}.pkl'.format(str(joint_number)))
-        joblib.dump(target_scaler_dq, plot_dir+'target_scaler_dq{}.pkl'.format(str(joint_number)))
+        joblib.dump(input_scaler, plot_dir+'input_scaler{}.pkl'.format(str(joint_idx)))
+        joblib.dump(target_scaler_q, plot_dir+'target_scaler_q{}.pkl'.format(str(joint_idx)))
+        joblib.dump(target_scaler_dq, plot_dir+'target_scaler_dq{}.pkl'.format(str(joint_idx)))
         # Save q model
         # torch.save({
         #     'model_state_dict': model_q.state_dict(),
         #     'likelihood_state_dict': likelihood_q.state_dict(),
         #     'input_scaler': input_scaler,
         #     'target_scaler': target_scaler_q,
-        # }, plot_dir+'gp_model_q{}.pth'.format(str(joint_number)))
+        # }, plot_dir+'gp_model_q{}.pth'.format(str(joint_idx)))
 
         torch.save({
             'model_state_dict': model_q.state_dict(),
@@ -684,7 +684,7 @@ def GP_mismatch_learning(file_names, base_path_extracted_data, plot_dir):
             'input_scaler': input_scaler,
             'target_scaler': target_scaler_q,
             'train_x_shape': (1, GP_input_dim),  # ← save this!
-        }, plot_dir + f'gp_model_q{joint_number}.pth')
+        }, plot_dir + f'gp_model_q{joint_idx}.pth')
 
         # Save dq model
         torch.save({
@@ -692,7 +692,7 @@ def GP_mismatch_learning(file_names, base_path_extracted_data, plot_dir):
             'likelihood_state_dict': likelihood_dq.state_dict(),
             'input_scaler': input_scaler,
             'target_scaler': target_scaler_dq,
-        }, plot_dir+'gp_model_dq{}.pth'.format(str(joint_number)))
+        }, plot_dir+'gp_model_dq{}.pth'.format(str(joint_idx)))
 
     print("")
 

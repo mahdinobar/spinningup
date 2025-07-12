@@ -11,6 +11,9 @@ import sys
 import gpytorch
 import joblib
 import torch
+import warnings
+
+warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
 sys.path.append('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch')
 from myKalmanFilter import KalmanFilter
@@ -63,6 +66,10 @@ pb.setAdditionalSearchPath(pybullet_data.getDataPath())
 arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf",
                   useFixedBase=True, physicsClientId=physics_client)
 
+arm_auxiliary_mismatch = pb.loadURDF(
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf",
+    useFixedBase=True, physicsClientId=physics_client)
+
 # # Create the second physics client
 # client_auxilary = pb.connect(pb.DIRECT)  # Use p.GUI for visualization
 # pb.setAdditionalSearchPath(pybullet_data.getDataPath(), physicsClientId=client_auxilary)
@@ -76,7 +83,9 @@ arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URD
 # pb.setGravity(0, 0, -9.81, physicsClientId=client_auxilary)
 import os
 
-arm_biased_kinematics = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc_biased_3.urdf",useFixedBase=True, physicsClientId=physics_client)
+arm_biased_kinematics = pb.loadURDF(
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc_biased_3.urdf",
+    useFixedBase=True, physicsClientId=physics_client)
 # arm_biased_kinematics = pb.loadURDF(
 #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics_3.urdf",
 #     useFixedBase=True)
@@ -213,11 +222,11 @@ Robotic Manipulation" by Murry et al.
         # GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
         # GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
         GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
-        GP_input_dim=2
+        GP_input_dim = 2
         for joint_number in range(6):
             # Load scalers
-            input_scaler = joblib.load(GP_dir+f'input_scaler{joint_number}.pkl')
-            target_scaler_q = joblib.load(GP_dir+f'target_scaler_q{joint_number}.pkl')
+            input_scaler = joblib.load(GP_dir + f'input_scaler{joint_number}.pkl')
+            target_scaler_q = joblib.load(GP_dir + f'target_scaler_q{joint_number}.pkl')
             # target_scaler_dq = joblib.load(GP_dir+f'target_scaler_dq{joint_number}.pkl')
 
             # Instantiate and load model for q
@@ -234,16 +243,18 @@ Robotic Manipulation" by Murry et al.
                         gpytorch.kernels.RBFKernel() +
                         gpytorch.kernels.MaternKernel(nu=2.5)
                     )
+
                 def forward(self, x):
                     mean_x = self.mean_module(x)
                     covar_x = self.covar_module(x)
                     return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
+
             # model_q = GPModel(train_x_shape=(1, GP_input_dim), likelihood=likelihood_q)
             train_x_placeholder = torch.zeros((1, GP_input_dim))
             train_y_placeholder = torch.zeros((1,))
             model_q = ExactGPModel(train_x_placeholder, train_y_placeholder, likelihood_q)
             checkpoint_q = torch.load(
-                GP_dir+f'gp_model_q{joint_number}.pth')
+                GP_dir + f'gp_model_q{joint_number}.pth')
             model_q.load_state_dict(checkpoint_q['model_state_dict'])
             likelihood_q.load_state_dict(checkpoint_q['likelihood_state_dict'])
             input_scaler = checkpoint_q['input_scaler']  # overwrite with trained one
@@ -335,6 +346,12 @@ Robotic Manipulation" by Murry et al.
             pb.resetBasePositionAndOrientation(
                 arm_biased_kinematics, [100, 100, 100], pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]),
                 physicsClientId=physics_client)
+            self.fixed_base_bias_arm_auxiliary_mismatch = 200
+            pb.resetBasePositionAndOrientation(
+                arm_auxiliary_mismatch, [self.fixed_base_bias_arm_auxiliary_mismatch, self.fixed_base_bias_arm_auxiliary_mismatch,
+                                         self.fixed_base_bias_arm_auxiliary_mismatch],
+                pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]),
+                physicsClientId=physics_client)
             # we add random normal noise with std of 0.25 [deg] and zero mean on all 6 joints
             # q_init is the inital condition of the startup phase
             self.q_init = np.array(
@@ -352,12 +369,15 @@ Robotic Manipulation" by Murry et al.
                 pb.resetJointState(arm, i, self.q_init[i], physicsClientId=physics_client)
                 pb.resetJointState(arm_biased_kinematics, i, self.q_init[i] + self.q_init_bias[i],
                                    physicsClientId=physics_client)
+                pb.resetJointState(arm_auxiliary_mismatch, i, self.q_init[i], physicsClientId=physics_client)
             # In Pybullet, gripper halves are controlled separately+we also deactivated the 7th joint too
             pb.resetJointState(arm, 7, 1.939142517407308, physicsClientId=physics_client)
+            pb.resetJointState(arm_auxiliary_mismatch, 7, 1.939142517407308, physicsClientId=physics_client)
             pb.resetJointState(arm_biased_kinematics, 7, 1.939142517407308, physicsClientId=physics_client)
             for j in [6] + list(range(8, 12)):
                 pb.resetJointState(arm, j, 0, physicsClientId=physics_client)
                 pb.resetJointState(arm_biased_kinematics, j, 0, physicsClientId=physics_client)
+                pb.resetJointState(arm_auxiliary_mismatch, j, 0, physicsClientId=physics_client)
             # Get end effector coordinates
             LinkState = pb.getLinkState(arm, 9, computeForwardKinematics=True, computeLinkVelocity=True,
                                         physicsClientId=physics_client)
@@ -651,9 +671,12 @@ Robotic Manipulation" by Murry et al.
             x_camera[i + 1] = x_camera[i] + self.vxd * dt_camera[i + 1]  # [m]
             y_camera[i + 1] = y_camera[i] + self.vyd * dt_camera[i + 1]  # [m]
             z_camera[i + 1] = z_camera[i] + self.vzd * dt_camera[i + 1]  # [m]
-        x_camera = x_camera + np.random.normal(loc=0.0, scale=0.0006, size=137) #+ np.random.normal(loc=0.0, scale=0.0005, size=137)  # [m]
-        y_camera = y_camera + np.random.normal(loc=0.0, scale=0.006, size=137) #+ np.random.normal(loc=0.0, scale=0.001, size=137)  # [m]
-        z_camera = z_camera + np.random.normal(loc=0.0, scale=0.0004, size=137) #+ np.random.normal(loc=0.0, scale=0.0005, size=137)  # [m]
+        x_camera = x_camera + np.random.normal(loc=0.0, scale=0.0006,
+                                               size=137)  # + np.random.normal(loc=0.0, scale=0.0005, size=137)  # [m]
+        y_camera = y_camera + np.random.normal(loc=0.0, scale=0.006,
+                                               size=137)  # + np.random.normal(loc=0.0, scale=0.001, size=137)  # [m]
+        z_camera = z_camera + np.random.normal(loc=0.0, scale=0.0004,
+                                               size=137)  # + np.random.normal(loc=0.0, scale=0.0005, size=137)  # [m]
         X_camera = np.array([x_camera, y_camera, z_camera])
 
         # create a Kalman filter object
@@ -803,6 +826,15 @@ Robotic Manipulation" by Murry et al.
             forces=[87, 87, 87, 87, 12, 12],
             physicsClientId=physics_client
         )
+        pb.setJointMotorControlArray(
+            arm_auxiliary_mismatch,
+            [0, 1, 2, 3, 4, 5],
+            controlMode=pb.VELOCITY_CONTROL,
+            targetVelocities=list(dqc_t),
+            velocityGains=[1, 1, 2, 1, 1, 1],
+            forces=[87, 87, 87, 87, 12, 12],
+            physicsClientId=physics_client
+        )
         # TODO pay attention to number of repetition (e.g., use 24 for period 24*1/240*1000=100 [ms])
         for _ in range(24):
             # default timestep is 1/240 second
@@ -824,71 +856,67 @@ Robotic Manipulation" by Murry et al.
             dq_tp1.append(joint_info[1])
             tau_tp1.append(joint_info[3])
 
-            # # Attention: hard reset for biased kinematics model
-        for i in range(12):
-            if i < 6:
-                pb.resetJointState(arm_biased_kinematics, i, q_tp1[i] + self.q_init_bias[i],
-                                   physicsClientId=physics_client)
-            else:
-                pb.resetJointState(arm_biased_kinematics, i, q_tp1[i], physicsClientId=physics_client)
-
-        q_tp1 = np.array(q_tp1)[:6]
-        # add dq measurement noise
-        dq_tp1 = np.array(dq_tp1)[:6] + np.random.normal(loc=0.0, scale=0.004, size=6)
-
-        #########################################################################
-        # ----- q and dq Mismatch Compensation -----
+        ###############################################################################################################
+        # ----- add q Mismatch Compensation -----
         for i in range(6):
             self.models_q[i].eval()
-            # self.models_dq[i].eval()
             self.likelihoods_q[i].eval()
-            # self.likelihoods_dq[i].eval()
             X_test = np.array([q_tp1[i], dq_tp1[i]]).reshape(-1, 2)
             X_test = self.input_scalers[i].transform(X_test)
             X_test = torch.tensor(X_test, dtype=torch.float32)
-            device = torch.device('cpu')  # or 'cuda' if you're using GPU
+            device = torch.device('cpu')
             X_test = X_test.to(device)
-
             with torch.no_grad(), gpytorch.settings.fast_pred_var():
                 self.models_q[i].to(device)
                 self.likelihoods_q[i].to(device)
                 pred_q = self.likelihoods_q[i](self.models_q[i](X_test))
-                # pred_dq = self.likelihoods_dq[i](self.models_dq[i](X_test))
                 mean_q = pred_q.mean.numpy()
-                # mean_dq = pred_dq.mean.numpy()
                 std_q = pred_q.variance.sqrt().numpy()
-                # std_dq = pred_dq.variance.sqrt().numpy()
                 # Uncomment when Normalizing
                 mean_q = self.target_scalers_q[i].inverse_transform(mean_q.reshape(-1, 1)).flatten()
-                std_q = std_q * self.target_scalers_q[i].scale_[0]  # only scale, don't shift
-                # mean_dq = self.target_scalers_dq[i].inverse_transform(mean_dq.reshape(-1, 1)).flatten()
-                # std_dq = std_dq * self.target_scalers_dq[i].scale_[0]  # only scale, don't shift
+                std_q = std_q * self.target_scalers_q[i].scale_[0]
             # TODO
             if ~np.isnan(mean_q):
                 q_tp1[i] = q_tp1[i] + mean_q
             else:
                 print("mean_q[{}] is nan!!".format(i))
-            # if ~np.isnan(mean_dq):
-            #     dq_tp1[i] = dq_tp1[i] + mean_dq
-            # else:
-            #     print("mean_dq[{}] is nan!".format(i))
-        #########################################################################
-
-        # add tau measurement noise and bias
+        ###############################################################################################################
+        q_tp1_rest_ = np.array(q_tp1)[6:]
+        q_tp1 = np.array(q_tp1)[:6]
+        # add dq measurement noise
+        dq_tp1 = np.array(dq_tp1)[:6] + np.random.normal(loc=0.0, scale=0.002, size=6)
         tau_tp1 = np.array(tau_tp1)[:6]  # + np.random.normal(loc=0.0, scale=0.08, size=6) #+ np.array(
         # [0.31, 9.53, 1.76, -9.54, 0.89, -2.69])
-        self.q = np.vstack((self.q, q_tp1))  # Attention
-        self.dq = np.vstack((self.dq, dq_tp1))  # Attention
+
+        # # Attention: hard reset for biased kinematics model
+        for i in range(12):
+            if i < 6:
+                pb.resetJointState(arm_biased_kinematics, i, q_tp1[i] + self.q_init_bias[i],
+                                   physicsClientId=physics_client)
+                # Attention: hard reset after adding mismatch correction
+                pb.resetJointState(arm_auxiliary_mismatch, i, q_tp1[i],
+                                   physicsClientId=physics_client)
+            else:
+                pb.resetJointState(arm_biased_kinematics, i, q_tp1_rest_[i - 6], physicsClientId=physics_client)
+                # Attention: hard reset after adding mismatch correction
+                pb.resetJointState(arm_auxiliary_mismatch, i, q_tp1_rest_[i - 6], physicsClientId=physics_client)
+        # Attention
+        self.q = np.vstack((self.q, q_tp1))
+        self.dq = np.vstack((self.dq, dq_tp1))
         # check done episode
         terminal = self._terminal()
         # calculate reward
         # define inspired by Pavlichenko et al SAC tracking paper https://doi.org/10.48550/arXiv.2203.07051
         # todo make more efficient by calling getLinkState only once
-        LinkState_tp1 = pb.getLinkState(arm, 9, computeForwardKinematics=True, computeLinkVelocity=True,
-                                        physicsClientId=physics_client)
+        LinkState_tp1_FORvhat = pb.getLinkState(arm, 9, computeForwardKinematics=True, computeLinkVelocity=True,
+                                             physicsClientId=physics_client)
+        # Attention: get after application of mismatch to q
+        LinkState_tp1_FORrhat = pb.getLinkState(arm_auxiliary_mismatch, 9, computeForwardKinematics=True,
+                                             computeLinkVelocity=True,
+                                             physicsClientId=physics_client)
         # TODO CHECK HERE: is there bug? why not use LinkState_tp1 or should I use LinkState?
-        r_hat_tp1 = np.array(LinkState_tp1[0])
-        v_hat_tp1 = np.array(LinkState_tp1[6])
+        r_hat_tp1 = np.array(LinkState_tp1_FORrhat[0]) - self.fixed_base_bias_arm_auxiliary_mismatch
+        v_hat_tp1 = np.array(LinkState_tp1_FORvhat[6])
         # error_p_t = sum(abs(r_hat_tp1 - rd_t))
         # error_v_t = sum(abs(v_hat_tp1 - vd_t))
         # error_ddqc_t = sum(abs(dqc_t - self.dq[-2, :]))
@@ -905,7 +933,7 @@ Robotic Manipulation" by Murry et al.
         # Attention: use biased kinematics model for jacobian calculation
         [linearJacobian_tp1, angularJacobian_tp1] = pb.calculateJacobian(arm_biased_kinematics,
                                                                          10,
-                                                                         list(LinkState_tp1[2]),
+                                                                         list(LinkState_tp1_FORrhat[2]),
                                                                          list(
                                                                              np.append(self.q[-1, :] + self.q_init_bias,
                                                                                        [0, 0, 0])),
@@ -915,7 +943,7 @@ Robotic Manipulation" by Murry et al.
         # print("3")
         [linearJacobian_TRUE_tp1, angularJacobian_TRUE_tp1] = pb.calculateJacobian(arm,
                                                                                    10,
-                                                                                   list(LinkState_tp1[2]),
+                                                                                   list(LinkState_tp1_FORrhat[2]),
                                                                                    list(np.append(self.q[-1, :],
                                                                                                   [0, 0, 0])),
                                                                                    list(np.append(self.dq[-1, :],
@@ -931,7 +959,7 @@ Robotic Manipulation" by Murry et al.
                                                edt=self.edt,
                                                deltaT=dt)
         self.dqc_PID = dqc_tp1_PID
-        # observations after applying the action a
+        # observations after action a
         obs = [(r_hat_tp1[0] - rd_tp1[0]) * 1000,
                (r_hat_tp1[1] - rd_tp1[1]) * 1000,
                (r_hat_tp1[2] - rd_tp1[2]) * 1000,
@@ -1060,8 +1088,8 @@ Robotic Manipulation" by Murry et al.
         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/PIonly_plot_data_buffer.npy",self.plot_data_buffer)
         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/PIonly_state_buffer.npy",self.state_buffer)
-        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/SAC_plot_data_buffer.npy",self.plot_data_buffer)
-        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/SAC_state_buffer.npy",self.state_buffer)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/SAC_plot_data_buffer.npy",self.plot_data_buffer)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/SAC_state_buffer.npy",self.state_buffer)
         # # given action it returns 4-tuple (observation, reward, done, info)
         return (obs, reward_t, terminal, {})
 
@@ -1249,24 +1277,24 @@ Robotic Manipulation" by Murry et al.
                         bbox_inches='tight')
             plt.show()
 
-            e_v_bounds=np.load(
+            e_v_bounds = np.load(
                 "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_bounds.npy"
-                )
-            e_v_norms=np.load(
+            )
+            e_v_norms = np.load(
                 "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_norms.npy"
-                )
-            e_v_components=np.load(
+            )
+            e_v_components = np.load(
                 "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_components.npy"
-                )
-            e_v_bounds_PIonly=np.load(
+            )
+            e_v_bounds_PIonly = np.load(
                 "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_bounds.npy"
-                )
-            e_v_norms_PIonly=np.load(
+            )
+            e_v_norms_PIonly = np.load(
                 "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_norms.npy"
-                )
-            e_v_components_PIonly=np.load(
+            )
+            e_v_components_PIonly = np.load(
                 "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_components.npy"
-                )
+            )
             fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 14))
             plt.rcParams.update({
                 'font.size': 14,  # overall font size
@@ -1277,7 +1305,8 @@ Robotic Manipulation" by Murry et al.
                 'font.family': 'Times'
             })
             data_list = []
-            for n in range(5):
+            n_episodes=5
+            for n in range(n_episodes):
                 arr = np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy")
                 data_list.append(arr)
             data = np.stack(data_list, axis=2)
@@ -1289,7 +1318,7 @@ Robotic Manipulation" by Murry et al.
             ci_upper_ = mean_ + 1.96 * sem_
             ci_lower_ = mean_ - 1.96 * sem_
             data_list_PIonly = []
-            for n in range(5):
+            for n in range(n_episodes):
                 arr = np.load(output_dir_rendering + f"/PIonly_plot_data_buffer_episode_{n}.npy")
                 data_list_PIonly.append(arr)
             data_PIonly = np.stack(data_list_PIonly, axis=2)
@@ -1333,7 +1362,7 @@ Robotic Manipulation" by Murry et al.
             axs3[0].set_ylim([0, 8])
             axs3[0].legend(loc="upper left")
             data_list = []
-            for n in range(5):
+            for n in range(n_episodes):
                 arr = np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy")
                 data_list.append(arr)
             data = np.stack(data_list, axis=2)
@@ -1345,7 +1374,7 @@ Robotic Manipulation" by Murry et al.
             ci_upper_ = mean_ + 1.96 * sem_
             ci_lower_ = mean_ - 1.96 * sem_
             data_list_PIonly = []
-            for n in range(5):
+            for n in range(n_episodes):
                 arr = np.load(output_dir_rendering + f"/PIonly_plot_data_buffer_episode_{n}.npy")
                 data_list_PIonly.append(arr)
             data_PIonly = np.stack(data_list_PIonly, axis=2)
@@ -1389,7 +1418,7 @@ Robotic Manipulation" by Murry et al.
             axs3[1].set_ylim([0, 8])
             axs3[1].legend(loc="upper left")
             data_list = []
-            for n in range(5):
+            for n in range(n_episodes):
                 arr = np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy")
                 data_list.append(arr)
             data = np.stack(data_list, axis=2)
@@ -1401,7 +1430,7 @@ Robotic Manipulation" by Murry et al.
             ci_upper_ = mean_ + 1.96 * sem_
             ci_lower_ = mean_ - 1.96 * sem_
             data_list_PIonly = []
-            for n in range(5):
+            for n in range(n_episodes):
                 arr = np.load(output_dir_rendering + f"/PIonly_plot_data_buffer_episode_{n}.npy")
                 data_list_PIonly.append(arr)
             data_PIonly = np.stack(data_list_PIonly, axis=2)
@@ -1449,7 +1478,7 @@ Robotic Manipulation" by Murry et al.
             #              np.linalg.norm((plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
             #                             axis=1) * 1000, '-ob', markersize=3, label='without SAC')
             data_list = []
-            for n in range(5):
+            for n in range(n_episodes):
                 arr = np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy")
                 data_list.append(arr)
             data = np.stack(data_list, axis=2)
@@ -1461,7 +1490,7 @@ Robotic Manipulation" by Murry et al.
             ci_upper = mean_l2 + 1.96 * sem_l2
             ci_lower = mean_l2 - 1.96 * sem_l2
             data_list_PIonly = []
-            for n in range(5):
+            for n in range(n_episodes):
                 arr = np.load(output_dir_rendering + f"/PIonly_plot_data_buffer_episode_{n}.npy")
                 data_list_PIonly.append(arr)
             data_PIonly = np.stack(data_list_PIonly, axis=2)
@@ -1518,13 +1547,13 @@ Robotic Manipulation" by Murry et al.
             # uncomment for plotting multiple episodes
             if True:
                 data_list = []
-                for n in range(5):
+                for n in range(n_episodes):
                     arr = np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy")
                     data_list.append(arr)
                 data = np.stack(data_list, axis=2)
 
                 data_list_PIonly = []
-                for n in range(5):
+                for n in range(n_episodes):
                     arr = np.load(output_dir_rendering + f"/PIonly_plot_data_buffer_episode_{n}.npy")
                     data_list_PIonly.append(arr)
                 data_PIonly = np.stack(data_list_PIonly, axis=2)
@@ -1537,7 +1566,8 @@ Robotic Manipulation" by Murry et al.
                     'legend.fontsize': 12,  # legend text
                     'font.family': 'Serif'
                 })
-                l2_data = np.linalg.norm((data_PIonly[:, 0:3, :] - data_PIonly[:, 3:6, :]), ord=2, axis=1)  # shape: (136, 5)
+                l2_data = np.linalg.norm((data_PIonly[:, 0:3, :] - data_PIonly[:, 3:6, :]), ord=2,
+                                         axis=1)  # shape: (136, 5)
                 # Compute mean and SEM across the 5 sequences
                 mean_l2_PIonly = np.mean(l2_data, axis=1) * 1000  # shape: (136,)
                 sem_l2_PIonly = np.std(l2_data, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
@@ -1547,7 +1577,8 @@ Robotic Manipulation" by Murry et al.
                 # Plot with confidence interval as shaded area
                 axs3.plot(np.arange(self.MAX_TIMESTEPS) * 100, mean_l2_PIonly, '-ob', markersize=3,
                           label='mean L2 norm without SAC')
-                axs3.fill_between(np.arange(self.MAX_TIMESTEPS) * 100, ci_lower_PIonly, ci_upper_PIonly, color='b', alpha=0.3,
+                axs3.fill_between(np.arange(self.MAX_TIMESTEPS) * 100, ci_lower_PIonly, ci_upper_PIonly, color='b',
+                                  alpha=0.3,
                                   label='95% CI without SAC')
 
                 l2_data = np.linalg.norm((data[:, 0:3, :] - data[:, 3:6, :]), ord=2, axis=1)  # shape: (136, 5)
@@ -1644,8 +1675,6 @@ Robotic Manipulation" by Murry et al.
                             format="pdf",
                             bbox_inches='tight')
                 plt.show()
-
-
 
             fig3, axs3 = plt.subplots(1, 1, sharex=False, sharey=False, figsize=(8, 8))
             plt.rcParams.update({
