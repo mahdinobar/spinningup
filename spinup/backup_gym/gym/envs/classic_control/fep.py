@@ -12,7 +12,7 @@ import gpytorch
 import joblib
 import torch
 
-sys.path.append('/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch')
+sys.path.append('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch')
 from myKalmanFilter import KalmanFilter
 
 __copyright__ = "Copyright 2024, IfA https://control.ee.ethz.ch/"
@@ -41,7 +41,7 @@ dt_pb_sim = 1 / 240
 #                             options='--mp4fps=10 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d' % (
 #                                 _screen_width, _screen_height))
 # # pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
-# #                      "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/simulation.mp4")
+# #                      "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/simulation.mp4")
 # # Initialise debug camera angle
 # pb.resetDebugVisualizerCamera(
 #     cameraDistance=1.2,
@@ -59,8 +59,8 @@ pb.setGravity(0, 0, -9.81, physicsClientId=physics_client)
 pb.setAdditionalSearchPath(pybullet_data.getDataPath())
 
 # pb.setPhysicsEngineParameter(numSolverIterations=50)  # Increase for better accuracy
-# /cluster/home/mnobar/code/spinningup
-arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf",
+# /home/mahdi/ETHZ/codes/spinningup
+arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf",
                   useFixedBase=True, physicsClientId=physics_client)
 
 # # Create the second physics client
@@ -68,7 +68,7 @@ arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/
 # pb.setAdditionalSearchPath(pybullet_data.getDataPath(), physicsClientId=client_auxilary)
 # pb.loadURDF("plane.urdf", physicsClientId=client_auxilary)
 # arm_auxilary = pb.loadURDF(
-#     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf",
+#     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf",
 #     useFixedBase=True, physicsClientId=client_auxilary)
 # # # default timestep is 1/240 second (search fixedTimeStep)
 # pb.setTimeStep(timeStep=dt_pb_sim, physicsClientId=client_auxilary)
@@ -76,31 +76,31 @@ arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/
 # pb.setGravity(0, 0, -9.81, physicsClientId=client_auxilary)
 import os
 
-arm_biased_kinematics = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc_biased_3.urdf",useFixedBase=True, physicsClientId=physics_client)
+arm_biased_kinematics = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc_biased_3.urdf",useFixedBase=True, physicsClientId=physics_client)
 # arm_biased_kinematics = pb.loadURDF(
-#     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics_3.urdf",
+#     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics_3.urdf",
 #     useFixedBase=True)
 
 # import os
 # import rospkg
 # import subprocess
 # rospack = rospkg.RosPack()
-# xacro_filename = os.path.join("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro")
-# urdf_filename = os.path.join("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf")
+# xacro_filename = os.path.join("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro")
+# urdf_filename = os.path.join("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf")
 # urdf = open(urdf_filename, "w")
 #
 # # Recompile the URDF to make sure it's up to date
 # subprocess.call(['rosrun', 'xacro', 'xacro.py', xacro_filename], stdout=urdf)
 #
 #
-# arm2 = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro",
+# arm2 = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro",
 #                   useFixedBase=True)
-target_object = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
+target_object = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
                             useFixedBase=True, physicsClientId=physics_client)
 conveyor_object = pb.loadURDF(
-    "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
     useFixedBase=True, physicsClientId=physics_client)
-plane = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
+plane = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
                     useFixedBase=True, physicsClientId=physics_client)
 
 
@@ -183,7 +183,7 @@ Robotic Manipulation" by Murry et al.
         #     likelihood_q = gpytorch.likelihoods.GaussianLikelihood()
         #     model_q = GPModel(train_x_shape=(1, input_dim), likelihood=likelihood_q)
         #     # Load q model
-        #     checkpoint_q = torch.load('/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/mismatch_learning/gp_model_q{}.pth'.format(str(joint_number)))
+        #     checkpoint_q = torch.load('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/gp_model_q{}.pth'.format(str(joint_number)))
         #     model_q.load_state_dict(checkpoint_q['model_state_dict'])
         #     likelihood_q.load_state_dict(checkpoint_q['likelihood_state_dict'])
         #     input_scaler = checkpoint_q['input_scaler']
@@ -193,7 +193,7 @@ Robotic Manipulation" by Murry et al.
         #     # Repeat for dq
         #     likelihood_dq = gpytorch.likelihoods.GaussianLikelihood()
         #     model_dq = GPModel(train_x_shape=(1, input_dim), likelihood=likelihood_dq)
-        #     checkpoint_dq = torch.load('/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/mismatch_learning/gp_model_dq{}.pth'.format(str(joint_number)))
+        #     checkpoint_dq = torch.load('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/gp_model_dq{}.pth'.format(str(joint_number)))
         #     model_dq.load_state_dict(checkpoint_dq['model_state_dict'])
         #     likelihood_dq.load_state_dict(checkpoint_dq['likelihood_state_dict'])
         #     target_scaler_dq = checkpoint_dq['target_scaler']
@@ -208,10 +208,11 @@ Robotic Manipulation" by Murry et al.
         self.likelihoods_q = []
         # self.models_dq = []
         self.likelihoods_dq = []
-        # GP_dir = "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/mismatch_learning/trainOnSAC1and2PI1and2and3_testOnSAC3_trackingPhaseOnly/"
-        # GP_dir = "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
-        GP_dir = "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
-        # GP_dir = "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
+        # GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/trainOnSAC1and2PI1and2and3_testOnSAC3_trackingPhaseOnly/"
+        # GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
+        # GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
+        # GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
+        GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
         GP_input_dim=2
         for joint_number in range(6):
             # Load scalers
@@ -1056,9 +1057,11 @@ Robotic Manipulation" by Murry et al.
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
         # # # # TODO: so dirty code: uncomment when NOSAC for plots -- you need to take care of which random values you call by break points after first done in sac.py ... and cmment a too ...
         # plot_data_buffer_no_SAC=self.plot_data_buffer
-        # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
-        # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/PIonly_plot_data_buffer.npy",self.plot_data_buffer)
-        # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/PIonly_state_buffer.npy",self.state_buffer)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/PIonly_plot_data_buffer.npy",self.plot_data_buffer)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_309/PIonly_state_buffer.npy",self.state_buffer)
+        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/SAC_plot_data_buffer.npy",self.plot_data_buffer)
+        np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/SAC_state_buffer.npy",self.state_buffer)
         # # given action it returns 4-tuple (observation, reward, done, info)
         return (obs, reward_t, terminal, {})
 
@@ -1072,11 +1075,11 @@ Robotic Manipulation" by Murry et al.
         render_training_buffer = False
         # render_test_buffer=False
         if render_test_buffer == True:
-            # # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
+            # # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
             plot_data_buffer_no_SAC = np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/plot_data_buffer_no_SAC.npy")
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/plot_data_buffer_no_SAC.npy")
             # plot_data_buffer_no_SAC = np.load(
-            #     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/plot_data_buffer_no_SAC.npy")
+            #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/plot_data_buffer_no_SAC.npy")
             if False:
                 fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(8, 14))
                 plt.rcParams['font.family'] = 'Serif'
@@ -1137,7 +1140,7 @@ Robotic Manipulation" by Murry et al.
                 axs3[3].set_ylabel("||r-rd||_2 [mm]")
                 axs3[3].set_ylim([0, 12])
                 plt.savefig(
-                    "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/PI_only_error.pdf")
+                    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/PI_only_error.pdf")
                 plt.show()
 
                 plots_PIonly = False
@@ -1247,22 +1250,22 @@ Robotic Manipulation" by Murry et al.
             plt.show()
 
             e_v_bounds=np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_bounds.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_bounds.npy"
                 )
             e_v_norms=np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_norms.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_norms.npy"
                 )
             e_v_components=np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_components.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_components.npy"
                 )
             e_v_bounds_PIonly=np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_bounds.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_bounds.npy"
                 )
             e_v_norms_PIonly=np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_norms.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_norms.npy"
                 )
             e_v_components_PIonly=np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_components.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_components.npy"
                 )
             fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 14))
             plt.rcParams.update({
@@ -2291,17 +2294,17 @@ Robotic Manipulation" by Murry et al.
             # pb.setGravity(0, 0, -9.81, physicsClientId=physics_client_rendering)
             # Load URDFs
             # Load robot, target object and plane urdf
-            # /cluster/home/mnobar/code/spinningup
+            # /home/mahdi/ETHZ/codes/spinningup
             pb.setAdditionalSearchPath(pybullet_data.getDataPath())
             pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
                                  output_dir_rendering + "/simulation.mp4")  # added by Pierre
             target_object = pb.loadURDF(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
                 useFixedBase=True, physicsClientId=physics_client)
             conveyor_object = pb.loadURDF(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
                 useFixedBase=True, physicsClientId=physics_client)
-            plane = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
+            plane = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
                                 useFixedBase=True, physicsClientId=physics_client)
             # Initialise debug camera angle
             pb.resetDebugVisualizerCamera(
@@ -2359,7 +2362,7 @@ Robotic Manipulation" by Murry et al.
                 time.sleep(0.01)
 
         # np.save(
-        #     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_" + str(
+        #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_" + str(
         #         self.n) + ".npy", self.plot_data_buffer)
 
     def close(self):
