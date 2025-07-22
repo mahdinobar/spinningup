@@ -118,7 +118,7 @@ def load_pytorch_policy(fpath, itr, deterministic=False):
             # model2=torch.jit.script(model.pi)
             # # # uncomment to save model of actor for libtorch
             # traced_model_Cpp=torch.jit.trace(model.pi, x.reshape(1,27)) #ATTENTION to set correctly dimension of state space here
-            # traced_model_Cpp.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_312/traced_model_Cpp_Fep_HW_312_double.pt")
+            # traced_model_Cpp.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_313_1/traced_model_Cpp_Fep_HW_313_1_double.pt")
         return action
 
     # ac.act(torch.as_tensor(o, dtype=torch.float32),
@@ -159,7 +159,7 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True, 
                 env.render(output_dir)
             elif num_episodes > 1:
                 # uncomment to plot with n>1 test episodes
-                # np.save(output_dir + "/plot_data_buffer_episode_{}".format(str(n)), env.unwrapped.plot_data_buffer)
+                np.save(output_dir + "/plot_data_buffer_episode_{}".format(str(n)), env.unwrapped.plot_data_buffer)
                 # np.save(output_dir + "/PIonly_plot_data_buffer_episode_{}".format(str(n)), env.unwrapped.plot_data_buffer)
                 if n==num_episodes-1:
                     env.render(output_dir)

@@ -194,6 +194,51 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
 
     # file_name= file_name+"_240Hz_"
 
+    # %% mismatch correction
+    # Initialize lists to hold models and scalers for all joints
+    input_scalers = []
+    target_scalers_q = []
+    models_q = []
+    likelihoods_q = []
+    GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
+    GP_input_dim = 2
+    for joint_number in range(6):
+        # Load scalers
+        # Instantiate and load model for q
+        likelihood_q = gpytorch.likelihoods.GaussianLikelihood()
+        class ExactGPModel_(gpytorch.models.ExactGP):
+            def __init__(self, train_x, train_y, likelihood):
+                super().__init__(train_x, train_y, likelihood)
+                self.mean_module = gpytorch.means.ConstantMean()
+                self.covar_module = gpytorch.kernels.ScaleKernel(
+                    gpytorch.kernels.RBFKernel() +
+                    gpytorch.kernels.MaternKernel(nu=2.5)
+                )
+            def forward(self, x):
+                mean_x = self.mean_module(x)
+                covar_x = self.covar_module(x)
+                return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
+
+        train_x_placeholder = torch.zeros((1, GP_input_dim))
+        train_y_placeholder = torch.zeros((1,))
+        model_q = ExactGPModel_(train_x_placeholder, train_y_placeholder, likelihood_q)
+        checkpoint_q = torch.load(
+            GP_dir + f'gp_model_q{joint_number}.pth')
+        model_q.load_state_dict(checkpoint_q['model_state_dict'])
+        likelihood_q.load_state_dict(checkpoint_q['likelihood_state_dict'])
+        input_scaler = checkpoint_q['input_scaler']  # overwrite with trained one
+        target_scaler_q = checkpoint_q['target_scaler']
+        model_q.eval()
+        likelihood_q.eval()
+        device = torch.device('cpu')
+        model_q.to(device)
+        likelihood_q.to(device)
+        # Append to lists
+        input_scalers.append(input_scaler)
+        target_scalers_q.append(target_scaler_q)
+        models_q.append(model_q)
+        likelihoods_q.append(likelihood_q)
+    # %%
     # Attentions
     idx_init_dq_measured=np.argwhere(abs(dq_PI[0, 0] - dq_measured[:, 0]) < 1e-3)
     idx_init_dq_desired_measured=np.argwhere(abs(dq_PI[0, 0] - dq_desired_measured[:, 0]) < 1e-3)
@@ -313,7 +358,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
     # ax.legend()
     # # Adjust layout
     # plt.tight_layout()
-    # plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_dq_measured_dq_simest.png".format(file_name), format="png",
+    # plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_313_j3_1/{}_dq_measured_dq_simest.png".format(file_name), format="png",
     #             bbox_inches='tight')
     # plt.show()
 
@@ -354,7 +399,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
     # Adjust layout
     plt.tight_layout()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_dq_desired_commanded.png".format(file_name),
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_313_j3_1/{}_dq_desired_commanded.png".format(file_name),
         format="png",
         bbox_inches='tight')
     plt.show()
@@ -384,10 +429,61 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
         ax.set_ylabel('Position')
         ax.grid(True)
         ax.legend()
-    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_q.png".format(file_name), format="png",
+    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_313_j3_1/{}_q.png".format(file_name), format="png",
                 bbox_inches='tight')
     plt.show()
 
+
+    # %% mismatch correction
+    q_sim_corrected=np.copy(q_sim)
+    for i in range(6):
+        models_q[i].eval()
+        likelihoods_q[i].eval()
+        X_test = np.array([q_sim[:,i], dq_sim[:,i]]).reshape(-1, 2)
+        X_test = input_scalers[i].transform(X_test)
+        X_test = torch.tensor(X_test, dtype=torch.float32)
+        device = torch.device('cpu')
+        X_test = X_test.to(device)
+        with torch.no_grad(), gpytorch.settings.fast_pred_var():
+            models_q[i].to(device)
+            likelihoods_q[i].to(device)
+            pred_q = likelihoods_q[i](models_q[i](X_test))
+            mean_q = pred_q.mean.numpy()
+            std_q = pred_q.variance.sqrt().numpy()
+            # Uncomment when Normalizing
+            mean_q = target_scalers_q[i].inverse_transform(mean_q.reshape(-1, 1)).flatten()
+            std_q = std_q * target_scalers_q[i].scale_[0]
+        # TODO
+        if ~np.any(np.isnan(mean_q)):
+            q_sim_corrected[:,i] = q_sim[:,i] + mean_q[:]
+        else:
+            print("mean_q[{}] is nan!!".format(i))
+    # %%
+
+    # Plot q and q_sim (Position)
+    fig1, axs1 = plt.subplots(3, 2, figsize=(12, 8))
+    plt.rcParams.update({
+        'font.size': 14,  # overall font size
+        'axes.labelsize': 16,  # x and y axis labels
+        'xtick.labelsize': 12,  # x-axis tick labels
+        'ytick.labelsize': 12,  # y-axis tick labels
+        'legend.fontsize': 12,  # legend text
+        'font.family': 'Serif'
+    })
+    fig1.suptitle('Joint Positions: Measured vs Simulated', fontsize=16)
+    for i in range(6):
+        ax = axs1[i // 2, i % 2]
+        ax.plot(closest_t_q, q[:, i], '-og', label='Measured $q$')
+        ax.plot(closest_t_PI, q_sim[:, i], '-ob', label='Simulated $q_sim$', markersize=2)
+        ax.plot(closest_t_PI, q_sim_corrected[:, i], '-om', label='Corrected $q_sim+q_{GP_c}$', markersize=2)
+        ax.set_title(f'Joint {i + 1}')
+        ax.set_xlabel('Time step')
+        ax.set_ylabel('Position')
+        ax.grid(True)
+        ax.legend()
+    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_313_j3_1/{}_q_corrected_all.png".format(file_name), format="png",
+                bbox_inches='tight')
+    plt.show()
     # Plot dq and dq_sim (Velocity)
     fig2, axs2 = plt.subplots(3, 2, figsize=(16, 16))
     fig2.suptitle('Joint Velocities: Measured vs Simulated', fontsize=16)
@@ -400,7 +496,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
         ax.set_ylabel('Velocity')
         ax.grid(True)
         ax.legend()
-    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_dq.png".format(file_name), format="png",
+    plt.savefig( "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_313_j3_1/{}_dq.png".format(file_name), format="png",
                 bbox_inches='tight')
     plt.show()
 
@@ -417,7 +513,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
         ax.set_ylim([0, 3])
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_dq_abs_error.png".format(
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_313_j3_1/{}_dq_abs_error.png".format(
             file_name), format="png",
         bbox_inches='tight')
     plt.show()
@@ -427,7 +523,8 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
     fig2.suptitle('Joint Positions: Absolute Error Measured vs Simulated', fontsize=16)
     for i in range(6):
         ax = axs2[i // 2, i % 2]
-        ax.plot(closest_t_q, abs(q_sim[:, i] - q[:, i])*180/np.pi, '-sr')
+        ax.plot(closest_t_q, abs(q_sim[:, i] - q[:, i])*180/np.pi, '-sr',label='$|q_{\t{measured}}-q_{\t{sim}}|$')
+        ax.plot(closest_t_q, abs(q_sim_corrected[:, i] - q[:, i])*180/np.pi, '-sm',label='$|q_{\t{measured}}-(q_{\t{sim}}+q_{\t{GP_c}})|$')
         ax.set_title(f'Joint {i + 1}')
         ax.set_xlabel('Time step')
         ax.set_ylabel('$|q_{\t{sim}} - q_{\t{measured}}|$ [deg]')
@@ -435,7 +532,7 @@ def retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_
         ax.set_ylim([0, 5])
         ax.legend()
     plt.savefig(
-        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_q_abs_error.png".format(
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_313_j3_1/{}_q_abs_error.png".format(
             file_name), format="png",
         bbox_inches='tight')
     plt.show()
@@ -698,23 +795,24 @@ def GP_mismatch_learning(file_names, base_path_extracted_data, plot_dir):
 
 
 if __name__ == '__main__':
-    # file_names = ["PIonly_1"]
-    # for file_name in file_names:
-    #     bag_path = '/home/mahdi/bagfiles/experiments_HW309/dqPIandSAC_command_update_100Hz/'
-    #     dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name,bag_path, save=True)
-    #
-    #     if file_name[0:3]=="SAC":
-    #         q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=False)
-    #     elif file_name[0:6]=="PIonly":
-    #         q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=True)
-    #
-    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_q.npy".format(file_name),q)
-    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_dq.npy".format(file_name),dq)
-    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_q_sim.npy".format(file_name),q_sim)
-    #     np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_dq_sim.npy".format(file_name),dq_sim)
-    #
-    #
-    # ####################################################################################################################
+    file_names = ["SAC_1"]
+    for file_name in file_names:
+        # bag_path = '/home/mahdi/bagfiles/experiments_HW309/dqPIandSAC_command_update_100Hz/'
+        bag_path = '/home/mahdi/bagfiles/experiments_HW313_j3_1/'
+        dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name,bag_path, save=True)
+
+        if file_name[0:3]=="SAC":
+            q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=False)
+        elif file_name[0:6]=="PIonly":
+            q, dq, q_sim, dq_sim = retrieve_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, PIonly=True)
+
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_q.npy".format(file_name),q)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_dq.npy".format(file_name),dq)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_q_sim.npy".format(file_name),q_sim)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/{}_dq_sim.npy".format(file_name),dq_sim)
+
+
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     file_names = ["SAC_1", "SAC_2", "SAC_3", "SAC_5"]
     # file_names = ["SAC_1", "SAC_2", "SAC_3", "PIonly_1", "PIonly_2", "PIonly_3"]
     base_path_extracted_data = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/"
