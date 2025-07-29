@@ -11,7 +11,7 @@ import os
 
 TRAIN=1
 env_fn = lambda: gym.make('Fep-v0')
-exp_name = "Fep_HW_314"
+exp_name = "Fep_HW_315"
 exp_name_checkpoint = "Fep_HW_309"
 Euler_server=True
 if __name__ == '__main__':
