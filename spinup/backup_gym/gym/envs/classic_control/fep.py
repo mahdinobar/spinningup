@@ -145,9 +145,9 @@ Robotic Manipulation" by Murry et al.
         np.random.seed(seed)
         self.seed(seed=seed)
         # TODO: reward params
-        self.lpx = 1200
-        self.lpy = 1200
-        self.lpz = 1200
+        self.lpx = 600
+        self.lpy = 600
+        self.lpz = 600
         self.lv = 10
         self.lddqc = 1
         self.reward_eta_p = 1
@@ -348,8 +348,9 @@ Robotic Manipulation" by Murry et al.
                 physicsClientId=physics_client)
             self.fixed_base_bias_arm_auxiliary_mismatch = 200
             pb.resetBasePositionAndOrientation(
-                arm_auxiliary_mismatch, [self.fixed_base_bias_arm_auxiliary_mismatch, self.fixed_base_bias_arm_auxiliary_mismatch,
-                                         self.fixed_base_bias_arm_auxiliary_mismatch],
+                arm_auxiliary_mismatch,
+                [self.fixed_base_bias_arm_auxiliary_mismatch, self.fixed_base_bias_arm_auxiliary_mismatch,
+                 self.fixed_base_bias_arm_auxiliary_mismatch],
                 pb.getQuaternionFromEuler([np.pi, np.pi, np.pi]),
                 physicsClientId=physics_client)
             # we add random normal noise with std of 0.25 [deg] and zero mean on all 6 joints
@@ -521,6 +522,8 @@ Robotic Manipulation" by Murry et al.
                                                 deltaT=dt_startup)
 
         q_t = np.array(q_t)[:6]
+        # keep q_t in q_tp0_ for manual corrections of q simulations
+        self.q_tp0_ = q_t
         # add dq measurement noise
         dq_t = np.array(dq_t)[:6] + np.random.normal(loc=0.0, scale=0.004, size=6)
         # add tau measurement noise and bias
@@ -543,24 +546,24 @@ Robotic Manipulation" by Murry et al.
                       (r_hat_tfp1_startup[1] - rd_tf_startup[1]) * 1000,
                       # ATTENTION: because of assumption that on real system we start Kalman filter with final position of EE at startup phase
                       (r_hat_tfp1_startup[2] - rd_tf_startup[2]) * 1000,
-                      q_t[0]*2,
-                      q_t[1]*2,
-                      q_t[2]*2,
-                      q_t[3]*2,
-                      q_t[4]*2,
-                      q_t[5]*2,
-                      dq_t[0]*2,
-                      dq_t[1]*2,
-                      dq_t[2]*2,
-                      dq_t[3]*2,
-                      dq_t[4]*2,
-                      dq_t[5]*2,
-                      dqc_t_PID[0]*10,
-                      dqc_t_PID[1]*10,
-                      dqc_t_PID[2]*10,
-                      dqc_t_PID[3]*10,
-                      dqc_t_PID[4]*10,
-                      dqc_t_PID[5]*10,
+                      q_t[0],
+                      q_t[1],
+                      q_t[2],
+                      q_t[3],
+                      q_t[4],
+                      q_t[5],
+                      dq_t[0],
+                      dq_t[1],
+                      dq_t[2],
+                      dq_t[3],
+                      dq_t[4],
+                      dq_t[5],
+                      dqc_t_PID[0],
+                      dqc_t_PID[1],
+                      dqc_t_PID[2],
+                      dqc_t_PID[3],
+                      dqc_t_PID[4],
+                      dqc_t_PID[5],
                       0,
                       0,
                       0,
@@ -836,9 +839,10 @@ Robotic Manipulation" by Murry et al.
             physicsClientId=physics_client
         )
         # TODO pay attention to number of repetition (e.g., use 24 for period 24*1/240*1000=100 [ms])
-        for _ in range(24):
-            # default timestep is 1/240 second
-            pb.stepSimulation(physicsClientId=physics_client)
+        # for _ in range(24):
+        #     # default timestep is 1/240 second
+        #     pb.stepSimulation(physicsClientId=physics_client)
+        pb.stepSimulation(physicsClientId=physics_client)
         # print("1")
         # update time index
         self.k += 1  # Attention doublecheck
@@ -856,35 +860,39 @@ Robotic Manipulation" by Murry et al.
             dq_tp1.append(joint_info[1])
             tau_tp1.append(joint_info[3])
 
-        ###############################################################################################################
-        # ----- add q Mismatch Compensation -----
-        # for i in range(6):
-        for i in [2]:
-            self.models_q[i].eval()
-            self.likelihoods_q[i].eval()
-            X_test = np.array([q_tp1[i], dq_tp1[i]]).reshape(-1, 2)
-            X_test = self.input_scalers[i].transform(X_test)
-            X_test = torch.tensor(X_test, dtype=torch.float32)
-            device = torch.device('cpu')
-            X_test = X_test.to(device)
-            with torch.no_grad(), gpytorch.settings.fast_pred_var():
-                self.models_q[i].to(device)
-                self.likelihoods_q[i].to(device)
-                pred_q = self.likelihoods_q[i](self.models_q[i](X_test))
-                mean_q = pred_q.mean.numpy()
-                std_q = pred_q.variance.sqrt().numpy()
-                # Uncomment when Normalizing
-                mean_q = self.target_scalers_q[i].inverse_transform(mean_q.reshape(-1, 1)).flatten()
-                std_q = std_q * self.target_scalers_q[i].scale_[0]
-            # TODO
-            if ~np.isnan(mean_q):
-                
-                q_tp1[i] = q_tp1[i] + mean_q[0]
-            else:
-                print("mean_q[{}] is nan!!".format(i))
+        # ###############################################################################################################
+        # # ----- add q Mismatch Compensation -----
+        # # for i in range(6):
+        # for i in [0,2]:
+        #     self.models_q[i].eval()
+        #     self.likelihoods_q[i].eval()
+        #     X_test = np.array([q_tp1[i], dq_tp1[i]]).reshape(-1, 2)
+        #     X_test = self.input_scalers[i].transform(X_test)
+        #     X_test = torch.tensor(X_test, dtype=torch.float32)
+        #     device = torch.device('cpu')
+        #     X_test = X_test.to(device)
+        #     with torch.no_grad(), gpytorch.settings.fast_pred_var():
+        #         self.models_q[i].to(device)
+        #         self.likelihoods_q[i].to(device)
+        #         pred_q = self.likelihoods_q[i](self.models_q[i](X_test))
+        #         mean_q = pred_q.mean.numpy()
+        #         std_q = pred_q.variance.sqrt().numpy()
+        #         # Uncomment when Normalizing
+        #         mean_q = self.target_scalers_q[i].inverse_transform(mean_q.reshape(-1, 1)).flatten()
+        #         std_q = std_q * self.target_scalers_q[i].scale_[0]
+        #     # TODO
+        #     if ~np.isnan(mean_q):
+        #
+        #         q_tp1[i] = q_tp1[i] + mean_q[0]
+        #     else:
+        #         print("mean_q[{}] is nan!!".format(i))
         ###############################################################################################################
         q_tp1_rest_ = np.array(q_tp1)[6:]
         q_tp1 = np.array(q_tp1)[:6]
+        # manually correct q_sim for 1/240 * 24 simulation sampling time
+        self.q_tp0_=q_tp1
+        q_tp1 = np.asarray(self.state[3:9]) + (q_tp1 - self.q_tp0_) * 24
+
         # add dq measurement noise
         dq_tp1 = np.array(dq_tp1)[:6] + np.random.normal(loc=0.0, scale=0.004, size=6)
         tau_tp1 = np.array(tau_tp1)[:6]  # + np.random.normal(loc=0.0, scale=0.08, size=6) #+ np.array(
@@ -911,11 +919,11 @@ Robotic Manipulation" by Murry et al.
         # define inspired by Pavlichenko et al SAC tracking paper https://doi.org/10.48550/arXiv.2203.07051
         # todo make more efficient by calling getLinkState only once
         LinkState_tp1_FORvhat = pb.getLinkState(arm, 9, computeForwardKinematics=True, computeLinkVelocity=True,
-                                             physicsClientId=physics_client)
+                                                physicsClientId=physics_client)
         # Attention: get after application of mismatch to q
         LinkState_tp1_FORrhat = pb.getLinkState(arm_auxiliary_mismatch, 9, computeForwardKinematics=True,
-                                             computeLinkVelocity=True,
-                                             physicsClientId=physics_client)
+                                                computeLinkVelocity=True,
+                                                physicsClientId=physics_client)
         # TODO CHECK HERE: is there bug? why not use LinkState_tp1 or should I use LinkState?
         r_hat_tp1 = np.array(LinkState_tp1_FORrhat[0]) - self.fixed_base_bias_arm_auxiliary_mismatch
         v_hat_tp1 = np.array(LinkState_tp1_FORvhat[6])
@@ -965,30 +973,30 @@ Robotic Manipulation" by Murry et al.
         obs = [(r_hat_tp1[0] - rd_tp1[0]) * 1000,
                (r_hat_tp1[1] - rd_tp1[1]) * 1000,
                (r_hat_tp1[2] - rd_tp1[2]) * 1000,
-               q_tp1[0]*2,
-               q_tp1[1]*2,
-               q_tp1[2]*2,
-               q_tp1[3]*2,
-               q_tp1[4]*2,
-               q_tp1[5]*2,
-               dq_tp1[0]*2,
-               dq_tp1[1]*2,
-               dq_tp1[2]*2,
-               dq_tp1[3]*2,
-               dq_tp1[4]*2,
-               dq_tp1[5]*2,
-               dqc_tp1_PID[0]*10,
-               dqc_tp1_PID[1]*10,
-               dqc_tp1_PID[2]*10,
-               dqc_tp1_PID[3]*10,
-               dqc_tp1_PID[4]*10,
-               dqc_tp1_PID[5]*10,
-               a[0]*2,
-               a[1]*2,
-               a[2]*2,
-               a[3]*2,
-               a[4]*2,
-               a[5]*2]
+               q_tp1[0],
+               q_tp1[1],
+               q_tp1[2],
+               q_tp1[3],
+               q_tp1[4],
+               q_tp1[5],
+               dq_tp1[0],
+               dq_tp1[1],
+               dq_tp1[2],
+               dq_tp1[3],
+               dq_tp1[4],
+               dq_tp1[5],
+               dqc_tp1_PID[0],
+               dqc_tp1_PID[1],
+               dqc_tp1_PID[2],
+               dqc_tp1_PID[3],
+               dqc_tp1_PID[4],
+               dqc_tp1_PID[5],
+               a[0],
+               a[1],
+               a[2],
+               a[3],
+               a[4],
+               a[5]]
         # update states
         self.state = obs
         self.state_buffer = np.vstack((self.state_buffer, self.state))
@@ -1090,8 +1098,8 @@ Robotic Manipulation" by Murry et al.
         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/PIonly_plot_data_buffer.npy",self.plot_data_buffer)
         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/PIonly_state_buffer.npy",self.state_buffer)
-        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_313_j3_1/SAC_plot_data_buffer.npy",self.plot_data_buffer)
-        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_313_j3_1/SAC_state_buffer.npy",self.state_buffer)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_313_9/compare_real_simulation_data/SAC_plot_data_buffer.npy",self.plot_data_buffer)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_313_9/compare_real_simulation_data/SAC_state_buffer.npy",self.state_buffer)
         # # given action it returns 4-tuple (observation, reward, done, info)
         return (obs, reward_t, terminal, {})
 
@@ -1307,7 +1315,7 @@ Robotic Manipulation" by Murry et al.
                 'font.family': 'Times'
             })
             data_list = []
-            n_episodes=5
+            n_episodes = 5
             for n in range(n_episodes):
                 arr = np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy")
                 data_list.append(arr)
