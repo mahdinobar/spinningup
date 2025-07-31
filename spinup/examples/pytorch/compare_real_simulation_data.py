@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import joblib
+import pybullet as p
 
 sys.path.append('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch')
 __copyright__ = "Copyright 2025, IfA https://control.ee.ethz.ch/"
@@ -218,14 +219,16 @@ def load_real(bag_path, file_name, save=False):
 
 def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured, p_hat_EE, p_star, PIonly):
     # file_name= file_name+"_240Hz_"
-    if PIonly==False:
-        sim_plot_data_buffer=np.load(
+    if PIonly == False:
+        sim_plot_data_buffer = np.load(
             "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_313_9/compare_real_simulation_data/SAC_plot_data_buffer.npy")
-        sim_state_buffer= np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_313_9/compare_real_simulation_data/SAC_state_buffer.npy")
-    elif PIonly==True:
-        sim_plot_data_buffer=np.load(
+        sim_state_buffer = np.load(
+            "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_313_9/compare_real_simulation_data/SAC_state_buffer.npy")
+    elif PIonly == True:
+        sim_plot_data_buffer = np.load(
             "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_313_9/compare_real_simulation_data/PIonly_plot_data_buffer.npy")
-        sim_state_buffer= np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_313_9/compare_real_simulation_data/PIonly_state_buffer.npy"        )
+        sim_state_buffer = np.load(
+            "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_313_9/compare_real_simulation_data/PIonly_state_buffer.npy")
 
     # Attentions (remove redundant initial data of some topics based on absolute ROS timestamp; conside dq_PI as base)
     idx_init_dq_measured = np.argwhere(abs(dq_PI[0, 0] - dq_measured[:, 0]) < 1e-3)
@@ -323,7 +326,7 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
     dq_sim = np.array(dq_sim)[:, :6]
     q_sim = np.array(q_sim)[:, :6]
     # manually correct q_sim for 1/240 * 24 simulation sampling time
-    q_sim= q_sim[0, :] + (q_sim[:, :] - q_sim[0, :]) * 24
+    q_sim = q_sim[0, :] + (q_sim[:, :] - q_sim[0, :]) * 24
 
     t_ = (q_measured[:, 0] - q_measured[0, 0]) * 1000
     # Target times: 0, 100, 200, ..., up to max(t)
@@ -435,7 +438,7 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         bbox_inches='tight')
     plt.show()
 
-# %%
+    # %%
     input_scalers = []
     target_scalers_q = []
     models_q = []
@@ -489,16 +492,16 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         models_q.append(model_q)
         likelihoods_q.append(likelihood_q)
     #########################################################################
-    q_sim_corrected=np.copy(q_sim)
+    q_sim_corrected = np.copy(q_sim)
     for k in range(104):
         # ----- q and dq Mismatch Compensation -----
-        for i in [0,2]:
+        for i in [0, 2]:
             models_q[i].eval()
             # models_dq[i].eval()
             likelihoods_q[i].eval()
             # likelihoods_dq[i].eval()
             # TODO ????????????
-            X_test = np.array([q_sim[k,i], dq_sim[k,i]]).reshape(-1, 2)
+            X_test = np.array([q_sim[k, i], dq_sim[k, i]]).reshape(-1, 2)
             X_test = input_scalers[i].transform(X_test)
             X_test = torch.tensor(X_test, dtype=torch.float32)
             device = torch.device('cpu')  # or 'cuda' if you're using GPU
@@ -519,7 +522,7 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
                 # std_dq = std_dq * target_scalers_dq[i].scale_[0]  # only scale, don't shift
             # TODO
             if ~np.isnan(mean_q):
-                q_sim_corrected[k,i] = q_sim_corrected[k,i] + mean_q
+                q_sim_corrected[k, i] = q_sim_corrected[k, i] + mean_q
             else:
                 print("mean_q[{}] is nan!!".format(i))
             # if ~np.isnan(mean_dq):
@@ -669,9 +672,9 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
     })
     for i in range(6):
         ax = axs2[i // 2, i % 2]
-        ax.plot((closest_t_PI[10:] - closest_t_PI[10])/1000, dq_PI[closest_idx_PI[10:], i + 1] * 180 / np.pi, '-og',
+        ax.plot((closest_t_PI[10:] - closest_t_PI[10]) / 1000, dq_PI[closest_idx_PI[10:], i + 1] * 180 / np.pi, '-og',
                 label='real $dq_{{PI}}$[{}]'.format(str(i)))
-        ax.plot((np.arange(0, 13600, 100))/1000, sim_state_buffer[:, 15 + i] * 180 / np.pi, '-ob',
+        ax.plot((np.arange(0, 13600, 100)) / 1000, sim_state_buffer[:, 15 + i] * 180 / np.pi, '-ob',
                 label='simulation $dq_{{PI}}$[{}]'.format(str(i)), markersize=2)
         ax.set_title(f'Joint {i + 1}')
         ax.set_xlabel('t [s]')
@@ -697,9 +700,9 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
     })
     for i in range(6):
         ax = axs2[i // 2, i % 2]
-        ax.plot((closest_t_PI[10:] - closest_t_PI[10])/1000, dq_PI[closest_idx_PI[10:], i + 1], '-og',
+        ax.plot((closest_t_PI[10:] - closest_t_PI[10]) / 1000, dq_PI[closest_idx_PI[10:], i + 1], '-og',
                 label='real $dq_{{PI}}$[{}]'.format(str(i)))
-        ax.plot((np.arange(0, 13600, 100))/1000, sim_state_buffer[:, 15 + i], '-ob',
+        ax.plot((np.arange(0, 13600, 100)) / 1000, sim_state_buffer[:, 15 + i], '-ob',
                 label='simulation $dq_{{PI}}$[{}]'.format(str(i)), markersize=2)
         ax.set_title(f'Joint {i + 1}')
         ax.set_xlabel('t [s]')
@@ -757,7 +760,7 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         ax.plot((closest_t_SAC[10:] - closest_t_SAC[10]) / 1000, dq_SAC[closest_idx_PI[10:], i + 1],
                 '-og',
                 label='real $dq_{{SAC}}$[{}]'.format(str(i)))
-        ax.plot((np.arange(0, 13600, 100)) / 1000, sim_state_buffer[:, 21 + i] , '-ob',
+        ax.plot((np.arange(0, 13600, 100)) / 1000, sim_state_buffer[:, 21 + i], '-ob',
                 label='simulation $dq_{{SAC}}$[{}]'.format(str(i)), markersize=2)
         ax.set_title(f'Joint {i + 1}')
         ax.set_xlabel('t [s]')
@@ -770,7 +773,6 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
             file_name), format="png",
         bbox_inches='tight')
     plt.show()
-
 
     t_ = (p_star[:, 0] - p_star[0, 0]) * 1000
     target_times = np.arange(0, t_[-1], 100)
@@ -885,7 +887,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         dq_sim_test = sim_state_buffer[:, 9 + i] * 180 / np.pi
         diff = dq_real - dq_sim_test[:len(dq_real)]
         ax.plot(t_real[:len(dq_real)], dq_real, '-og', label='$dq_{{real}}[{}]$'.format(i))
-        ax.plot(t_real[:len(dq_real)], dq_sim_test[:len(dq_real)], '-ob', label='$dq_{{sim_{{test}}}}[{}]$'.format(i),markersize=3)
+        ax.plot(t_real[:len(dq_real)], dq_sim_test[:len(dq_real)], '-ob', label='$dq_{{sim_{{test}}}}[{}]$'.format(i),
+                markersize=3)
         ax.set_title(f'Joint {i + 1}')
         ax.set_xlabel('t [s]')
         ax.set_ylabel('$dq$ [deg/s]')
@@ -913,7 +916,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         q_real = q_measured[closest_idx_q[10:], i + 1] * 180 / np.pi
         q_sim_test = sim_state_buffer[:, 3 + i] * 180 / np.pi
         ax.plot(t_real[:len(q_real)], q_real, '-og', label='$q_{{real}}[{}]$'.format(i))
-        ax.plot(t_real[:len(q_real)], q_sim_test[:len(dq_real)], '-ob', label='$q_{{sim_{{test}}}}[{}]$'.format(i),markersize=3)
+        ax.plot(t_real[:len(q_real)], q_sim_test[:len(dq_real)], '-ob', label='$q_{{sim_{{test}}}}[{}]$'.format(i),
+                markersize=3)
         ax.set_title(f'Joint {i + 1}')
         ax.set_xlabel('t [s]')
         ax.set_ylabel('$q$ [deg]')
@@ -925,7 +929,6 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
             file_name), format="png",
         bbox_inches='tight')
     plt.show()
-
 
     fig2, axs2 = plt.subplots(3, 2, figsize=(18, 18))
     plt.rcParams.update({
@@ -942,7 +945,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         q_real = q_measured[closest_idx_q[10:], i + 1]
         q_sim_test = sim_state_buffer[:, 3 + i]
         ax.plot(t_real[:len(q_real)], q_real, '-og', label='$q_{{real}}[{}]$'.format(i))
-        ax.plot(t_real[:len(q_real)], q_sim_test[:len(dq_real)], '-ob', label='$q_{{sim_{{test}}}}[{}]$'.format(i),markersize=3)
+        ax.plot(t_real[:len(q_real)], q_sim_test[:len(dq_real)], '-ob', label='$q_{{sim_{{test}}}}[{}]$'.format(i),
+                markersize=3)
         ax.set_title(f'Joint {i + 1}')
         ax.set_xlabel('t [s]')
         ax.set_ylabel('$q$ [deg]')
@@ -971,7 +975,8 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         dq_sim_test = sim_state_buffer[:, 9 + i]
         diff = dq_real - dq_sim_test[:len(dq_real)]
         ax.plot(t_real[:len(dq_real)], dq_real, '-og', label='$dq_{{real}}[{}]$'.format(i))
-        ax.plot(t_real[:len(dq_real)], dq_sim_test[:len(dq_real)], '-ob', label='$dq_{{sim_{{test}}}}[{}]$'.format(i),markersize=3)
+        ax.plot(t_real[:len(dq_real)], dq_sim_test[:len(dq_real)], '-ob', label='$dq_{{sim_{{test}}}}[{}]$'.format(i),
+                markersize=3)
         ax.set_title(f'Joint {i + 1}')
         ax.set_xlabel('t [s]')
         ax.set_ylabel('$dq$ [rad/s]')
@@ -1124,10 +1129,10 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         t_real = (closest_t_p_star[10:] - closest_t_p_star[10]) / 1000
         p_real = p_star[closest_idx_p_star[10:], i + 1] * 1000
         p_sim = sim_plot_data_buffer[:, 3 + i] * 1000
-        delta = p_real- p_sim[:len(p_real)]
+        delta = p_real - p_sim[:len(p_real)]
         ax.plot(t_real[:len(p_real)], delta, '-ok', label='$\Delta p^*[{}]$'.format(i))
         ax.set_xlabel('t [s]')
-        ax.set_ylabel('$p^*_{{real}}[{}]-p^*_{{sim_{{test}}}}[{}]$ [mm]'.format(i,i))
+        ax.set_ylabel('$p^*_{{real}}[{}]-p^*_{{sim_{{test}}}}[{}]$ [mm]'.format(i, i))
         # ax.set_ylim([-6, 3])
         ax.grid(True)
         ax.legend()
@@ -1143,7 +1148,7 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         t_real = (closest_t_p_hat_EE[10:] - closest_t_p_hat_EE[10]) / 1000
         p_real = p_hat_EE[closest_idx_p_hat_EE[10:], i + 1] * 1000
         p_sim = sim_plot_data_buffer[:, 0 + i] * 1000
-        delta = p_real- p_sim[:len(p_real)]
+        delta = p_real - p_sim[:len(p_real)]
         ax.plot(t_real[:len(p_sim)], delta, '-ok', label='$\Delta \hat{{p}}[{}]$'.format(i))
         ax.set_xlabel('t [s]')
         ax.set_ylabel('$\Delta \hat{{p}}[{}]$ [mm]'.format(i))
@@ -1271,20 +1276,295 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
     return True
 
 
+def get_data(dq_PI, p_hat_EE, p_star, q_measured, dq_measured):
+    # # Attentions (remove redundant initial data of some topics based on absolute ROS timestamp; conside dq_PI as base)
+    idx_init_dq_measured = np.argwhere(abs(dq_PI[0, 0] - dq_measured[:, 0]) < 2e-3)
+    # idx_init_dq_desired_measured = np.argwhere(abs(dq_PI[0, 0] - dq_desired_measured[:, 0]) < 1e-3)
+    dq_measured_ = dq_measured[idx_init_dq_measured[0][0]:, :]
+    q_measured_ = q_measured[idx_init_dq_measured[0][0]:, :]
+    # dq_desired_measured = dq_desired_measured[idx_init_dq_desired_measured[0][0]:, :]
+    idx_init_p_hat_EE = np.argwhere(abs(dq_PI[0, 0] - p_hat_EE[:, 0]) < 2e-3)
+    p_hat_EE_ = p_hat_EE[idx_init_p_hat_EE[0][0]:, :]
+
+    idx_init_p_star = np.argwhere(abs(dq_PI[0, 0] - p_star[:, 0]) < 1e-3)
+    p_star_ = p_star[idx_init_p_star[0][0]:, :]
+
+    t_ = (q_measured_[:, 0] - q_measured_[0, 0]) * 1000
+    target_times = np.arange(0, t_[-1], 100)
+    closest_idx_q = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_t_q = t_[closest_idx_q]
+
+    t_ = (dq_measured_[:, 0] - dq_measured_[0, 0]) * 1000
+    closest_idx_dq = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_t_dq = t_[closest_idx_dq]
+
+    t_ = (p_star_[:, 0] - p_star_[0, 0]) * 1000
+    closest_idx_p_star = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_t_p_star = t_[closest_idx_p_star]
+
+    t_ = (p_hat_EE_[:, 0] - p_hat_EE_[0, 0]) * 1000
+    closest_idx_p_hat_EE = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_t_p_hat_EE = t_[closest_idx_p_hat_EE]
+
+    # compare p^*-\hat{p}
+    fig2, axs2 = plt.subplots(3, 1, figsize=(6, 8))
+    plt.rcParams.update({
+        'font.size': 14,  # overall font size
+        'axes.labelsize': 14,  # x and y axis labels
+        'xtick.labelsize': 12,  # x-axis tick labels
+        'ytick.labelsize': 12,  # y-axis tick labels
+        'legend.fontsize': 12,  # legend text
+        'font.family': 'Serif'
+    })
+    for i in range(3):
+        ax = axs2[i]
+        ax.plot(closest_t_p_star[10:] - closest_t_p_star[10],
+                (-p_star_[closest_idx_p_star[10:], i + 1] + p_hat_EE_[closest_idx_p_hat_EE[10:], i + 1]) * 1000, '-og',
+                label='real $\hat{{p}}[{}]-p^*[{}$'.format(str(i), str(i)))
+        # ax.plot(np.arange(0, 13600, 100), sim_state_buffer[:, 0 + i], '-ob',
+        #         label='simulation $\hat{{p}}[{}]- p^*[{}]$'.format(str(i), str(i)), markersize=2)
+        # ax.set_title(f'Joint {i + 1}')
+        ax.set_xlabel('t [s]')
+        ax.set_ylabel('$\hat{{p}}[{}]-p^*[{}]$ [mm]'.format(str(i), str(i)))
+        ax.grid(True)
+        # ax.set_ylim([-5, 5])
+        ax.legend()
+    # plt.savefig(
+    #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_313_9/compare_real_simulation_data/friction02/{}_compare_delta_p_frictionJ3_02.png".format(
+    #         file_name), format="png",
+    #     bbox_inches='tight')
+    plt.show()
+
+    return q_measured_[closest_idx_q[10:], 1:], dq_measured_[closest_idx_dq[10:], 1:], (
+                closest_t_p_star[10:] - closest_t_p_star[10]), np.array([
+        (-p_star_[closest_idx_p_star[10:], 1] + p_hat_EE_[closest_idx_p_hat_EE[10:], 1]) * 1000,
+        (-p_star_[closest_idx_p_star[10:], 2] + p_hat_EE_[closest_idx_p_hat_EE[10:], 2]) * 1000,
+        (-p_star_[closest_idx_p_star[10:], 3] + p_hat_EE_[closest_idx_p_hat_EE[10:], 3]) * 1000])
+
+import pybullet_data
+
+# Start PyBullet in DIRECT mode (no GUI) or GUI if you want visualization
+p.connect(p.DIRECT)  # or p.GUI
+p.setAdditionalSearchPath(pybullet_data.getDataPath())
+p.setPhysicsEngineParameter(enableFileCaching=0)
+p.setAdditionalSearchPath(pybullet_data.getDataPath())
+p.setPhysicsEngineParameter(deterministicOverlappingPairs=1)
+p.setPhysicsEngineParameter(enableConeFriction=0)
+
+
+def load_jacobian(robot_id, q_t, dq_t):
+    p.setGravity(0, 0, -9.81)
+    p.setAdditionalSearchPath(pybullet_data.getDataPath())
+    for i in range(12):
+        if i < 6:
+            p.resetJointState(robot_id, i, q[i])
+        else:
+            p.resetJointState(robot_id, i, 0)
+    LinkState = p.getLinkState(robot_id, 9, computeForwardKinematics=True, computeLinkVelocity=True)
+    [J_lin, J_ang] = p.calculateJacobian(robot_id,
+                                         10,
+                                         list(LinkState[2]),
+                                         list(q),
+                                         list(dq),
+                                         list(np.zeros(9)))
+    J_linear = np.array(J_lin)
+    J_angular = np.array(J_ang)
+    J_geo = np.vstack((J_linear, J_angular))
+    return J_geo
+
+
+urdf_path_ = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf"
+urdf_path_biased_ = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc_biased_3.urdf"
+robot_id_true = p.loadURDF(urdf_path_, useFixedBase=True)
+robot_id_biased = p.loadURDF(urdf_path_biased_, useFixedBase=True)
+
 if __name__ == '__main__':
-    # file_names = ["SAC_1","SAC_2","SAC_3","SAC_4","SAC_5", "PIonly_1", "PIonly_2", "PIonly_3", "PIonly_4", "PIonly_5"]
-    # file_names = ["PIonly_4"]
-    file_names = ["SAC_1"]
-    for file_name in file_names:
-        bag_path = '/home/mahdi/bagfiles/experiments_HW313_9/'
-        # dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, bag_path, save=True)
-        dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star  = load_bags(file_name, bag_path, save=True)
+    # # file_names = ["SAC_100Hz_2","SAC_100Hz_3","SAC_100Hz_4"]
+    # file_names = ["PIonly_1","PIonly_2","PIonly_3","PIonly_4"]
+    # qs_ = []
+    # dqs_ = []
+    # ts_ = []
+    # dps_ = []
+    # K_p = 1 * np.eye(3)
+    # K_d = 0.1 * np.eye(3)
+    # for file_name in file_names:
+    #     print("file_name=",file_name)
+    #     # bag_path = '/home/mahdi/bagfiles/experiments_HW314/'
+    #     bag_path = '/home/mahdi/bagfiles/experiments_HW309/'
+    #     # dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, bag_path, save=True)
+    #     dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star = load_bags(file_name, bag_path, save=True)
+    #     #
+    #     # if file_name[0:3] == "SAC":
+    #     #     compare_data(file_name, dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star,
+    #     #                                          PIonly=False)
+    #     # elif file_name[0:6] == "PIonly":
+    #     #     compare_data(file_name, dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star,
+    #     #                                          PIonly=True)
+    #
+    #     q_, dq_, t_, dp_ = get_data(dq_PI, p_hat_EE, p_star, q, dq)
+    #     qs_.append(q_)
+    #     dqs_.append(dq_)
+    #     ts_.append(t_)
+    #     dps_.append(dp_)
+    #
+    #     int_err = np.zeros(3)
+    #     e_v_norms = []
+    #     e_v_bounds = []
+    #     e_v_components = []
+    #     for k in range(t_.__len__()):
+    #         q = np.hstack((q_[k, :6], np.zeros(3)))
+    #         dq = np.hstack((dq_[k, :6], np.zeros(3)))
+    #         J_true = load_jacobian(robot_id_true, q, dq)
+    #         J = J_true[:3, :6]
+    #         J_biased = load_jacobian(robot_id_biased, q, dq)
+    #         J_tilde = J_biased[:3, :6]
+    #         u_d = np.array([0, 0.0349028, 0])  # TODO
+    #         delta_r = dp_[:,k]/1000
+    #         int_err += delta_r/1000  # integral update
+    #         u = u_d + K_p @ delta_r + K_d @ int_err
+    #         J_tilde_pinv = np.linalg.pinv(J_tilde)
+    #         P = J @ J_tilde_pinv
+    #         I = np.eye(3)
+    #         e_v = (I - P) @ u
+    #         e_v_components.append(e_v)
+    #         e_v_norms.append(np.linalg.norm(e_v))
+    #         sigma_min = np.min(np.linalg.svd(P, compute_uv=False))
+    #         e_v_bound = (1 - sigma_min) * np.linalg.norm(u)
+    #         e_v_bounds.append(e_v_bound)
+    #
+    #     e_v_components = np.array(e_v_components)
+    #     e_v_norms = np.array(e_v_norms)
+    #     e_v_bounds = np.array(e_v_bounds)
 
-        if file_name[0:3] == "SAC":
-            compare_data(file_name, dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star,
-                                                 PIonly=False)
-        elif file_name[0:6] == "PIonly":
-            compare_data(file_name, dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star,
-                                                 PIonly=True)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_components.npy", e_v_components)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_norms.npy", e_v_norms)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_bounds.npy", e_v_bounds)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/qs_.npy", qs_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/dqs_.npy", dqs_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/ts_.npy", ts_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/dps_.npy", dps_)
 
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_components_PIonly.npy", e_v_components)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_norms_PIonly.npy", e_v_norms)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_bounds_PIonly.npy", e_v_bounds)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/qs_PIonly_.npy", qs_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/dqs_PIonly_.npy", dqs_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/ts_PIonly_.npy", ts_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/dps_PIonly_.npy", dps_)
 
+    e_v_components= np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_components.npy")
+    e_v_norms=np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_norms.npy")
+    e_v_bounds=np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_bounds.npy")
+    qs_=np.load("/home/mahdi/bagfiles/experiments_HW314/qs_.npy")
+    dqs_=np.load("/home/mahdi/bagfiles/experiments_HW314/dqs_.npy")
+    ts_=np.load("/home/mahdi/bagfiles/experiments_HW314/ts_.npy")
+    dps_=np.load("/home/mahdi/bagfiles/experiments_HW314/dps_.npy")
+
+    e_v_components_PIonly= np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_components_PIonly.npy")
+    e_v_norms_PIonly=np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_norms_PIonly.npy")
+    e_v_bounds_PIonly=np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_bounds_PIonly.npy")
+    qs_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW314/qs_PIonly_.npy")
+    dqs_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW314/dqs_PIonly_.npy")
+    ts_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW314/ts_PIonly_.npy")
+    dps_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW314/dps_PIonly_.npy")
+
+    fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 14))
+    plt.rcParams.update({
+        'font.size': 14,  # overall font size
+        'axes.labelsize': 16,  # x and y axis labels
+        'xtick.labelsize': 12,  # x-axis tick labels
+        'ytick.labelsize': 12,  # y-axis tick labels
+        'legend.fontsize': 12,  # legend text
+        'font.family': 'Times'
+    })
+    data = np.stack(dps_, axis=2)
+    mean_ = np.mean(data, axis=2)
+    sem_ = np.std(data, axis=2, ddof=1) / np.sqrt(5)
+    ci_upper_ = abs(mean_) + 1.96 * sem_
+    ci_lower_ = abs(mean_) - 1.96 * sem_
+    data = np.stack(ts_, axis=1)
+    mean_t_ = np.mean(data, axis=1) / 1000
+    axs3[0].plot(mean_t_, abs(mean_[0, :]), '-om', markersize=3,
+                 label='mean with SAC')
+    axs3[0].fill_between(mean_t_, ci_lower_[0, :], ci_upper_[0, :], color='m',
+                         alpha=0.3,
+                         label='95% CI with SAC')
+    data = np.stack(dps_PIonly_, axis=2)
+    mean_PIonly_ = np.mean(data, axis=2)
+    sem_ = np.std(data, axis=2, ddof=1) / np.sqrt(5)
+    ci_upper_PIonly_ = abs(mean_PIonly_) + 1.96 * sem_
+    ci_lower_PIonly_ = abs(mean_PIonly_) - 1.96 * sem_
+    data = np.stack(ts_PIonly_, axis=1)
+    mean_t_PIonly_ = np.mean(data, axis=1) / 1000
+    axs3[0].plot(mean_t_PIonly_, abs(mean_PIonly_[0, :]), '-ob', markersize=3,
+                 label='mean without SAC')
+    axs3[0].fill_between(mean_t_PIonly_, ci_lower_PIonly_[0, :], ci_upper_PIonly_[0, :], color='b',
+                         alpha=0.3,
+                         label='95% CI without SAC')
+    axs3[0].set_ylabel("$|x-x^*|$ [mm]")
+    axs3[0].set_ylim([0, 8])
+    axs3[0].legend(loc="upper left")
+    axs3[1].plot(mean_t_, abs(mean_[1, :]), '-om', markersize=3,
+                 label='')
+    axs3[1].fill_between(mean_t_, ci_lower_[1, :], ci_upper_[1, :], color='m',
+                         alpha=0.3,
+                         label='')
+    axs3[1].plot(mean_t_PIonly_, abs(mean_PIonly_[1, :]), '-ob', markersize=3,
+                 label='')
+    axs3[1].fill_between(mean_t_PIonly_, ci_lower_PIonly_[1, :], ci_upper_PIonly_[1, :], color='b',
+                         alpha=0.3,
+                         label='')
+    axs3[1].set_ylabel("$|y-y^*|$ [mm]")
+    axs3[1].set_ylim([0, 8])
+    axs3[1].legend(loc="upper left")
+    axs3[2].plot(mean_t_, abs(mean_[2, :]), '-om', markersize=3,
+                 label='')
+    axs3[2].fill_between(mean_t_, ci_lower_[2, :], ci_upper_[2, :], color='m',
+                         alpha=0.3,
+                         label='')
+    axs3[2].plot(mean_t_PIonly_, abs(mean_PIonly_[2, :]), '-ob', markersize=3,
+                 label='')
+    axs3[2].fill_between(mean_t_PIonly_, ci_lower_PIonly_[2, :], ci_upper_PIonly_[2, :], color='b',
+                         alpha=0.3,
+                         label='')
+    axs3[2].set_ylabel("$|z-z^*|$ [mm]")
+    axs3[2].set_ylim([0, 8])
+    axs3[2].legend(loc="upper left")
+    data = np.stack(dps_, axis=2)
+    l2_data = np.linalg.norm(data, ord=2, axis=0)
+    mean_l2 = np.mean(l2_data, axis=1)
+    sem_l2 = np.std(l2_data, axis=1, ddof=1) / np.sqrt(5)  # shape: (136,)
+    # Compute 95% confidence interval bounds
+    ci_upper_ = abs(mean_l2) + 1.96 * sem_l2
+    ci_lower_ = abs(mean_l2) - 1.96 * sem_l2
+
+    data = np.stack(dps_PIonly_, axis=2)
+    l2_data_PIonly = np.linalg.norm(data, ord=2, axis=0)
+    mean_l2_PIonly = np.mean(l2_data_PIonly, axis=1)
+    sem_l2 = np.std(l2_data_PIonly, axis=1, ddof=1) / np.sqrt(5)  # shape: (136,)
+    # Compute 95% confidence interval bounds
+    ci_upper_PIonly_ = abs(mean_l2_PIonly) + 1.96 * sem_l2
+    ci_lower_PIonly_ = abs(mean_l2_PIonly) - 1.96 * sem_l2
+    axs3[3].plot(mean_t_, abs(mean_l2), '-om', markersize=3,
+                 label='')
+    axs3[3].fill_between(mean_t_, ci_lower_, ci_upper_, color='m',
+                         alpha=0.3,
+                         label='')
+    axs3[3].plot(mean_t_PIonly_, abs(mean_l2_PIonly), '-ob', markersize=3,
+                 label='')
+    axs3[3].fill_between(mean_t_PIonly_, ci_lower_PIonly_, ci_upper_PIonly_, color='b',
+                         alpha=0.3,
+                         label='')
+    axs3[3].plot(mean_t_,
+                 e_v_bounds * 1000 * 0.1,
+                 'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{{SAC}}(t))||.\Delta t$")
+
+    axs3[3].set_xlabel("t [s]")
+    axs3[3].set_ylabel("$||\mathbf{p}-\mathbf{p}^*||_{2}$ [mm]")
+    axs3[3].set_ylim([0, 8])
+    axs3[3].legend(loc="upper left")
+    plt.savefig("/home/mahdi/bagfiles/experiments_HW314/real_test_position_errors_both.pdf",
+                format="pdf",
+                bbox_inches='tight')
+    plt.show()
+    print("")

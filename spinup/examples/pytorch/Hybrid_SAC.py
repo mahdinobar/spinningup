@@ -9,11 +9,11 @@ from spinup.algos.pytorch.sac.sac import load_checkpoint
 from spinup.utils.test_policy import load_policy_and_env, run_policy
 import os
 
-TRAIN=1
+TRAIN=0
 env_fn = lambda: gym.make('Fep-v0')
-exp_name = "Fep_HW_315"
+exp_name = "Fep_HW_314"
 exp_name_checkpoint = "Fep_HW_309"
-Euler_server=True
+Euler_server=False
 if __name__ == '__main__':
     if Euler_server==True:
         output_dir='/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/'+exp_name

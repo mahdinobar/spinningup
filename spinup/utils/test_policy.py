@@ -118,7 +118,7 @@ def load_pytorch_policy(fpath, itr, deterministic=False):
             # model2=torch.jit.script(model.pi)
             # # # uncomment to save model of actor for libtorch
             # traced_model_Cpp=torch.jit.trace(model.pi, x.reshape(1,27)) #ATTENTION to set correctly dimension of state space here
-            # traced_model_Cpp.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_313_1/traced_model_Cpp_Fep_HW_313_1_double.pt")
+            # traced_model_Cpp.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/traced_model_Cpp_Fep_HW_314_double.pt")
         return action
 
     # ac.act(torch.as_tensor(o, dtype=torch.float32),
