@@ -1502,7 +1502,7 @@ if __name__ == '__main__':
                          alpha=0.3,
                          label='95% CI without SAC')
     axs3[0].set_ylabel("$|x-x^*|$ [mm]")
-    axs3[0].set_ylim([0, 8])
+    axs3[0].set_ylim([0, 6])
     axs3[0].legend(loc="upper left")
     axs3[1].plot(mean_t_, abs(mean_[1, :]), '-om', markersize=3,
                  label='')
@@ -1515,7 +1515,7 @@ if __name__ == '__main__':
                          alpha=0.3,
                          label='')
     axs3[1].set_ylabel("$|y-y^*|$ [mm]")
-    axs3[1].set_ylim([0, 8])
+    axs3[1].set_ylim([0, 6])
     axs3[1].legend(loc="upper left")
     axs3[2].plot(mean_t_, abs(mean_[2, :]), '-om', markersize=3,
                  label='')
@@ -1528,7 +1528,7 @@ if __name__ == '__main__':
                          alpha=0.3,
                          label='')
     axs3[2].set_ylabel("$|z-z^*|$ [mm]")
-    axs3[2].set_ylim([0, 8])
+    axs3[2].set_ylim([0, 6])
     axs3[2].legend(loc="upper left")
     data = np.stack(dps_, axis=2)
     l2_data = np.linalg.norm(data, ord=2, axis=0)
@@ -1561,8 +1561,8 @@ if __name__ == '__main__':
 
     axs3[3].set_xlabel("t [s]")
     axs3[3].set_ylabel("$||\mathbf{p}-\mathbf{p}^*||_{2}$ [mm]")
-    axs3[3].set_ylim([0, 8])
-    axs3[3].legend(loc="upper left")
+    axs3[3].set_ylim([0, 6])
+    axs3[3].legend(loc="upper right")
     plt.savefig("/home/mahdi/bagfiles/experiments_HW314/real_test_position_errors_both.pdf",
                 format="pdf",
                 bbox_inches='tight')
