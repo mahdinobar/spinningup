@@ -15,7 +15,7 @@ import warnings
 
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
-sys.path.append('/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch')
+sys.path.append('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch')
 from myKalmanFilter import KalmanFilter
 
 __copyright__ = "Copyright 2024, IfA https://control.ee.ethz.ch/"
@@ -44,7 +44,7 @@ dt_pb_sim = 1 / 240
 #                             options='--mp4fps=10 --background_color_red=0.8 --background_color_green=0.9 --background_color_blue=1.0 --width=%d --height=%d' % (
 #                                 _screen_width, _screen_height))
 # # pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
-# #                      "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/simulation.mp4")
+# #                      "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/simulation.mp4")
 # # Initialise debug camera angle
 # pb.resetDebugVisualizerCamera(
 #     cameraDistance=1.2,
@@ -63,11 +63,11 @@ pb.setAdditionalSearchPath(pybullet_data.getDataPath())
 
 # pb.setPhysicsEngineParameter(numSolverIterations=50)  # Increase for better accuracy
 # /home/mahdi/ETHZ/codes/spinningup
-arm = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf",
+arm = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf",
                   useFixedBase=True, physicsClientId=physics_client)
 
 arm_auxiliary_mismatch = pb.loadURDF(
-    "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf",
     useFixedBase=True, physicsClientId=physics_client)
 
 # # Create the second physics client
@@ -75,7 +75,7 @@ arm_auxiliary_mismatch = pb.loadURDF(
 # pb.setAdditionalSearchPath(pybullet_data.getDataPath(), physicsClientId=client_auxilary)
 # pb.loadURDF("plane.urdf", physicsClientId=client_auxilary)
 # arm_auxilary = pb.loadURDF(
-#     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf",
+#     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc.urdf",
 #     useFixedBase=True, physicsClientId=client_auxilary)
 # # # default timestep is 1/240 second (search fixedTimeStep)
 # pb.setTimeStep(timeStep=dt_pb_sim, physicsClientId=client_auxilary)
@@ -84,32 +84,32 @@ arm_auxiliary_mismatch = pb.loadURDF(
 import os
 
 arm_biased_kinematics = pb.loadURDF(
-    "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc_biased_3.urdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc_biased_3.urdf",
     useFixedBase=True, physicsClientId=physics_client)
 # arm_biased_kinematics = pb.loadURDF(
-#     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics_3.urdf",
+#     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_biased_kinematics_3.urdf",
 #     useFixedBase=True)
 
 # import os
 # import rospkg
 # import subprocess
 # rospack = rospkg.RosPack()
-# xacro_filename = os.path.join("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro")
-# urdf_filename = os.path.join("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf")
+# xacro_filename = os.path.join("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro")
+# urdf_filename = os.path.join("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf")
 # urdf = open(urdf_filename, "w")
 #
 # # Recompile the URDF to make sure it's up to date
 # subprocess.call(['rosrun', 'xacro', 'xacro.py', xacro_filename], stdout=urdf)
 #
 #
-# arm2 = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro",
+# arm2 = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep2/robots/panda/panda.urdf.xacro",
 #                   useFixedBase=True)
-target_object = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
+target_object = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
                             useFixedBase=True, physicsClientId=physics_client)
 conveyor_object = pb.loadURDF(
-    "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
+    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
     useFixedBase=True, physicsClientId=physics_client)
-plane = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
+plane = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
                     useFixedBase=True, physicsClientId=physics_client)
 
 
@@ -192,7 +192,7 @@ Robotic Manipulation" by Murry et al.
         #     likelihood_q = gpytorch.likelihoods.GaussianLikelihood()
         #     model_q = GPModel(train_x_shape=(1, input_dim), likelihood=likelihood_q)
         #     # Load q model
-        #     checkpoint_q = torch.load('/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/mismatch_learning/gp_model_q{}.pth'.format(str(joint_number)))
+        #     checkpoint_q = torch.load('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/gp_model_q{}.pth'.format(str(joint_number)))
         #     model_q.load_state_dict(checkpoint_q['model_state_dict'])
         #     likelihood_q.load_state_dict(checkpoint_q['likelihood_state_dict'])
         #     input_scaler = checkpoint_q['input_scaler']
@@ -202,7 +202,7 @@ Robotic Manipulation" by Murry et al.
         #     # Repeat for dq
         #     likelihood_dq = gpytorch.likelihoods.GaussianLikelihood()
         #     model_dq = GPModel(train_x_shape=(1, input_dim), likelihood=likelihood_dq)
-        #     checkpoint_dq = torch.load('/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/mismatch_learning/gp_model_dq{}.pth'.format(str(joint_number)))
+        #     checkpoint_dq = torch.load('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/gp_model_dq{}.pth'.format(str(joint_number)))
         #     model_dq.load_state_dict(checkpoint_dq['model_state_dict'])
         #     likelihood_dq.load_state_dict(checkpoint_dq['likelihood_state_dict'])
         #     target_scaler_dq = checkpoint_dq['target_scaler']
@@ -217,11 +217,11 @@ Robotic Manipulation" by Murry et al.
         self.likelihoods_q = []
         # self.models_dq = []
         self.likelihoods_dq = []
-        # GP_dir = "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/mismatch_learning/trainOnSAC1and2PI1and2and3_testOnSAC3_trackingPhaseOnly/"
-        # GP_dir = "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
-        # GP_dir = "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
-        # GP_dir = "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
-        GP_dir = "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
+        # GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/trainOnSAC1and2PI1and2and3_testOnSAC3_trackingPhaseOnly/"
+        # GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
+        # GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
+        # GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
+        GP_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/mismatch_learning/extracted_data/Fep_HW_309/dqPIandSAC_command_update_100Hz/trainOnSAC_1_2_3_testOnSAC_5_trackingPhaseOnly/"
         GP_input_dim = 2
         for joint_number in range(6):
             # Load scalers
@@ -1095,11 +1095,11 @@ Robotic Manipulation" by Murry et al.
         self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
         # # # # TODO: so dirty code: uncomment when NOSAC for plots -- you need to take care of which random values you call by break points after first done in sac.py ... and cmment a too ...
         # plot_data_buffer_no_SAC=self.plot_data_buffer
-        # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
-        # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/PIonly_plot_data_buffer.npy",self.plot_data_buffer)
-        # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/PIonly_state_buffer.npy",self.state_buffer)
-        # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_313_9/compare_real_simulation_data/SAC_plot_data_buffer.npy",self.plot_data_buffer)
-        # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_313_9/compare_real_simulation_data/SAC_state_buffer.npy",self.state_buffer)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/PIonly_plot_data_buffer.npy",self.plot_data_buffer)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/compare_real_simulation_data/Fep_HW_312/PIonly_state_buffer.npy",self.state_buffer)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_313_9/compare_real_simulation_data/SAC_plot_data_buffer.npy",self.plot_data_buffer)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_313_9/compare_real_simulation_data/SAC_state_buffer.npy",self.state_buffer)
         # # given action it returns 4-tuple (observation, reward, done, info)
         return (obs, reward_t, terminal, {})
 
@@ -1113,11 +1113,11 @@ Robotic Manipulation" by Murry et al.
         render_training_buffer = False
         # render_test_buffer=False
         if render_test_buffer == True:
-            # # np.save("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
+            # # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_"+str(self.n)+".npy", self.plot_data_buffer)
             plot_data_buffer_no_SAC = np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/plot_data_buffer_no_SAC.npy")
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/plot_data_buffer_no_SAC.npy")
             # plot_data_buffer_no_SAC = np.load(
-            #     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/plot_data_buffer_no_SAC.npy")
+            #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/plot_data_buffer_no_SAC.npy")
             if False:
                 fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(8, 14))
                 plt.rcParams['font.family'] = 'Serif'
@@ -1178,7 +1178,7 @@ Robotic Manipulation" by Murry et al.
                 axs3[3].set_ylabel("||r-rd||_2 [mm]")
                 axs3[3].set_ylim([0, 12])
                 plt.savefig(
-                    "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/PI_only_error.pdf")
+                    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/jacobian_analysis/bias_3/Kp_1_Ki_01/PI_only_error.pdf")
                 plt.show()
 
                 plots_PIonly = False
@@ -1288,22 +1288,22 @@ Robotic Manipulation" by Murry et al.
             plt.show()
 
             e_v_bounds = np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_bounds.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_bounds.npy"
             )
             e_v_norms = np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_norms.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_norms.npy"
             )
             e_v_components = np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_components.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/SAC_e_v_components.npy"
             )
             e_v_bounds_PIonly = np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_bounds.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_bounds.npy"
             )
             e_v_norms_PIonly = np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_norms.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_norms.npy"
             )
             e_v_components_PIonly = np.load(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_components.npy"
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_components.npy"
             )
             fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 14))
             plt.rcParams.update({
@@ -1357,12 +1357,12 @@ Robotic Manipulation" by Murry et al.
             # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
             #              abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, '-om', markersize=3,
             #              label='with SAC')
-            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-                         abs(e_v_components[:, 0]) * 1000 * 0.1,
-                         'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{SAC}}(t))[0]\||.\Delta t$")
-            axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-                         abs(e_v_components_PIonly[:, 0]) * 1000 * 0.1,
-                         'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{PI}}(t))[0]\||.\Delta t$")
+            # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
+            #              abs(e_v_components[:, 0]) * 1000 * 0.1,
+            #              'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{SAC}}(t))[0]\||.\Delta t$")
+            # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
+            #              abs(e_v_components_PIonly[:, 0]) * 1000 * 0.1,
+            #              'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{PI}}(t))[0]\||.\Delta t$")
             # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(self.plot_data_buffer[:, 30]) * 1000, 'r:',
             #              label='error bound with SAC')
             # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(plot_data_buffer_no_SAC[:, 30]) * 1000, 'b:',
@@ -1413,12 +1413,12 @@ Robotic Manipulation" by Murry et al.
             # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
             #              abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, '-om', markersize=3,
             #              label='with SAC')
-            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-                         abs(e_v_components[:, 1]) * 1000 * 0.1,
-                         'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{SAC}}(t))[1]\||.\Delta t$")
-            axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-                         abs(e_v_components_PIonly[:, 1]) * 1000 * 0.1,
-                         'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{PI}}(t))[1]\||.\Delta t$")
+            # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
+            #              abs(e_v_components[:, 1]) * 1000 * 0.1,
+            #              'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{SAC}}(t))[1]\||.\Delta t$")
+            # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
+            #              abs(e_v_components_PIonly[:, 1]) * 1000 * 0.1,
+            #              'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{PI}}(t))[1]\||.\Delta t$")
             # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(self.plot_data_buffer[:, 31]) * 1000, 'r:',
             #              label='error bound on with SAC')
             # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(plot_data_buffer_no_SAC[:, 31]) * 1000, 'b:',
@@ -1426,7 +1426,7 @@ Robotic Manipulation" by Murry et al.
             # axs3[1].set_xlabel("t [s]")
             axs3[1].set_ylabel("$|y-y^*|$ [mm]")
             axs3[1].set_ylim([0, 8])
-            axs3[1].legend(loc="upper left")
+            # axs3[1].legend(loc="upper left")
             data_list = []
             for n in range(n_episodes):
                 arr = np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy")
@@ -1473,16 +1473,16 @@ Robotic Manipulation" by Murry et al.
             #              label='error bound on with SAC')
             # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(plot_data_buffer_no_SAC[:, 32]) * 1000, 'b:',
             #              label='error bound on without SAC')
-            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-                         abs(e_v_components[:, 2]) * 1000 * 0.1,
-                         'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{SAC}}(t))[2]\||.\Delta t$")
-            axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-                         abs(e_v_components_PIonly[:, 2]) * 1000 * 0.1,
-                         'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{PI}}(t))[2]\||.\Delta t$")
+            # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
+            #              abs(e_v_components[:, 2]) * 1000 * 0.1,
+            #              'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{SAC}}(t))[2]\||.\Delta t$")
+            # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
+            #              abs(e_v_components_PIonly[:, 2]) * 1000 * 0.1,
+            #              'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{PI}}(t))[2]\||.\Delta t$")
             # axs3[2].set_xlabel("t [s]")
             axs3[2].set_ylabel("$|z-z^*|$ [mm]")
             axs3[2].set_ylim([0, 8])
-            axs3[2].legend(loc="upper left")
+            # axs3[2].legend(loc="upper left")
             # axs3[2].legend(loc="upper left")
             # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
             #              np.linalg.norm((plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
@@ -1533,15 +1533,15 @@ Robotic Manipulation" by Murry et al.
             axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
                          e_v_bounds * 1000 * 0.1,
                          'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{{SAC}}(t))||.\Delta t$")
-            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-                         e_v_norms * 1000 * 0.1,
-                         'm:', label="")
+            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
+            #              e_v_norms * 1000 * 0.1,
+            #              'm:', label="")
             axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
                          e_v_bounds_PIonly * 1000 * 0.1,
                          'b--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{{PI}}(t))||.\Delta t$")
-            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-                         e_v_norms_PIonly * 1000 * 0.1,
-                         'b:', label="")
+            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
+            #              e_v_norms_PIonly * 1000 * 0.1,
+            #              'b:', label="")
             # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
             #              np.linalg.norm(plot_data_buffer_no_SAC[:, 30:33], ord=2, axis=1) * 1000,
             #              'b:', label='error bound on without SAC')
@@ -1549,6 +1549,9 @@ Robotic Manipulation" by Murry et al.
             axs3[3].set_ylabel("$||\mathbf{p}-\mathbf{p}^*||_{2}$ [mm]")
             axs3[3].set_ylim([0, 8])
             axs3[3].legend(loc="upper left")
+            plt.grid(True)
+            for ax in axs3:
+                ax.grid(True)
             plt.savefig(output_dir_rendering + "/test_position_errors_both.pdf",
                         format="pdf",
                         bbox_inches='tight')
@@ -2338,12 +2341,12 @@ Robotic Manipulation" by Murry et al.
             pb.startStateLogging(pb.STATE_LOGGING_VIDEO_MP4,
                                  output_dir_rendering + "/simulation.mp4")  # added by Pierre
             target_object = pb.loadURDF(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/sphere.urdf",
                 useFixedBase=True, physicsClientId=physics_client)
             conveyor_object = pb.loadURDF(
-                "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/dobot_conveyer.urdf",
                 useFixedBase=True, physicsClientId=physics_client)
-            plane = pb.loadURDF("/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
+            plane = pb.loadURDF("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/plane.urdf",
                                 useFixedBase=True, physicsClientId=physics_client)
             # Initialise debug camera angle
             pb.resetDebugVisualizerCamera(
@@ -2401,7 +2404,7 @@ Robotic Manipulation" by Murry et al.
                 time.sleep(0.01)
 
         # np.save(
-        #     "/cluster/home/mnobar/code/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_" + str(
+        #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/noSACFapv3_17/plot_data_buffer_" + str(
         #         self.n) + ".npy", self.plot_data_buffer)
 
     def close(self):
