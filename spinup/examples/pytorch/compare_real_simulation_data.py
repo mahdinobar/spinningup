@@ -1379,8 +1379,10 @@ robot_id_true = p.loadURDF(urdf_path_, useFixedBase=True)
 robot_id_biased = p.loadURDF(urdf_path_biased_, useFixedBase=True)
 
 if __name__ == '__main__':
-    # # file_names = ["SAC_100Hz_2","SAC_100Hz_3","SAC_100Hz_4"]
-    # file_names = ["PIonly_1","PIonly_2","PIonly_3","PIonly_4"]
+    # file_names = ["SAC_100Hz_2","SAC_100Hz_3","SAC_100Hz_4"]
+    # # file_names = ["PIonly_1","PIonly_2","PIonly_3","PIonly_4"]
+    # bag_path = '/home/mahdi/bagfiles/experiments_HW314/'
+    # # bag_path = '/home/mahdi/bagfiles/experiments_HW309/'
     # qs_ = []
     # dqs_ = []
     # ts_ = []
@@ -1389,8 +1391,6 @@ if __name__ == '__main__':
     # K_d = 0.1 * np.eye(3)
     # for file_name in file_names:
     #     print("file_name=",file_name)
-    #     # bag_path = '/home/mahdi/bagfiles/experiments_HW314/'
-    #     bag_path = '/home/mahdi/bagfiles/experiments_HW309/'
     #     # dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, bag_path, save=True)
     #     dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star = load_bags(file_name, bag_path, save=True)
     #     #
@@ -1435,7 +1435,7 @@ if __name__ == '__main__':
     #     e_v_components = np.array(e_v_components)
     #     e_v_norms = np.array(e_v_norms)
     #     e_v_bounds = np.array(e_v_bounds)
-
+    #
     # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_components.npy", e_v_components)
     # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_norms.npy", e_v_norms)
     # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_bounds.npy", e_v_bounds)
@@ -1516,7 +1516,7 @@ if __name__ == '__main__':
                          label='')
     axs3[1].set_ylabel("$|y-y^*|$ [mm]")
     axs3[1].set_ylim([0, 6])
-    axs3[1].legend(loc="upper left")
+    # axs3[1].legend(loc="upper left")
     axs3[2].plot(mean_t_, abs(mean_[2, :]), '-om', markersize=3,
                  label='')
     axs3[2].fill_between(mean_t_, ci_lower_[2, :], ci_upper_[2, :], color='m',
@@ -1529,7 +1529,7 @@ if __name__ == '__main__':
                          label='')
     axs3[2].set_ylabel("$|z-z^*|$ [mm]")
     axs3[2].set_ylim([0, 6])
-    axs3[2].legend(loc="upper left")
+    # axs3[2].legend(loc="upper left")
     data = np.stack(dps_, axis=2)
     l2_data = np.linalg.norm(data, ord=2, axis=0)
     mean_l2 = np.mean(l2_data, axis=1)
@@ -1537,7 +1537,6 @@ if __name__ == '__main__':
     # Compute 95% confidence interval bounds
     ci_upper_ = abs(mean_l2) + 1.96 * sem_l2
     ci_lower_ = abs(mean_l2) - 1.96 * sem_l2
-
     data = np.stack(dps_PIonly_, axis=2)
     l2_data_PIonly = np.linalg.norm(data, ord=2, axis=0)
     mean_l2_PIonly = np.mean(l2_data_PIonly, axis=1)
@@ -1557,12 +1556,17 @@ if __name__ == '__main__':
                          label='')
     axs3[3].plot(mean_t_,
                  e_v_bounds * 1000 * 0.1,
-                 'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{{SAC}}(t))||.\Delta t$")
-
+                 'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{\mathrm{SAC}}(t))||.\Delta t$")
+    axs3[3].plot(mean_t_PIonly_,
+                 e_v_bounds_PIonly * 1000 * 0.1,
+                 'b--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{\mathrm{PI}}(t))||.\Delta t$")
     axs3[3].set_xlabel("t [s]")
     axs3[3].set_ylabel("$||\mathbf{p}-\mathbf{p}^*||_{2}$ [mm]")
     axs3[3].set_ylim([0, 6])
     axs3[3].legend(loc="upper right")
+    plt.grid(True)
+    for ax in axs3:
+        ax.grid(True)
     plt.savefig("/home/mahdi/bagfiles/experiments_HW314/real_test_position_errors_both.pdf",
                 format="pdf",
                 bbox_inches='tight')
