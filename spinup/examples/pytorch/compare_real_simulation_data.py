@@ -1278,15 +1278,18 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
 
 def get_data(dq_PI, p_hat_EE, p_star, q_measured, dq_measured):
     # # Attentions (remove redundant initial data of some topics based on absolute ROS timestamp; conside dq_PI as base)
-    idx_init_dq_measured = np.argwhere(abs(dq_PI[0, 0] - dq_measured[:, 0]) < 2e-3)
-    # idx_init_dq_desired_measured = np.argwhere(abs(dq_PI[0, 0] - dq_desired_measured[:, 0]) < 1e-3)
+    dq_tmp=dq_PI #temporary correction to find initial time in ROS topic
+    if np.shape(np.argwhere(abs(dq_tmp[0, 0] - dq_measured[:, 0]) < 2e-3))[0]==0:
+        dq_tmp = dq_measured
+    idx_init_dq_measured = np.argwhere(abs(dq_tmp[0, 0] - dq_measured[:, 0]) < 2e-3)
+    # idx_init_dq_desired_measured = np.argwhere(abs(dq_tmp[0, 0] - dq_desired_measured[:, 0]) < 1e-3)
     dq_measured_ = dq_measured[idx_init_dq_measured[0][0]:, :]
     q_measured_ = q_measured[idx_init_dq_measured[0][0]:, :]
     # dq_desired_measured = dq_desired_measured[idx_init_dq_desired_measured[0][0]:, :]
-    idx_init_p_hat_EE = np.argwhere(abs(dq_PI[0, 0] - p_hat_EE[:, 0]) < 2e-3)
+    idx_init_p_hat_EE = np.argwhere(abs(dq_tmp[0, 0] - p_hat_EE[:, 0]) < 2e-3)
     p_hat_EE_ = p_hat_EE[idx_init_p_hat_EE[0][0]:, :]
 
-    idx_init_p_star = np.argwhere(abs(dq_PI[0, 0] - p_star[:, 0]) < 1e-3)
+    idx_init_p_star = np.argwhere(abs(dq_tmp[0, 0] - p_star[:, 0]) < 1e-3)
     p_star_ = p_star[idx_init_p_star[0][0]:, :]
 
     t_ = (q_measured_[:, 0] - q_measured_[0, 0]) * 1000
@@ -1379,94 +1382,95 @@ robot_id_true = p.loadURDF(urdf_path_, useFixedBase=True)
 robot_id_biased = p.loadURDF(urdf_path_biased_, useFixedBase=True)
 
 if __name__ == '__main__':
-    # file_names = ["SAC_100Hz_2","SAC_100Hz_3","SAC_100Hz_4"]
-    # # file_names = ["PIonly_1","PIonly_2","PIonly_3","PIonly_4"]
-    # bag_path = '/home/mahdi/bagfiles/experiments_HW314/'
-    # # bag_path = '/home/mahdi/bagfiles/experiments_HW309/'
-    # qs_ = []
-    # dqs_ = []
-    # ts_ = []
-    # dps_ = []
-    # K_p = 1 * np.eye(3)
-    # K_d = 0.1 * np.eye(3)
-    # for file_name in file_names:
-    #     print("file_name=",file_name)
-    #     # dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, bag_path, save=True)
-    #     dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star = load_bags(file_name, bag_path, save=True)
-    #     #
-    #     # if file_name[0:3] == "SAC":
-    #     #     compare_data(file_name, dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star,
-    #     #                                          PIonly=False)
-    #     # elif file_name[0:6] == "PIonly":
-    #     #     compare_data(file_name, dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star,
-    #     #                                          PIonly=True)
-    #
-    #     q_, dq_, t_, dp_ = get_data(dq_PI, p_hat_EE, p_star, q, dq)
-    #     qs_.append(q_)
-    #     dqs_.append(dq_)
-    #     ts_.append(t_)
-    #     dps_.append(dp_)
-    #
-    #     int_err = np.zeros(3)
-    #     e_v_norms = []
-    #     e_v_bounds = []
-    #     e_v_components = []
-    #     for k in range(t_.__len__()):
-    #         q = np.hstack((q_[k, :6], np.zeros(3)))
-    #         dq = np.hstack((dq_[k, :6], np.zeros(3)))
-    #         J_true = load_jacobian(robot_id_true, q, dq)
-    #         J = J_true[:3, :6]
-    #         J_biased = load_jacobian(robot_id_biased, q, dq)
-    #         J_tilde = J_biased[:3, :6]
-    #         u_d = np.array([0, 0.0349028, 0])  # TODO
-    #         delta_r = dp_[:,k]/1000
-    #         int_err += delta_r/1000  # integral update
-    #         u = u_d + K_p @ delta_r + K_d @ int_err
-    #         J_tilde_pinv = np.linalg.pinv(J_tilde)
-    #         P = J @ J_tilde_pinv
-    #         I = np.eye(3)
-    #         e_v = (I - P) @ u
-    #         e_v_components.append(e_v)
-    #         e_v_norms.append(np.linalg.norm(e_v))
-    #         sigma_min = np.min(np.linalg.svd(P, compute_uv=False))
-    #         e_v_bound = (1 - sigma_min) * np.linalg.norm(u)
-    #         e_v_bounds.append(e_v_bound)
-    #
-    #     e_v_components = np.array(e_v_components)
-    #     e_v_norms = np.array(e_v_norms)
-    #     e_v_bounds = np.array(e_v_bounds)
-    #
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_components.npy", e_v_components)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_norms.npy", e_v_norms)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_bounds.npy", e_v_bounds)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/qs_.npy", qs_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/dqs_.npy", dqs_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/ts_.npy", ts_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/dps_.npy", dps_)
+    # file_names = ["SAC_100Hz_1","SAC_100Hz_2","SAC_100Hz_3"]
+    # file_names = ["PIonly_1","PIonly_2","PIonly_3"]
+    file_names = ["PIonly_100Hz_1","PIonly_100Hz_2"]
+    bag_path = '/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/'
+    # bag_path = '/home/mahdi/bagfiles/experiments_HW309/'
+    qs_ = []
+    dqs_ = []
+    ts_ = []
+    dps_ = []
+    K_p = 1 * np.eye(3)
+    K_d = 0.1 * np.eye(3)
+    for file_name in file_names:
+        print("file_name=",file_name)
+        # dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, bag_path, save=True)
+        dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star = load_bags(file_name, bag_path, save=True)
+        #
+        # if file_name[0:3] == "SAC":
+        #     compare_data(file_name, dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star,
+        #                                          PIonly=False)
+        # elif file_name[0:6] == "PIonly":
+        #     compare_data(file_name, dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star,
+        #                                          PIonly=True)
 
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_components_PIonly.npy", e_v_components)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_norms_PIonly.npy", e_v_norms)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_bounds_PIonly.npy", e_v_bounds)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/qs_PIonly_.npy", qs_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/dqs_PIonly_.npy", dqs_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/ts_PIonly_.npy", ts_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/dps_PIonly_.npy", dps_)
+        q_, dq_, t_, dp_ = get_data(dq_PI, p_hat_EE, p_star, q, dq)
+        qs_.append(q_)
+        dqs_.append(dq_)
+        ts_.append(t_)
+        dps_.append(dp_)
 
-    e_v_components= np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_components.npy")
-    e_v_norms=np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_norms.npy")
-    e_v_bounds=np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_bounds.npy")
-    qs_=np.load("/home/mahdi/bagfiles/experiments_HW314/qs_.npy")
-    dqs_=np.load("/home/mahdi/bagfiles/experiments_HW314/dqs_.npy")
-    ts_=np.load("/home/mahdi/bagfiles/experiments_HW314/ts_.npy")
-    dps_=np.load("/home/mahdi/bagfiles/experiments_HW314/dps_.npy")
+        int_err = np.zeros(3)
+        e_v_norms = []
+        e_v_bounds = []
+        e_v_components = []
+        for k in range(t_.__len__()):
+            q = np.hstack((q_[k, :6], np.zeros(3)))
+            dq = np.hstack((dq_[k, :6], np.zeros(3)))
+            J_true = load_jacobian(robot_id_true, q, dq)
+            J = J_true[:3, :6]
+            J_biased = load_jacobian(robot_id_biased, q, dq)
+            J_tilde = J_biased[:3, :6]
+            u_d = np.array([0, 0.0349028, 0])  # TODO
+            delta_r = dp_[:,k]/1000
+            int_err += delta_r/1000  # integral update
+            u = u_d + K_p @ delta_r + K_d @ int_err
+            J_tilde_pinv = np.linalg.pinv(J_tilde)
+            P = J @ J_tilde_pinv
+            I = np.eye(3)
+            e_v = (I - P) @ u
+            e_v_components.append(e_v)
+            e_v_norms.append(np.linalg.norm(e_v))
+            sigma_min = np.min(np.linalg.svd(P, compute_uv=False))
+            e_v_bound = (1 - sigma_min) * np.linalg.norm(u)
+            e_v_bounds.append(e_v_bound)
 
-    e_v_components_PIonly= np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_components_PIonly.npy")
-    e_v_norms_PIonly=np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_norms_PIonly.npy")
-    e_v_bounds_PIonly=np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_bounds_PIonly.npy")
-    qs_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW314/qs_PIonly_.npy")
-    dqs_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW314/dqs_PIonly_.npy")
-    ts_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW314/ts_PIonly_.npy")
-    dps_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW314/dps_PIonly_.npy")
+        e_v_components = np.array(e_v_components)
+        e_v_norms = np.array(e_v_norms)
+        e_v_bounds = np.array(e_v_bounds)
+
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/e_v_components.npy", e_v_components)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/e_v_norms.npy", e_v_norms)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/e_v_bounds.npy", e_v_bounds)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/qs_.npy", qs_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/dqs_.npy", dqs_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/ts_.npy", ts_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/dps_.npy", dps_)
+
+    np.save("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/e_v_components_PIonly.npy", e_v_components)
+    np.save("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/e_v_norms_PIonly.npy", e_v_norms)
+    np.save("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/e_v_bounds_PIonly.npy", e_v_bounds)
+    np.save("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/qs_PIonly_.npy", qs_)
+    np.save("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/dqs_PIonly_.npy", dqs_)
+    np.save("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/ts_PIonly_.npy", ts_)
+    np.save("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/dps_PIonly_.npy", dps_)
+
+    e_v_components= np.load("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/e_v_components.npy")
+    e_v_norms=np.load("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/e_v_norms.npy")
+    e_v_bounds=np.load("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/e_v_bounds.npy")
+    qs_=np.load("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/qs_.npy")
+    dqs_=np.load("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/dqs_.npy")
+    ts_=np.load("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/ts_.npy")
+    dps_=np.load("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/dps_.npy")
+
+    e_v_components_PIonly= np.load("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/e_v_components_PIonly.npy")
+    e_v_norms_PIonly=np.load("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/e_v_norms_PIonly.npy")
+    e_v_bounds_PIonly=np.load("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/e_v_bounds_PIonly.npy")
+    qs_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/qs_PIonly_.npy")
+    dqs_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/dqs_PIonly_.npy")
+    ts_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/ts_PIonly_.npy")
+    dps_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/dps_PIonly_.npy")
 
     fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 14))
     plt.rcParams.update({
@@ -1567,8 +1571,16 @@ if __name__ == '__main__':
     plt.grid(True)
     for ax in axs3:
         ax.grid(True)
-    plt.savefig("/home/mahdi/bagfiles/experiments_HW314/real_test_position_errors_both.pdf",
+    plt.savefig("/home/mahdi/bagfiles/experiments_HW314/BeltSpeed_pd_20/real_test_position_errors_both.pdf",
                 format="pdf",
                 bbox_inches='tight')
     plt.show()
+
+    bar_e_L2=np.mean(l2_data)
+    sigma_e_L2=np.mean(np.std(l2_data, axis=1, ddof=1))
+    bar_e_L2_PIonly=np.mean(l2_data_PIonly)
+    sigma_e_L2_PIonly=np.mean(np.std(l2_data_PIonly, axis=1, ddof=1))
+
+    e_rmse=np.mean(l2_data**2)**0.5
+    e_rmse_PIonly=np.mean(l2_data_PIonly**2)**0.5
     print("")
