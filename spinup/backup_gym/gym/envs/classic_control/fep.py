@@ -1307,12 +1307,12 @@ Robotic Manipulation" by Murry et al.
             )
             fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 14))
             plt.rcParams.update({
-                'font.size': 14,  # overall font size
-                'axes.labelsize': 16,  # x and y axis labels
+                'font.size': 12,  # overall font size
+                'axes.labelsize': 12,  # x and y axis labels
                 'xtick.labelsize': 12,  # x-axis tick labels
                 'ytick.labelsize': 12,  # y-axis tick labels
                 'legend.fontsize': 12,  # legend text
-                'font.family': 'Times'
+                'font.family': 'Serif'
             })
             data_list = []
             n_episodes = 5
@@ -1341,36 +1341,19 @@ Robotic Manipulation" by Murry et al.
             ci_lower_PIonly_ = mean_PIonly_ - 1.96 * sem_PIonly
             # Plot with confidence interval as shaded area
             axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, mean_PIonly_, '-ob', markersize=3,
-                         label='mean without SAC')
+                         label='mean PI')
             axs3[0].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower_PIonly_, ci_upper_PIonly_,
                                  color='b',
                                  alpha=0.3,
-                                 label='95% CI without SAC')
+                                 label='95% CI PI')
             axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, mean_, '-om', markersize=3,
-                         label='mean with SAC')
+                         label='mean RSAC-PI')
             axs3[0].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower_, ci_upper_, color='m',
                                  alpha=0.3,
-                                 label='95% CI with SAC')
-            # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
-            #              abs(plot_data_buffer_no_SAC[:, 0] - plot_data_buffer_no_SAC[:, 3]) * 1000, '-ob', markersize=3,
-            #              label='without SAC')
-            # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
-            #              abs(self.plot_data_buffer[:, 0] - self.plot_data_buffer[:, 3]) * 1000, '-om', markersize=3,
-            #              label='with SAC')
-            # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-            #              abs(e_v_components[:, 0]) * 1000 * 0.1,
-            #              'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{SAC}}(t))[0]\||.\Delta t$")
-            # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-            #              abs(e_v_components_PIonly[:, 0]) * 1000 * 0.1,
-            #              'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{PI}}(t))[0]\||.\Delta t$")
-            # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(self.plot_data_buffer[:, 30]) * 1000, 'r:',
-            #              label='error bound with SAC')
-            # axs3[0].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(plot_data_buffer_no_SAC[:, 30]) * 1000, 'b:',
-            #              label='error bound without SAC')
-            # axs3[0].set_xlabel("t [s]")
-            axs3[0].set_ylabel("$|x-x^*|$ [mm]")
-            axs3[0].set_ylim([0, 8])
-            axs3[0].legend(loc="upper left")
+                                 label='95% CI RSAC-PI')
+            axs3[0].set_ylabel(r"$|\hat{x}-\tilde{x}^*|$ [mm]")
+            axs3[0].set_ylim([0, 6])
+            axs3[0].legend(loc="upper right")
             data_list = []
             for n in range(n_episodes):
                 arr = np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy")
@@ -1407,25 +1390,8 @@ Robotic Manipulation" by Murry et al.
             axs3[1].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower_, ci_upper_, color='m',
                                  alpha=0.3,
                                  label='')
-            # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
-            #              abs(plot_data_buffer_no_SAC[:, 1] - plot_data_buffer_no_SAC[:, 4]) * 1000, '-ob', markersize=3,
-            #              label='without SAC')
-            # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
-            #              abs(self.plot_data_buffer[:, 1] - self.plot_data_buffer[:, 4]) * 1000, '-om', markersize=3,
-            #              label='with SAC')
-            # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-            #              abs(e_v_components[:, 1]) * 1000 * 0.1,
-            #              'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{SAC}}(t))[1]\||.\Delta t$")
-            # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-            #              abs(e_v_components_PIonly[:, 1]) * 1000 * 0.1,
-            #              'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{PI}}(t))[1]\||.\Delta t$")
-            # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(self.plot_data_buffer[:, 31]) * 1000, 'r:',
-            #              label='error bound on with SAC')
-            # axs3[1].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(plot_data_buffer_no_SAC[:, 31]) * 1000, 'b:',
-            #              label='error bound on without SAC')
-            # axs3[1].set_xlabel("t [s]")
-            axs3[1].set_ylabel("$|y-y^*|$ [mm]")
-            axs3[1].set_ylim([0, 8])
+            axs3[1].set_ylabel(r"$|\hat{y}-\tilde{y}^*|$ [mm]")
+            axs3[1].set_ylim([0, 6])
             # axs3[1].legend(loc="upper left")
             data_list = []
             for n in range(n_episodes):
@@ -1463,30 +1429,8 @@ Robotic Manipulation" by Murry et al.
             axs3[2].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower_, ci_upper_, color='m',
                                  alpha=0.3,
                                  label='')
-            # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
-            #              abs(plot_data_buffer_no_SAC[:, 2] - plot_data_buffer_no_SAC[:, 5]) * 1000, '-ob', markersize=3,
-            #              label='without SAC')
-            # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
-            #              abs(self.plot_data_buffer[:, 2] - self.plot_data_buffer[:, 5]) * 1000, '-om', markersize=3,
-            #              label='with SAC')
-            # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(self.plot_data_buffer[:, 32]) * 1000, 'r:',
-            #              label='error bound on with SAC')
-            # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000, abs(plot_data_buffer_no_SAC[:, 32]) * 1000, 'b:',
-            #              label='error bound on without SAC')
-            # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-            #              abs(e_v_components[:, 2]) * 1000 * 0.1,
-            #              'm:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{SAC}}(t))[2]\||.\Delta t$")
-            # axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-            #              abs(e_v_components_PIonly[:, 2]) * 1000 * 0.1,
-            #              'b:', label=r"$||\mathbf{e}_{\mathbf{u}}(t| \mathbf{q}_{{PI}}(t))[2]\||.\Delta t$")
-            # axs3[2].set_xlabel("t [s]")
-            axs3[2].set_ylabel("$|z-z^*|$ [mm]")
-            axs3[2].set_ylim([0, 8])
-            # axs3[2].legend(loc="upper left")
-            # axs3[2].legend(loc="upper left")
-            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
-            #              np.linalg.norm((plot_data_buffer_no_SAC[:, 0:3] - plot_data_buffer_no_SAC[:, 3:6]), ord=2,
-            #                             axis=1) * 1000, '-ob', markersize=3, label='without SAC')
+            axs3[2].set_ylabel(r"$|\hat{z}-\tilde{z}^*|$ [mm]")
+            axs3[2].set_ylim([0, 6])
             data_list = []
             for n in range(n_episodes):
                 arr = np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy")
@@ -1519,36 +1463,32 @@ Robotic Manipulation" by Murry et al.
                                  color='b',
                                  alpha=0.3,
                                  label="")
-            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
-            #              np.linalg.norm((self.plot_data_buffer[:, 0:3] - self.plot_data_buffer[:, 3:6]), ord=2,
-            #                             axis=1) * 1000,
-            #              '-om', markersize=3, label='with SAC')
             axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, mean_l2, '-om', markersize=3,
                          label="")
             axs3[3].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower, ci_upper, color='m', alpha=0.3,
                                  label="")
             # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
             #              np.linalg.norm(self.plot_data_buffer[:, 30:33], ord=2, axis=1) * 1000,
-            #              'r:', label='error bound on with SAC')
+            #              'r:', label='error bound on RSAC-PI')
             axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
                          e_v_bounds * 1000 * 0.1,
-                         'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{{SAC}}(t))||.\Delta t$")
+                         'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{{SAC}}(t))||_2.\delta t$")
             # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
             #              e_v_norms * 1000 * 0.1,
             #              'm:', label="")
             axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
                          e_v_bounds_PIonly * 1000 * 0.1,
-                         'b--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{{PI}}(t))||.\Delta t$")
+                         'b--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{{PI}}(t))||_2.\delta t$")
             # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
             #              e_v_norms_PIonly * 1000 * 0.1,
             #              'b:', label="")
             # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
             #              np.linalg.norm(plot_data_buffer_no_SAC[:, 30:33], ord=2, axis=1) * 1000,
-            #              'b:', label='error bound on without SAC')
+            #              'b:', label='error bound on PI')
             axs3[3].set_xlabel("t [s]")
-            axs3[3].set_ylabel("$||\mathbf{p}-\mathbf{p}^*||_{2}$ [mm]")
-            axs3[3].set_ylim([0, 8])
-            axs3[3].legend(loc="upper left")
+            axs3[3].set_ylabel(r"$\|\hat{\mathbf{p}}-\tilde{\mathbf{p}}^*\|_{2}$ [mm]")
+            axs3[3].set_ylim([0, 6])
+            axs3[3].legend(loc="upper right")
             plt.grid(True)
             for ax in axs3:
                 ax.grid(True)
@@ -1556,7 +1496,6 @@ Robotic Manipulation" by Murry et al.
                         format="pdf",
                         bbox_inches='tight')
             plt.show()
-
             # uncomment for plotting multiple episodes
             if True:
                 data_list = []
