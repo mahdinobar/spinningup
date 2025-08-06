@@ -193,22 +193,46 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
     # Generate epoch indices
     epochs = range(1, len(average_test_returns) + 1)
     # Plot
-    plt.figure(figsize=(6, 4))
+    plt.figure(figsize=(6, 4), facecolor='white')
+    plt.rcParams.update({
+        'font.size': 14,
+        'axes.labelsize': 14,
+        'xtick.labelsize': 14,
+        'ytick.labelsize': 14,
+        'legend.fontsize': 14,
+        'font.family': 'Serif'
+    })
+
+    ax = plt.gca()
+    ax.set_facecolor('white')
+
+    # Border box
+    for spine in ax.spines.values():
+        spine.set_visible(True)
+        spine.set_color('black')
+        spine.set_linewidth(1.0)
+
+    # Plot data
     plt.plot(epochs, average_test_returns, color="blue")
-    # plt.hlines( 107, 0, 4000, 'k', linestyles="dashed", label='PI only')
-    plt.hlines( 85.21, 0, 4000, 'k', linestyles="dashed", label='PI only')
-    # plt.hlines( 54.43, 0, 4000, 'k', linestyles="dashed", label='PI only')
-    # plt.hlines( 54.43, 4000, 8000, 'r', linestyles="dashed", label='PI only')
-    plt.xlabel("Number of Epochs", fontproperties=times_new_roman_font, fontsize=14)
-    plt.ylabel("Average Test Return", fontproperties=times_new_roman_font, fontsize=14)
-    # plt.title("Average Test Return vs Epochs", fontsize=14, fontproperties=times_new_roman_font)
+
+    # Horizontal line
+    hline_y = 85.21
+    plt.hlines(hline_y, 0, 4000, 'k', linestyles="dashed")
+
+    # Annotate text above left end of line
+    plt.text(2830, hline_y + 1, "PI Controller", ha='left', va='bottom',
+             fontsize=12, fontfamily='serif')
+
+    # Labels and grid
+    plt.xlabel("Number of Epochs")
+    plt.ylabel("Average Test Return")
     plt.xticks(fontproperties=times_new_roman_font, fontsize=12)
     plt.yticks(fontproperties=times_new_roman_font, fontsize=12)
-    plt.xlim([0,len(average_test_returns)])
-    plt.grid(True)
-    plt.legend(prop=times_new_roman_font, fontsize=14)
+    plt.xlim([0, len(average_test_returns)])
+    plt.grid(True, which='both', color='gray', linestyle='--', linewidth=0.5)
+
     plt.tight_layout()
-    plt.savefig(all_logdirs[-1] + "/learning_curve", format="pdf")
+    plt.savefig(all_logdirs[-1] + "/learning_curve.pdf", format="pdf")
     plt.show()
 
     # Register the specific Times New Roman font
