@@ -1,3 +1,4 @@
+
 import math
 import time
 
@@ -12,7 +13,7 @@ import gpytorch
 import joblib
 import torch
 import warnings
-
+from typing import Optional, Tuple
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
 sys.path.append('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch')
@@ -83,6 +84,9 @@ arm_auxiliary_mismatch = pb.loadURDF(
 # pb.setGravity(0, 0, -9.81, physicsClientId=client_auxilary)
 import os
 
+# arm_biased_kinematics = pb.loadURDF(
+#     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc_biased_3.urdf",
+#     useFixedBase=True, physicsClientId=physics_client)
 arm_biased_kinematics = pb.loadURDF(
     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/URDFs/fep3/panda_corrected_Nosc_biased_3.urdf",
     useFixedBase=True, physicsClientId=physics_client)
@@ -329,6 +333,347 @@ Robotic Manipulation" by Murry et al.
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
+    def _damped_pinv(self, J: np.ndarray, lam: float = 1e-3) -> np.ndarray:
+        J = np.asarray(J);
+        m, n = J.shape
+        if m <= n:
+            JJt = J @ J.T
+            return J.T @ np.linalg.solve(JJt + (lam ** 2) * np.eye(m, dtype=J.dtype), np.eye(m, dtype=J.dtype))
+        else:
+            JtJ = J.T @ J
+            return np.linalg.solve(JtJ + (lam ** 2) * np.eye(n, dtype=J.dtype), J.T)
+
+    def lower_bound_best_direction_no_injection(self,
+            J_true_k: np.ndarray,  # (m,n)
+            J_bias_k: np.ndarray,  # (m,n)
+            e_k: np.ndarray,  # (m,)   current error
+            Kp: np.ndarray,  # (m,m)
+            Ki: np.ndarray,  # (m,m)  (you may pass zeros to ignore integral penalty)
+            m_k: np.ndarray,  # (m,)   integral state
+            dt: float,
+            pinv_damping: float = 1e-3,
+            include_integral_penalty: bool = True
+    ):
+        """
+        Computes max over singular directions of
+          LB_i = alpha_i*|s_i| - beta*||e_perp,i|| - (integral penalty if enabled),
+        with the reference/mismatch injection term omitted.
+
+        Returns:
+          LB_best : float
+          best    : dict (details for winning direction)
+          per_dir : list of dicts with per-direction diagnostics (alpha, beta, s_i, e_perp_i, required_s_for_positive, etc.)
+        """
+        # Shapes
+        e_k = np.asarray(e_k).reshape(-1)
+        Kp = np.asarray(Kp);
+        Ki = np.asarray(Ki)
+        m_k = np.asarray(m_k).reshape(-1)
+        m = e_k.size
+        assert J_true_k.shape[0] == m and J_bias_k.shape[0] == m
+        assert Kp.shape == (m, m) and Ki.shape == (m, m)
+
+        # P = J_true * (J_bias)^†
+        Jb_dag = self._damped_pinv(np.asarray(J_bias_k), lam=pinv_damping)
+        P = np.asarray(J_true_k) @ Jb_dag
+
+        # SVD
+        U, S, Vt = np.linalg.svd(P, full_matrices=True)
+        sigma_max = float(S[0])
+        P_norm2 = sigma_max
+        Kp_norm2 = float(np.linalg.norm(Kp, 2))
+        Ki_norm2 = float(np.linalg.norm(Ki, 2))
+        m_norm = float(np.linalg.norm(m_k, 2))
+
+        e_norm = float(np.linalg.norm(e_k))
+        beta = 1.0 + dt * P_norm2 * Kp_norm2
+        int_penalty = dt * P_norm2 * Ki_norm2 * m_norm if include_integral_penalty else 0.0
+
+        LB_best = -np.inf
+        best = None
+        per_dir = []
+
+        for i in range(m):
+            sigma_i = float(S[i])
+            u_i = U[:, i];
+            v_i = Vt.T[:, i]
+            c_i = float(u_i @ v_i)
+            kappa_i = float(v_i @ (Kp @ v_i))  # Rayleigh along v_i
+            s_i = float(v_i @ e_k)
+            eperp_i = float(np.sqrt(max(0.0, e_norm ** 2 - s_i ** 2)))
+            alpha_i = abs(c_i - dt * sigma_i * kappa_i)
+
+            LB_i = alpha_i * abs(s_i) - beta * eperp_i - int_penalty
+
+            # compute the |s_i| needed to make LB_i > 0 (helpful diagnostic)
+            denom = max(alpha_i, 1e-12)
+            required_s = (beta * eperp_i + int_penalty) / denom
+
+            entry = dict(
+                i=i, sigma=sigma_i, c=c_i, kappa=kappa_i,
+                s=s_i, eperp=eperp_i, alpha=alpha_i, beta=beta,
+                LB=LB_i, required_abs_s_for_positive=required_s,
+                P_norm2=P_norm2, Kp_norm2=Kp_norm2, Ki_norm2=Ki_norm2, m_norm=m_norm,
+                LBmm=LB_i*1000, B1mm=alpha_i * abs(s_i)*1000, B2mm=beta * eperp_i*1000, B3mm=int_penalty*1000,
+            )
+            per_dir.append(entry)
+            if LB_i > LB_best:
+                LB_best = LB_i
+                best = entry
+
+        return float(LB_best), best, per_dir
+
+    # =========================
+    # Helpers (no class / no self)
+    # =========================
+
+    def damped_pinv(self,J: np.ndarray, lam: float = 1e-2) -> np.ndarray:
+        """Tikhonov-damped pseudoinverse."""
+        J = np.asarray(J);
+        m, n = J.shape
+        if m <= n:
+            JJt = J @ J.T
+            return J.T @ np.linalg.solve(JJt + (lam ** 2) * np.eye(m), np.eye(m))
+        else:
+            JtJ = J.T @ J
+            return np.linalg.solve(JtJ + (lam ** 2) * np.eye(n), J.T)
+
+    def H_accumulator(self,z: complex) -> complex:
+        """H(z) = 1 / (1 - z^{-1}) evaluated on the unit circle."""
+        return 1.0 / (1.0 - 1.0 / z)
+
+    def build_S0_ES0(self,omega: float, dt: float, Kp: np.ndarray, Ki: np.ndarray, Delta: np.ndarray):
+        """
+        For one frequency ω, build:
+          S0 = (I + G*C)^(-1),
+          ES0 = E*S0 with E = -G * Delta * C,
+        where G = dt * H(z),  C = Kp + Ki * (dt * H(z)).
+        """
+        m = Kp.shape[0]
+        z = np.exp(1j * omega * dt)
+        H = self.H_accumulator(z)  # complex scalar
+        Gs = dt * H  # scalar
+        C = Kp + Ki * (dt * H)  # (m,m) complex
+        I = np.eye(m, dtype=complex)
+        L0 = Gs * C
+        S0 = np.linalg.inv(I + L0)
+        E = -(Gs) * (Delta @ C)
+        ES0 = E @ S0
+        return S0, ES0
+
+    def make_omega_grid(self,dt: float, N: int = 2048, omega_min: float = 1e-6) -> np.ndarray:
+        """Uniform grid in [omega_min, π/dt] (exclude DC)."""
+        return np.linspace(max(omega_min, 1e-9), np.pi / dt, N)
+
+    def detrend_window(self,r_win: np.ndarray, dt: float, mode: str = 'mean') -> np.ndarray:
+        """Detrend window by removing mean or best affine fit (per channel)."""
+        if mode is None:
+            return r_win
+        r = np.asarray(r_win, dtype=float).copy()
+        if mode == 'mean':
+            r -= np.mean(r, axis=0, keepdims=True)
+        elif mode == 'linear':
+            T, m = r.shape
+            t = np.arange(T, dtype=float).reshape(-1, 1)
+            X = np.hstack([np.ones((T, 1)), t])
+            for j in range(m):
+                theta, *_ = np.linalg.lstsq(X, r[:, j:j + 1], rcond=None)
+                r[:, j] -= (X @ theta).ravel()
+        else:
+            raise ValueError("detrend mode must be None|'mean'|'linear'")
+        return r
+
+    def choose_signal_band_from_window(self,r_win, dt,
+                                       energy_keep= 0.95,
+                                       force_min_omega= 0.0,
+                                       min_bins= 1,
+                                       omega_band= None):
+        """
+        Select Ω_sig from r_win (Tw x m), excluding DC. Two modes:
+         - If omega_band=(ωmin, ωmax) is given, pick bins in that band (excluding DC).
+         - Else, keep the smallest set of bins capturing 'energy_keep' of non-DC energy.
+           If non-DC energy is ~0, force at least 'min_bins' bins above 'force_min_omega'.
+        Returns: mask_pos (bool over rfft bins), omegas (rad/s)
+        """
+        r_win = np.asarray(r_win)
+        T, m = r_win.shape
+        R = np.fft.rfft(r_win, axis=0)  # (F, m)
+        freqs = np.fft.rfftfreq(T, d=dt)  # Hz
+        omegas = 2 * np.pi * freqs  # rad/s
+        F = omegas.size
+
+        # Manual band override
+        if omega_band is not None:
+            mask = (omegas >= omega_band[0]) & (omegas <= omega_band[1])
+            mask[0] = False  # exclude DC
+            return mask, omegas
+
+        # Energy-based selection
+        power = np.sum(np.abs(R) ** 2, axis=1)  # (F,)
+        valid = np.arange(F) > 0  # exclude DC
+        power_ndc = power[valid]
+        if power_ndc.sum() <= 0:
+            # Force a minimal non-empty band above cutoff
+            mask = np.zeros(F, dtype=bool)
+            above = np.where((valid) & (omegas >= max(force_min_omega, 1e-9)))[0]
+            if above.size > 0:
+                pick = above[:min(min_bins, above.size)]
+                mask[pick] = True
+            return mask, omegas
+
+        order = np.argsort(power_ndc)[::-1]
+        csum = np.cumsum(power_ndc[order])
+        k = np.searchsorted(csum, energy_keep * power_ndc.sum()) + 1
+        keep = np.sort(order[:k])
+
+        mask = np.zeros(F, dtype=bool)
+        candidates = np.where(valid)[0][keep]
+        # Enforce minimum omega cutoff and min bins
+        if force_min_omega > 0.0:
+            candidates = candidates[omegas[candidates] >= force_min_omega]
+        if candidates.size == 0:
+            above = np.where((valid) & (omegas >= force_min_omega))[0]
+            candidates = above[:min_bins]
+        mask[candidates] = True
+        return mask, omegas
+
+    def band_limited_norm_time(self,r_win: np.ndarray, mask_pos: np.ndarray) -> float:
+        """||r||_{2,Ωsig} via FFT masking and iFFT (Parseval)."""
+        R = np.fft.rfft(r_win, axis=0)  # (F, m)
+        R_masked = R * mask_pos[:, None]
+        r_band = np.fft.irfft(R_masked, n=r_win.shape[0], axis=0)
+        return float(np.linalg.norm(r_band))
+
+    # =========================
+    # Main per-step and trajectory functions
+    # =========================
+
+    def lower_bound_band_at_step(self, dt,
+                                 Kp, Ki,
+                                 J_true_k, J_bias_k,
+                                 pstar_seq, w_seq,
+                                 k,
+                                 pinv_damping=1e-2,
+                                 window_sec=1.0,
+                                 energy_keep=0.95,
+                                 use_global_sup_for_ES0=True,
+                                 N_omega=2048,
+                                 detrend='mean',
+                                 force_min_omega=0.0,
+                                 omega_band=None):
+        """
+        Compute the band-limited lower bound at step k using a rolling window.
+        Returns: LB, alpha_Omega, info(dict)
+        """
+        Kp = np.asarray(Kp);
+        Ki = np.asarray(Ki)
+        # window
+        Tw = max(2, int(round(window_sec / dt)))
+        k0 = max(0, k - Tw + 1)
+        r_win = pstar_seq[k0:k + 1] - w_seq[k0:k + 1]
+        if r_win.shape[0] < 8:  # pad early steps for FFT stability
+            pad = np.zeros((8 - r_win.shape[0], r_win.shape[1]))
+            r_win = np.vstack([pad, r_win])
+        r_win = self.detrend_window(r_win, dt, mode=detrend)
+
+        # posture-frozen mismatch at k
+        Jb_dag = self.damped_pinv(np.asarray(J_bias_k), lam=pinv_damping)
+        P = np.asarray(J_true_k) @ Jb_dag
+        Delta = np.eye(P.shape[0]) - P
+
+        # pick Ω_sig
+        mask_pos, omegas_pos = self.choose_signal_band_from_window(
+            r_win, dt,
+            energy_keep=energy_keep,
+            force_min_omega=force_min_omega,
+            min_bins=1,
+            omega_band=omega_band
+        )
+        if not np.any(mask_pos):
+            return 0.0, 0.0, dict(
+                note="Ω_sig empty after selection",
+                band_bins=0, r_band_norm=0.0,
+                sigma_min_S0_band=0.0, ES0_sup=0.0,
+                small_gain_ok=True, k0=k0, k1=k
+            )
+
+        # ||r||_{2,Ω}
+        r_band_norm = self.band_limited_norm_time(r_win, mask_pos)
+
+        # sigma_min(S0; Ω)
+        sigma_min_S0 = np.inf
+        for w in omegas_pos[mask_pos]:
+            S0, _ = self.build_S0_ES0(w, dt, Kp.astype(complex), Ki.astype(complex), Delta.astype(complex))
+            svals = np.linalg.svd(S0, compute_uv=False)
+            sigma_min_S0 = min(sigma_min_S0, float(svals[-1]))
+
+        # ||ES0||_∞
+        if use_global_sup_for_ES0:
+            omegas_sup = self.make_omega_grid(dt, N=N_omega)
+        else:
+            omegas_sup = omegas_pos[mask_pos]
+        ES0_sup = 0.0
+        for w in omegas_sup:
+            _, ES0 = self.build_S0_ES0(w, dt, Kp.astype(complex), Ki.astype(complex), Delta.astype(complex))
+            svals = np.linalg.svd(ES0, compute_uv=False)
+            ES0_sup = max(ES0_sup, float(svals[0]))
+
+        alpha_Omega = sigma_min_S0 / (1.0 + ES0_sup)
+        LB = max(0.0, alpha_Omega * r_band_norm)
+
+        info = dict(
+            k0=k0, k1=k,
+            band_bins=int(np.count_nonzero(mask_pos)),
+            r_band_norm=r_band_norm,
+            sigma_min_S0_band=sigma_min_S0,
+            ES0_sup=ES0_sup,
+            small_gain_ok=(ES0_sup < 1.0)
+        )
+        return LB, alpha_Omega, info
+
+    def lower_bound_band_over_trajectory(self, dt,
+                                             Kp, Ki,
+                                             J_true_seq, J_bias_seq,
+                                             pstar_seq, w_seq=None,
+                                             pinv_damping=1e-2,
+                                             window_sec=1.0,
+                                             energy_keep=0.95,
+                                             use_global_sup_for_ES0=True,
+                                             N_omega=2048,
+                                             detrend='mean',
+                                             force_min_omega=0.0,
+                                             omega_band=None):
+
+        """
+        Run the band-limited bound across all time steps.
+        Returns: LB_seq (T,), alpha_seq (T,), infos (list of dicts)
+        """
+        pstar_seq = np.asarray(pstar_seq)
+        if w_seq is None:
+            w_seq = np.zeros_like(pstar_seq)
+        T = pstar_seq.shape[0]
+        LB_seq = np.zeros(T)
+        alpha_seq = np.zeros(T)
+        infos = []
+        for k in range(T):
+            LB, alpha, info = self.lower_bound_band_at_step(
+                dt, Kp, Ki,
+                np.asarray(J_true_seq[k]), np.asarray(J_bias_seq[k]),
+                pstar_seq, w_seq, k,
+                pinv_damping=pinv_damping,
+                window_sec=window_sec,
+                energy_keep=energy_keep,
+                use_global_sup_for_ES0=use_global_sup_for_ES0,
+                N_omega=N_omega,
+                detrend=detrend,
+                force_min_omega=force_min_omega,
+                omega_band=omega_band
+            )
+            LB_seq[k] = LB
+            alpha_seq[k] = alpha
+            infos.append(info)
+        return LB_seq, alpha_seq, infos
+
     def reset(self, signal=False):
         # if signal:
         #     print("hello")
@@ -515,6 +860,16 @@ Robotic Manipulation" by Murry et al.
                                                                  list(np.zeros(9)), physicsClientId=physics_client)
 
         J_t = np.asarray(linearJacobian)[:, :6]
+
+        [linearJacobian_biased_, angularJacobianbiased_] = pb.calculateJacobian(arm_biased_kinematics,
+                                                                 10,
+                                                                 list(LinkState[2]),
+                                                                 list(np.append(q_t[:6], [0, 0, 0])),
+                                                                 list(np.append(dq_t[:6], [0, 0, 0])),
+                                                                 list(np.zeros(9)), physicsClientId=physics_client)
+
+        J_t_biased_ = np.asarray(linearJacobian_biased_)[:, :6]
+        J_t = np.asarray(linearJacobian)[:, :6]
         Jpinv_t = self.pseudoInverseMat(J_t, ld=0.01)
         # ATTENTION: here we calculate the self.dqc_PID ready but we do not step simulation, and keep it for "step" to set with a
         self.dqc_PID, self.edt = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t,
@@ -653,11 +1008,6 @@ Robotic Manipulation" by Murry et al.
         time_randomness = np.clip(time_randomness, -49, 49)
         time_randomness[0] = np.clip(time_randomness[0], 1, 49)
         tVec_camera = np.linspace(0, 13600, 137) + time_randomness  # [ms]
-        # self.vxd = (np.random.normal(loc=0.0, scale=0.000367647, size=1)[
-        #     0]) / 1000  # [m/ms] for 2 [cm] drift given std error after 13.6 [s]
-        # self.vyd = (34.9028e-3 + np.random.normal(loc=0.0, scale=0.002205882, size=1)[
-        #     0]) / 1000  # [m/ms] for 5 [cm] drift given std error after 13.6 [s]
-        # self.vzd = 0
         self.vxd = 0  # [m/ms]
         self.vyd = (34.9028e-3 + np.random.normal(loc=0.0, scale=0.00005077, size=1)[
             0]) / 1000  # [m/ms]
@@ -718,51 +1068,51 @@ Robotic Manipulation" by Murry et al.
         # ATTENTION set back simulation frequency after startup phase
         pb.setTimeStep(timeStep=dt_pb_sim, physicsClientId=physics_client)
 
-        plot_data_t = [r_hat_t[0],
-                       r_hat_t[1],
-                       r_hat_t[2],
-                       rd_t[0],
-                       rd_t[1],
-                       rd_t[2],
-                       v_hat_t[0],
-                       v_hat_t[1],
-                       v_hat_t[2],
-                       vd_t[0],
-                       vd_t[1],
-                       vd_t[2],
-                       dqc_t_PID[0],
-                       dqc_t_PID[1],
-                       dqc_t_PID[2],
-                       dqc_t_PID[3],
-                       dqc_t_PID[4],
-                       dqc_t_PID[5],
-                       0,
-                       0,
-                       0,
-                       tau_t[0],
-                       tau_t[1],
-                       tau_t[2],
-                       tau_t[3],
-                       tau_t[4],
-                       tau_t[5],
-                       0,
-                       0,
-                       0,
-                       0,
-                       0,
-                       0,
-                       dqc_t_PID[0],
-                       dqc_t_PID[1],
-                       dqc_t_PID[2],
-                       dqc_t_PID[3],
-                       dqc_t_PID[4],
-                       dqc_t_PID[5],
-                       0,
-                       0,
-                       0,
-                       0,
-                       0,
-                       0]
+        self.plot_data_t = [r_hat_t[0],
+                            r_hat_t[1],
+                            r_hat_t[2],
+                            rd_t[0],
+                            rd_t[1],
+                            rd_t[2],
+                            v_hat_t[0],
+                            v_hat_t[1],
+                            v_hat_t[2],
+                            vd_t[0],
+                            vd_t[1],
+                            vd_t[2],
+                            dqc_t_PID[0],
+                            dqc_t_PID[1],
+                            dqc_t_PID[2],
+                            dqc_t_PID[3],
+                            dqc_t_PID[4],
+                            dqc_t_PID[5],
+                            0,
+                            0,
+                            0,
+                            tau_t[0],
+                            tau_t[1],
+                            tau_t[2],
+                            tau_t[3],
+                            tau_t[4],
+                            tau_t[5],
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            dqc_t_PID[0],
+                            dqc_t_PID[1],
+                            dqc_t_PID[2],
+                            dqc_t_PID[3],
+                            dqc_t_PID[4],
+                            dqc_t_PID[5],
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0]
         # # uncomment for jacobian_analysis
         # plot_data_t = [q_t[0],
         #                q_t[1],
@@ -810,7 +1160,13 @@ Robotic Manipulation" by Murry et al.
         #                0,
         #                0]
 
-        self.plot_data_buffer = plot_data_t
+        self.plot_data_buffer = self.plot_data_t
+
+        self.J_true_seq = []
+        self.J_bias_seq = []
+        self.J_true_seq.append(np.asarray(J_t))
+        self.J_bias_seq.append(np.asarray(J_t_biased_))
+
         return self.state
 
     def step(self, a):
@@ -891,7 +1247,7 @@ Robotic Manipulation" by Murry et al.
         q_tp1_ = np.array(q_tp1_)[:6]
         # manually correct q_sim for 1/240 * 24 simulation sampling time
         q_tp1 = np.asarray(self.state[3:9]) + (q_tp1_ - self.q_tp0_) * 24
-        self.q_tp0_=q_tp1_
+        self.q_tp0_ = q_tp1_
 
         # add dq measurement noise
         dq_tp1 = np.array(dq_tp1)[:6] + np.random.normal(loc=0.0, scale=0.004, size=6)
@@ -965,6 +1321,105 @@ Robotic Manipulation" by Murry et al.
         Jpinv_tp1 = self.pseudoInverseMat(J_tp1, ld=0.01)
         J_tp1_TRUE = np.asarray(linearJacobian_TRUE_tp1)[:, :6]
         rd_tp1_error = np.matmul(J_tp1_TRUE, self.pseudoInverseMat(J_tp1, ld=0.0001)) @ rd_tp1 - rd_tp1
+
+
+        ################################################################################################################
+        ################################################################################################################
+        # For performance bound DEBUGGING
+        # e_k = -np.asarray(self.state)[:3] / 1000  # (m,); in meter
+        # pstar_k =  np.array([self.xd[self.k], self.yd[self.k], self.zd[self.k]]) # (m,)
+        # pstar_kp1 = np.array([self.xd[self.k + 1], self.yd[self.k + 1], self.zd[self.k + 1]])  # (m,)
+        # dpstar_k = np.array([self.vxd, self.vyd, self.vzd])*1000  # (m,); in [m/s]
+        # LB_best, best, per_dir = self.lower_bound_best_direction_no_injection(
+        #     J_true_k=J_tp1_TRUE,  # (m,n)
+        #     J_bias_k=J_tp1,  # (m,n)
+        #     e_k=e_k,  # (m,)
+        #     Kp=self.K_p * np.eye(3),  # diag/PD
+        #     Ki=self.K_i * np.eye(3),  # you can pass zeros to ignore integral penalty
+        #     m_k=self.edt,  # (m,)
+        #     dt=dt,
+        #     pinv_damping=1e-2,
+        #     include_integral_penalty=True  # or False to see pure P-action bound
+        # )
+        # print("Best-direction lower bound (no injection)[mm]:", LB_best*1000)
+        # print("Best direction details:", best)
+        # # Inspect per_dir to see which i has the largest alpha*|s| vs. leakage beta*eperp.
+        # for d in per_dir:
+        #     print(f"i={d['i']}  sigma={d['sigma']:.3e} LB={d['LB']:.3e}  |s|={abs(d['s']):.3e}  e_perp={d['eperp']:.3e}  "
+        #           f"alpha={d['alpha']:.3f}  required|s|>{d['required_abs_s_for_positive']:.3e}"
+        #           f"LBmm={d['LBmm']:.3e}  B1mm={d['B1mm']:.3e}  B2mm={d['B2mm']:.3e}  B3mm={d['B3mm']:.3e} ")
+        # --- You must provide these from your framework ---
+        # dt = 0.001  # seconds
+        # gains (example 3D task)
+        # Kp = self.K_p * np.eye(3)
+        # Ki = self.K_i * np.eye(3)
+        # Jacobians at posture q(k)
+        # Replace with your PyBullet/Pinocchio calls:
+        # m, n = 3, 6
+        # J_true = J_tp1_TRUE  # placeholder
+        # J_bias = J_tp1  # placeholder
+        # Convert to numpy arrays (if not already)
+        self.J_true_seq.append(np.asarray(J_tp1_TRUE))
+        self.J_bias_seq.append(np.asarray(J_tp1))
+        # # Reference & disturbance time series over a short window
+        # pstar_seq=np.array([self.xd, self.yd, self.zd]).T
+        # w_seq = np.zeros_like(pstar_seq)  # if you have disturbance, pass it
+
+        # # REQUIRED INPUTS FROM YOUR FRAMEWORK
+        # dt = 0.008  # e.g., 125 Hz; set to your actual controller step
+        # T = 136  # you said k=0..135 inclusive
+        # m, n = 3, 7  # task dimension 3, joints 7 (adjust as needed)
+        #
+        # # 1) Full reference over the run (T,m)
+        # # Replace with your actual p*(k) array:
+        # # pstar_seq[k] = [xd[k], yd[k], zd[k]]
+        # pstar_seq = np.zeros((T, m))  # placeholder; fill with your data
+        #
+        # # 2) Disturbance (T,m). If none, zeros:
+        # w_seq = np.zeros_like(pstar_seq)
+        #
+        # # 3) Gains (m,m)
+        # Kp = np.diag([1.0, 1.0, 1.0])
+        # Ki = np.diag([0.1, 0.1, 0.1])
+        # 4) Jacobians at each time step, from your two URDFs (TRUE and BIASED), same posture q(k)
+        # For each k: J_true_seq[k] = get_task_jacobian_true(q[k]);  J_bias_seq[k] = get_task_jacobian_biased(q[k])
+        # Here we create placeholders; YOU must fill with real Jacobians from your sim
+        # J_true_seq = [np.random.randn(m, n) * 0.1 for _ in range(T)]
+        # J_bias_seq = [J_true_seq[k] + 0.02 * np.random.randn(m, n) for k in range(T)]
+
+        if self.k==135:
+            Kp = self.K_p * np.eye(3)
+            Ki = self.K_i * np.eye(3)
+            # Reference & disturbance time series over a short window
+            pstar_seq = np.array([self.xd, self.yd, self.zd]).T
+            w_seq = np.zeros_like(pstar_seq)
+            # Optional: force a band (e.g., ≥ 0.2 Hz), or leave None to auto-select
+            omega_band = None
+            force_min_omega = 2 * np.pi * 0.2  # 0.2 Hz cutoff to avoid DC-only windows
+            # Run bound over the whole trajectory
+            LB_seq, alpha_seq, infos = self.lower_bound_band_over_trajectory(
+                dt, Kp, Ki,
+                self.J_true_seq, self.J_bias_seq,
+                pstar_seq, w_seq,
+                pinv_damping=1e-2,
+                window_sec=1.5,
+                energy_keep=0.95,
+                use_global_sup_for_ES0=False,  # conservative (global sup)
+                N_omega=2048,
+                detrend='linear',  # good when p* is ramp-like
+                force_min_omega=force_min_omega,
+                omega_band=omega_band
+            )
+            print("Per-step lower bounds [mm]:", LB_seq[:]*1000)
+            print("Per-step alpha:       ", alpha_seq[:])
+            print(f"LB[k] last = {LB_seq[-1]:.6g}   alpha[k] last = {alpha_seq[-1]:.6g}")
+            print("info_last =", infos[-1])
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/SAC_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(12,30,12)],LB_seq[12:])*1000)
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/PIonly_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(12,30,12)],LB_seq[12:])*1000)
+
+        ################################################################################################################
+        ################################################################################################################
+
         dqc_tp1_PID, self.edt = self.q_command(r_ee=r_hat_tp1, v_ee=v_hat_tp1, Jpinv=Jpinv_tp1, rd=rd_tp1, vd=vd_tp1,
                                                edt=self.edt,
                                                deltaT=dt)
@@ -1000,51 +1455,51 @@ Robotic Manipulation" by Murry et al.
         # update states
         self.state = obs
         self.state_buffer = np.vstack((self.state_buffer, self.state))
-        plot_data_t = [r_hat_tp1[0],
-                       r_hat_tp1[1],
-                       r_hat_tp1[2],
-                       rd_tp1[0],
-                       rd_tp1[1],
-                       rd_tp1[2],
-                       v_hat_tp1[0],
-                       v_hat_tp1[1],
-                       v_hat_tp1[2],
-                       vd_tp1[0],
-                       vd_tp1[1],
-                       vd_tp1[2],
-                       dqc_t[0],
-                       dqc_t[1],
-                       dqc_t[2],
-                       dqc_t[3],
-                       dqc_t[4],
-                       dqc_t[5],
-                       self.reward_eta_p * reward_p_t,
-                       0,
-                       0,
-                       tau_tp1[0],
-                       tau_tp1[1],
-                       tau_tp1[2],
-                       tau_tp1[3],
-                       tau_tp1[4],
-                       tau_tp1[5],
-                       reward_px_t,
-                       reward_py_t,
-                       reward_pz_t,
-                       rd_tp1_error[0],
-                       rd_tp1_error[1],
-                       rd_tp1_error[2],
-                       dqc_tp1_PID[0],
-                       dqc_tp1_PID[1],
-                       dqc_tp1_PID[2],
-                       dqc_tp1_PID[3],
-                       dqc_tp1_PID[4],
-                       dqc_tp1_PID[5],
-                       a[0],
-                       a[1],
-                       a[2],
-                       a[3],
-                       a[4],
-                       a[5]]
+        self.plot_data_t = [r_hat_tp1[0],
+                            r_hat_tp1[1],
+                            r_hat_tp1[2],
+                            rd_tp1[0],
+                            rd_tp1[1],
+                            rd_tp1[2],
+                            v_hat_tp1[0],
+                            v_hat_tp1[1],
+                            v_hat_tp1[2],
+                            vd_tp1[0],
+                            vd_tp1[1],
+                            vd_tp1[2],
+                            dqc_t[0],
+                            dqc_t[1],
+                            dqc_t[2],
+                            dqc_t[3],
+                            dqc_t[4],
+                            dqc_t[5],
+                            self.reward_eta_p * reward_p_t,
+                            0,
+                            0,
+                            tau_tp1[0],
+                            tau_tp1[1],
+                            tau_tp1[2],
+                            tau_tp1[3],
+                            tau_tp1[4],
+                            tau_tp1[5],
+                            reward_px_t,
+                            reward_py_t,
+                            reward_pz_t,
+                            rd_tp1_error[0],
+                            rd_tp1_error[1],
+                            rd_tp1_error[2],
+                            dqc_tp1_PID[0],
+                            dqc_tp1_PID[1],
+                            dqc_tp1_PID[2],
+                            dqc_tp1_PID[3],
+                            dqc_tp1_PID[4],
+                            dqc_tp1_PID[5],
+                            a[0],
+                            a[1],
+                            a[2],
+                            a[3],
+                            a[4],
+                            a[5]]
         # # uncomment for jacobian_analysis
         # plot_data_t = [q_tp1[0],
         #                q_tp1[1],
@@ -1092,7 +1547,7 @@ Robotic Manipulation" by Murry et al.
         #                rd_tp1_error[1],
         #                rd_tp1_error[2]]
 
-        self.plot_data_buffer = np.vstack((self.plot_data_buffer, plot_data_t))
+        self.plot_data_buffer = np.vstack((self.plot_data_buffer, self.plot_data_t))
         # # # # TODO: so dirty code: uncomment when NOSAC for plots -- you need to take care of which random values you call by break points after first done in sac.py ... and cmment a too ...
         # plot_data_buffer_no_SAC=self.plot_data_buffer
         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/plot_data_buffer_no_SAC.npy",plot_data_buffer_no_SAC)
@@ -1101,6 +1556,7 @@ Robotic Manipulation" by Murry et al.
         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_313_9/compare_real_simulation_data/SAC_plot_data_buffer.npy",self.plot_data_buffer)
         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_313_9/compare_real_simulation_data/SAC_state_buffer.npy",self.state_buffer)
         # # given action it returns 4-tuple (observation, reward, done, info)
+
         return (obs, reward_t, terminal, {})
 
     def _terminal(self):
@@ -1299,6 +1755,12 @@ Robotic Manipulation" by Murry et al.
             e_v_bounds_PIonly = np.load(
                 "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_bounds.npy"
             )
+            PIonly_band_limited_e_lower_bounds = np.load(
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/PIonly_band_limited_e_lower_bounds.npy"
+            )
+            SAC_band_limited_e_lower_bounds = np.load(
+                "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/SAC_band_limited_e_lower_bounds.npy"
+            )
             e_v_norms_PIonly = np.load(
                 "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_norms.npy"
             )
@@ -1470,15 +1932,21 @@ Robotic Manipulation" by Murry et al.
             # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
             #              np.linalg.norm(self.plot_data_buffer[:, 30:33], ord=2, axis=1) * 1000,
             #              'r:', label='error bound on RSAC-PI')
+            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
+            #              e_v_bounds * 1000 * 0.1,
+            #              'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{{SAC}}(t))||_2.\delta t$")
             axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-                         e_v_bounds * 1000 * 0.1,
-                         'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{{SAC}}(t))||_2.\delta t$")
+                         SAC_band_limited_e_lower_bounds,
+                         'm--', label="PI with SAC - band limited lower bound")
             # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
             #              e_v_norms * 1000 * 0.1,
             #              'm:', label="")
+            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
+            #              e_v_bounds_PIonly * 1000 * 0.1,
+            #              'b--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{{PI}}(t))||_2.\delta t$")
             axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-                         e_v_bounds_PIonly * 1000 * 0.1,
-                         'b--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{{PI}}(t))||_2.\delta t$")
+                         PIonly_band_limited_e_lower_bounds,
+                         'b--', label="PI only - band limited lower bound")
             # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
             #              e_v_norms_PIonly * 1000 * 0.1,
             #              'b:', label="")
@@ -1492,7 +1960,10 @@ Robotic Manipulation" by Murry et al.
             plt.grid(True)
             for ax in axs3:
                 ax.grid(True)
-            plt.savefig(output_dir_rendering + "/test_position_errors_both.pdf",
+            # plt.savefig(output_dir_rendering + "/test_position_errors_both.pdf",
+            #                 format="pdf",
+            #                 bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/test_position_errors_both_band_limited_bound.pdf",
                         format="pdf",
                         bbox_inches='tight')
             plt.show()
