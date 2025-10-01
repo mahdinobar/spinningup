@@ -424,7 +424,6 @@ Robotic Manipulation" by Murry et al.
         return float(LB_best), best, per_dir
 
     # =========================
-    # Helpers (no class / no self)
     # =========================
 
     def damped_pinv(self,J: np.ndarray, lam: float = 1e-2) -> np.ndarray:
@@ -586,7 +585,7 @@ Robotic Manipulation" by Murry et al.
             r_win, dt,
             energy_keep=energy_keep,
             force_min_omega=force_min_omega,
-            min_bins=1,
+            min_bins=5,
             omega_band=omega_band
         )
         if not np.any(mask_pos):
@@ -629,6 +628,12 @@ Robotic Manipulation" by Murry et al.
             ES0_sup=ES0_sup,
             small_gain_ok=(ES0_sup < 1.0)
         )
+
+        info['omegas_sel'] = omegas_pos[mask_pos]
+        R = np.fft.rfft(r_win, axis=0)
+        power_all = np.sum(np.abs(R) ** 2, axis=1)  # total power per bin
+        info['power_sel'] = power_all[mask_pos]  # power of selected bins
+
         return LB, alpha_Omega, info
 
     def lower_bound_band_over_trajectory(self, dt,
@@ -1325,68 +1330,8 @@ Robotic Manipulation" by Murry et al.
 
         ################################################################################################################
         ################################################################################################################
-        # For performance bound DEBUGGING
-        # e_k = -np.asarray(self.state)[:3] / 1000  # (m,); in meter
-        # pstar_k =  np.array([self.xd[self.k], self.yd[self.k], self.zd[self.k]]) # (m,)
-        # pstar_kp1 = np.array([self.xd[self.k + 1], self.yd[self.k + 1], self.zd[self.k + 1]])  # (m,)
-        # dpstar_k = np.array([self.vxd, self.vyd, self.vzd])*1000  # (m,); in [m/s]
-        # LB_best, best, per_dir = self.lower_bound_best_direction_no_injection(
-        #     J_true_k=J_tp1_TRUE,  # (m,n)
-        #     J_bias_k=J_tp1,  # (m,n)
-        #     e_k=e_k,  # (m,)
-        #     Kp=self.K_p * np.eye(3),  # diag/PD
-        #     Ki=self.K_i * np.eye(3),  # you can pass zeros to ignore integral penalty
-        #     m_k=self.edt,  # (m,)
-        #     dt=dt,
-        #     pinv_damping=1e-2,
-        #     include_integral_penalty=True  # or False to see pure P-action bound
-        # )
-        # print("Best-direction lower bound (no injection)[mm]:", LB_best*1000)
-        # print("Best direction details:", best)
-        # # Inspect per_dir to see which i has the largest alpha*|s| vs. leakage beta*eperp.
-        # for d in per_dir:
-        #     print(f"i={d['i']}  sigma={d['sigma']:.3e} LB={d['LB']:.3e}  |s|={abs(d['s']):.3e}  e_perp={d['eperp']:.3e}  "
-        #           f"alpha={d['alpha']:.3f}  required|s|>{d['required_abs_s_for_positive']:.3e}"
-        #           f"LBmm={d['LBmm']:.3e}  B1mm={d['B1mm']:.3e}  B2mm={d['B2mm']:.3e}  B3mm={d['B3mm']:.3e} ")
-        # --- You must provide these from your framework ---
-        # dt = 0.001  # seconds
-        # gains (example 3D task)
-        # Kp = self.K_p * np.eye(3)
-        # Ki = self.K_i * np.eye(3)
-        # Jacobians at posture q(k)
-        # Replace with your PyBullet/Pinocchio calls:
-        # m, n = 3, 6
-        # J_true = J_tp1_TRUE  # placeholder
-        # J_bias = J_tp1  # placeholder
-        # Convert to numpy arrays (if not already)
         self.J_true_seq.append(np.asarray(J_tp1_TRUE))
         self.J_bias_seq.append(np.asarray(J_tp1))
-        # # Reference & disturbance time series over a short window
-        # pstar_seq=np.array([self.xd, self.yd, self.zd]).T
-        # w_seq = np.zeros_like(pstar_seq)  # if you have disturbance, pass it
-
-        # # REQUIRED INPUTS FROM YOUR FRAMEWORK
-        # dt = 0.008  # e.g., 125 Hz; set to your actual controller step
-        # T = 136  # you said k=0..135 inclusive
-        # m, n = 3, 7  # task dimension 3, joints 7 (adjust as needed)
-        #
-        # # 1) Full reference over the run (T,m)
-        # # Replace with your actual p*(k) array:
-        # # pstar_seq[k] = [xd[k], yd[k], zd[k]]
-        # pstar_seq = np.zeros((T, m))  # placeholder; fill with your data
-        #
-        # # 2) Disturbance (T,m). If none, zeros:
-        # w_seq = np.zeros_like(pstar_seq)
-        #
-        # # 3) Gains (m,m)
-        # Kp = np.diag([1.0, 1.0, 1.0])
-        # Ki = np.diag([0.1, 0.1, 0.1])
-        # 4) Jacobians at each time step, from your two URDFs (TRUE and BIASED), same posture q(k)
-        # For each k: J_true_seq[k] = get_task_jacobian_true(q[k]);  J_bias_seq[k] = get_task_jacobian_biased(q[k])
-        # Here we create placeholders; YOU must fill with real Jacobians from your sim
-        # J_true_seq = [np.random.randn(m, n) * 0.1 for _ in range(T)]
-        # J_bias_seq = [J_true_seq[k] + 0.02 * np.random.randn(m, n) for k in range(T)]
-
         if self.k==135:
             Kp = self.K_p * np.eye(3)
             Ki = self.K_i * np.eye(3)
@@ -1395,7 +1340,8 @@ Robotic Manipulation" by Murry et al.
             w_seq = np.zeros_like(pstar_seq)
             # Optional: force a band (e.g., ≥ 0.2 Hz), or leave None to auto-select
             omega_band = None
-            force_min_omega = 2 * np.pi * 0.2  # 0.2 Hz cutoff to avoid DC-only windows
+            # omega_band = (0.3, 1.5)
+            force_min_omega = 2 * np.pi * 0.7  # 0.7 Hz cutoff to avoid DC-only windows
             # Run bound over the whole trajectory
             LB_seq, alpha_seq, infos = self.lower_bound_band_over_trajectory(
                 dt, Kp, Ki,
@@ -1412,10 +1358,8 @@ Robotic Manipulation" by Murry et al.
             )
             print("Per-step lower bounds [mm]:", LB_seq[:]*1000)
             print("Per-step alpha:       ", alpha_seq[:])
-            print(f"LB[k] last = {LB_seq[-1]:.6g}   alpha[k] last = {alpha_seq[-1]:.6g}")
-            print("info_last =", infos[-1])
-            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/SAC_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(12,30,12)],LB_seq[12:])*1000)
-            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/PIonly_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(12,30,12)],LB_seq[12:])*1000)
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/SAC_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(12,20,12)],LB_seq[12:])*1000)
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/PIonly_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(12,20,12)],LB_seq[12:])*1000)
 
         ################################################################################################################
         ################################################################################################################
