@@ -1341,7 +1341,7 @@ Robotic Manipulation" by Murry et al.
             # Optional: force a band (e.g., ≥ 0.2 Hz), or leave None to auto-select
             omega_band = None
             # omega_band = (0.3, 1.5)
-            force_min_omega = 2 * np.pi * 0.7  # 0.7 Hz cutoff to avoid DC-only windows
+            force_min_omega = 2 * np.pi * 1.4  # 0.7 Hz cutoff to avoid DC-only windows
             # Run bound over the whole trajectory
             LB_seq, alpha_seq, infos = self.lower_bound_band_over_trajectory(
                 dt, Kp, Ki,
@@ -1360,6 +1360,7 @@ Robotic Manipulation" by Murry et al.
             print("Per-step alpha:       ", alpha_seq[:])
             # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/SAC_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(12,20,12)],LB_seq[12:])*1000)
             # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/PIonly_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(12,20,12)],LB_seq[12:])*1000)
+            np.save("/home/mahdi/bagfiles/experiments_HW314/e_bounds_band_limited.npy",np.append(LB_seq[np.random.randint(12,20,12)],LB_seq[12:])*1000)
 
         ################################################################################################################
         ################################################################################################################
