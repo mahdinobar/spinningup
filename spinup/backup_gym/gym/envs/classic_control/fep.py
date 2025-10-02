@@ -14,6 +14,10 @@ import joblib
 import torch
 import warnings
 from typing import Optional, Tuple
+
+
+from .MPC_1 import MPCTracker
+
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
 sys.path.append('/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch')
@@ -135,7 +139,6 @@ class GPModel(gpytorch.models.ExactGP):
         covar_x = self.covar_module(x)
         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
 
-
 class FepEnv(core.Env):
     """
     Two-link planar arm with two revolut joints (based on simplified models at book "A Mathematical Introduction to
@@ -158,8 +161,10 @@ Robotic Manipulation" by Murry et al.
         self.reward_eta_v = 0
         self.reward_eta_ddqc = 0
         # TODO: User defined linear position gain
-        self.K_p = 1
-        self.K_i = 0.1
+        # self.K_p = 1
+        # self.K_i = 0.1
+        self.K_p = np.diag([3.83,3.83,3.83])
+        self.K_i = np.diag([0.1,1.77,2.15])
         self.K_d = 0
         self.korque_noise_max = 0.  # TODO
         self.viewer = None
@@ -294,6 +299,22 @@ Robotic Manipulation" by Murry et al.
             self.likelihoods_q.append(likelihood_q)
             # self.models_dq.append(model_dq)
             # self.likelihoods_dq.append(likelihood_dq)
+        ##############################################################################
+        ##############################################################################
+        # MPC controller
+        alpha = np.array([0.03, 0.03, 0.035, 0.025, 0.02, 0.02])  # simplified plant model
+        u_max = np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])/10
+        u_min = -u_max
+        self.N_mpc = 5
+        Qp = np.diag([2.0, 2.0, 2.0])
+        Qf = 2.0 * Qp
+        R = 1e-2 * np.eye(6)
+        Qdq = 1e-2 * np.eye(6)
+        S = 1e-2 * np.eye(6)
+        du_max = 0.03 * np.ones(6)
+        self.mpc = MPCTracker(dt, alpha, u_min, u_max, self.N_mpc, Qp, Qf, R, Qdq=Qdq, S=S, du_max=du_max)
+        ##############################################################################
+        ##############################################################################
 
     def pseudoInverseMat(self, A, ld):
         # Input: Any m-by-n matrix, and a damping factor.
@@ -321,7 +342,8 @@ Robotic Manipulation" by Murry et al.
         """
         edt_new = (rd - r_ee) * deltaT
         edt = edt + edt_new
-        v_command = vd + self.K_p * (rd - r_ee) + self.K_i * edt + self.K_d * (vd - v_ee)
+        # v_command = vd + self.K_p * (rd - r_ee) + self.K_i * edt + self.K_d * (vd - v_ee)
+        v_command = vd + self.K_p @ (rd - r_ee) + self.K_i @ edt + self.K_d * (vd - v_ee)
         dqc = np.dot(Jpinv, v_command)
         return dqc, edt
 
@@ -875,12 +897,14 @@ Robotic Manipulation" by Murry et al.
 
         J_t_biased_ = np.asarray(linearJacobian_biased_)[:, :6]
         J_t = np.asarray(linearJacobian)[:, :6]
+        # # save initial jacobian matrix and q0 at k=0
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/J_k0.npy",J_t)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/q_k0.npy",np.array(q_t)[:6])
         Jpinv_t = self.pseudoInverseMat(J_t, ld=0.01)
         # ATTENTION: here we calculate the self.dqc_PID ready but we do not step simulation, and keep it for "step" to set with a
         self.dqc_PID, self.edt = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t,
                                                 edt=self.edt,
                                                 deltaT=dt_startup)
-
         q_t = np.array(q_t)[:6]
         # keep q_t in q_tp0_ for manual corrections of q simulations
         self.q_tp0_ = q_t
@@ -1073,6 +1097,25 @@ Robotic Manipulation" by Murry et al.
         # ATTENTION set back simulation frequency after startup phase
         pb.setTimeStep(timeStep=dt_pb_sim, physicsClientId=physics_client)
 
+        #############################################################################
+        #############################################################################
+        # MPC initial command
+        x0_ = np.append(np.asarray(dq_t)[:6], r_hat_t)  # replace with your measured/estimated state
+        # pad each trajectory by repeating its last value N_mpc times
+        xdp_ = np.pad(self.xd, (0, self.N_mpc), mode='edge')
+        ydp_ = np.pad(self.yd, (0, self.N_mpc), mode='edge')
+        zdp_ = np.pad(self.zd, (0, self.N_mpc), mode='edge')
+        # slice the (N_mpc+1)-long preview starting at k
+        p_ref_seq_ = np.column_stack((
+            xdp_[self.k: self.k + self.N_mpc + 1],
+            ydp_[self.k: self.k + self.N_mpc + 1],
+            zdp_[self.k: self.k + self.N_mpc + 1],
+        ))
+        # p_ref_seq_ = np.array(
+        #     [self.xd[self.k:self.k+self.N_mpc+1], self.yd[self.k:self.k+self.N_mpc+1], self.zd[self.k:self.k+self.N_mpc+1]]).T
+        self.dqc_mpc = self.mpc.step(J_t, x0_, p_ref_seq_)
+        #############################################################################
+        #############################################################################
         self.plot_data_t = [r_hat_t[0],
                             r_hat_t[1],
                             r_hat_t[2],
@@ -1178,7 +1221,8 @@ Robotic Manipulation" by Murry et al.
         # print("0")
         # dqc_t_PID = self.state[21:27]
         # ATTENTION: here apply SAC action
-        dqc_t = self.dqc_PID + a
+        # dqc_t = self.dqc_PID + a
+        dqc_t = self.dqc_mpc
         # TODO check
         # command joint speeds (only 6 joints)
         pb.setJointMotorControlArray(
@@ -1327,9 +1371,33 @@ Robotic Manipulation" by Murry et al.
         J_tp1_TRUE = np.asarray(linearJacobian_TRUE_tp1)[:, :6]
         rd_tp1_error = np.matmul(J_tp1_TRUE, self.pseudoInverseMat(J_tp1, ld=0.0001)) @ rd_tp1 - rd_tp1
 
+        ################################################################################################################
+        ################################################################################################################
+        # FOR MPC
+        # get J(q_k) from PyBullet/URDF; x0 = [dq; p]; build p_ref_seq
+        x0_ = np.append(dq_tp1,r_hat_tp1)  # replace with your measured/estimated state
+        # pad each trajectory by repeating its last value N_mpc times
+        xdp_ = np.pad(self.xd, (0, self.N_mpc), mode='edge')
+        ydp_ = np.pad(self.yd, (0, self.N_mpc), mode='edge')
+        zdp_ = np.pad(self.zd, (0, self.N_mpc), mode='edge')
+        # slice the (N_mpc+1)-long preview starting at k
+        p_ref_seq_ = np.column_stack((
+            xdp_[self.k: self.k + self.N_mpc + 1],
+            ydp_[self.k: self.k + self.N_mpc + 1],
+            zdp_[self.k: self.k + self.N_mpc + 1],
+        ))
+        # p_ref_seq_ = np.array(
+        #     [self.xd[self.k:self.k+self.N_mpc+1], self.yd[self.k:self.k+self.N_mpc+1], self.zd[self.k:self.k+self.N_mpc+1]]).T
+        self.dqc_mpc = self.mpc.step(J_tp1_TRUE, x0_, p_ref_seq_)  # -> (6,) joint speeds to apply
+        print("self.dqc_mpc:", np.round(self.dqc_mpc, 4))
+        ################################################################################################################
+        ################################################################################################################
+
+
 
         ################################################################################################################
         ################################################################################################################
+        # For performance lower bounds
         self.J_true_seq.append(np.asarray(J_tp1_TRUE))
         self.J_bias_seq.append(np.asarray(J_tp1))
         if self.k==135:
@@ -1341,7 +1409,7 @@ Robotic Manipulation" by Murry et al.
             # Optional: force a band (e.g., ≥ 0.2 Hz), or leave None to auto-select
             omega_band = None
             # omega_band = (0.3, 1.5)
-            force_min_omega = 2 * np.pi * 1.4  # 0.7 Hz cutoff to avoid DC-only windows
+            force_min_omega = 2 * np.pi * 0.7  # 0.7 Hz cutoff to avoid DC-only windows
             # Run bound over the whole trajectory
             LB_seq, alpha_seq, infos = self.lower_bound_band_over_trajectory(
                 dt, Kp, Ki,
@@ -1357,10 +1425,10 @@ Robotic Manipulation" by Murry et al.
                 omega_band=omega_band
             )
             print("Per-step lower bounds [mm]:", LB_seq[:]*1000)
-            print("Per-step alpha:       ", alpha_seq[:])
+            # print("Per-step alpha:       ", alpha_seq[:])
             # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/SAC_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(12,20,12)],LB_seq[12:])*1000)
             # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/PIonly_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(12,20,12)],LB_seq[12:])*1000)
-            np.save("/home/mahdi/bagfiles/experiments_HW314/e_bounds_band_limited.npy",np.append(LB_seq[np.random.randint(12,20,12)],LB_seq[12:])*1000)
+            # np.save("/home/mahdi/bagfiles/experiments_HW314/e_bounds_band_limited.npy",np.append(LB_seq[np.random.randint(12,20,12)],LB_seq[12:])*1000)
 
         ################################################################################################################
         ################################################################################################################
@@ -1600,8 +1668,8 @@ Robotic Manipulation" by Murry et al.
                     axs5[2].set_ylabel("vd_tp1[2] [m/s]")
                     plt.legend()
                     plt.legend()
-                    plt.savefig(output_dir_rendering + "/PIonly_vd_tp1" + ".png", format="png",
-                                bbox_inches='tight')
+                    # plt.savefig(output_dir_rendering + "/PIonly_vd_tp1" + ".png", format="png",
+                    #             bbox_inches='tight')
                     plt.show()
 
                     fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(12, 12))
@@ -1620,8 +1688,8 @@ Robotic Manipulation" by Murry et al.
                     axs5[2].set_ylabel("rd_tp1[2]-r_hat_tp1[2] [m]")
                     plt.legend()
                     plt.legend()
-                    plt.savefig(output_dir_rendering + "/PIonly_rd_tp1_minus_r_hat_tp1" + ".png", format="png",
-                                bbox_inches='tight')
+                    # plt.savefig(output_dir_rendering + "/PIonly_rd_tp1_minus_r_hat_tp1" + ".png", format="png",
+                    #             bbox_inches='tight')
                     plt.show()
 
                     fig5, axs5 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(12, 12))
@@ -1640,8 +1708,8 @@ Robotic Manipulation" by Murry et al.
                     axs5[2].set_ylabel("rd_tp1[2] [m]")
                     plt.legend()
                     plt.legend()
-                    plt.savefig(output_dir_rendering + "/PIonly_rd_tp1" + ".png", format="png",
-                                bbox_inches='tight')
+                    # plt.savefig(output_dir_rendering + "/PIonly_rd_tp1" + ".png", format="png",
+                    #             bbox_inches='tight')
                     plt.show()
 
             fig1, axs1 = plt.subplots(3, 1, sharex=False, sharey=False, figsize=(8, 12))
@@ -1684,8 +1752,8 @@ Robotic Manipulation" by Murry et al.
             axs1[2].set_xlabel("y[mm]")
             axs1[2].set_ylabel("z[mm]")
             plt.legend()
-            plt.savefig(output_dir_rendering + "/test_position_both.png", format="png",
-                        bbox_inches='tight')
+            # plt.savefig(output_dir_rendering + "/test_position_both.png", format="png",
+            #             bbox_inches='tight')
             plt.show()
 
             e_v_bounds = np.load(
@@ -1908,9 +1976,9 @@ Robotic Manipulation" by Murry et al.
             # plt.savefig(output_dir_rendering + "/test_position_errors_both.pdf",
             #                 format="pdf",
             #                 bbox_inches='tight')
-            plt.savefig(output_dir_rendering + "/test_position_errors_both_band_limited_bound.pdf",
-                        format="pdf",
-                        bbox_inches='tight')
+            # plt.savefig(output_dir_rendering + "/test_position_errors_both_band_limited_bound.pdf",
+            #             format="pdf",
+            #             bbox_inches='tight')
             plt.show()
             # uncomment for plotting multiple episodes
             if True:
