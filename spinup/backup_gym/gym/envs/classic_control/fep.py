@@ -305,8 +305,8 @@ Robotic Manipulation" by Murry et al.
         alpha = np.array([0.03, 0.03, 0.035, 0.025, 0.02, 0.02])  # simplified plant model
         u_max = np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])/10
         u_min = -u_max
-        self.N_mpc = 5
-        Qp = np.diag([2.0, 2.0, 2.0])
+        self.N_mpc = 8
+        Qp = np.diag([1.0, 1.0, 1.0])
         Qf = 2.0 * Qp
         R = 1e-2 * np.eye(6)
         Qdq = 1e-2 * np.eye(6)
