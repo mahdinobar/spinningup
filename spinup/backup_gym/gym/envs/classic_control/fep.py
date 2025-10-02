@@ -306,7 +306,7 @@ Robotic Manipulation" by Murry et al.
         u_max = np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])/10
         u_min = -u_max
         self.N_mpc = 8
-        Qp = np.diag([1.0, 1.0, 1.0])
+        Qp = np.diag([2.0, 2.0, 2.0])
         Qf = 2.0 * Qp
         R = 1e-2 * np.eye(6)
         Qdq = 1e-2 * np.eye(6)
@@ -1113,7 +1113,7 @@ Robotic Manipulation" by Murry et al.
         ))
         # p_ref_seq_ = np.array(
         #     [self.xd[self.k:self.k+self.N_mpc+1], self.yd[self.k:self.k+self.N_mpc+1], self.zd[self.k:self.k+self.N_mpc+1]]).T
-        self.dqc_mpc = self.mpc.step(J_t, x0_, p_ref_seq_)
+        self.dqc_mpc = self.mpc.step(J_t_biased_, x0_, p_ref_seq_)
         #############################################################################
         #############################################################################
         self.plot_data_t = [r_hat_t[0],
@@ -1388,11 +1388,10 @@ Robotic Manipulation" by Murry et al.
         ))
         # p_ref_seq_ = np.array(
         #     [self.xd[self.k:self.k+self.N_mpc+1], self.yd[self.k:self.k+self.N_mpc+1], self.zd[self.k:self.k+self.N_mpc+1]]).T
-        self.dqc_mpc = self.mpc.step(J_tp1_TRUE, x0_, p_ref_seq_)  # -> (6,) joint speeds to apply
+        self.dqc_mpc = self.mpc.step(J_tp1, x0_, p_ref_seq_)  # -> (6,) joint speeds to apply
         print("self.dqc_mpc:", np.round(self.dqc_mpc, 4))
         ################################################################################################################
         ################################################################################################################
-
 
 
         ################################################################################################################
