@@ -165,6 +165,8 @@ Robotic Manipulation" by Murry et al.
         # self.K_i = 0.1
         self.K_p = np.diag([3.83,3.83,3.83])
         self.K_i = np.diag([0.1,1.77,2.15])
+        # self.K_p = np.diag([1,1.46,1.21])
+        # self.K_i = np.diag([0.56,0.68,0.56])
         self.K_d = 0
         self.korque_noise_max = 0.  # TODO
         self.viewer = None
@@ -299,22 +301,22 @@ Robotic Manipulation" by Murry et al.
             self.likelihoods_q.append(likelihood_q)
             # self.models_dq.append(model_dq)
             # self.likelihoods_dq.append(likelihood_dq)
-        ##############################################################################
-        ##############################################################################
-        # MPC controller
-        alpha = np.array([0.03, 0.03, 0.035, 0.025, 0.02, 0.02])  # simplified plant model
-        u_max = np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])/10
-        u_min = -u_max
-        self.N_mpc = 8
-        Qp = np.diag([2.0, 2.0, 2.0])
-        Qf = 2.0 * Qp
-        R = 1e-2 * np.eye(6)
-        Qdq = 1e-2 * np.eye(6)
-        S = 1e-2 * np.eye(6)
-        du_max = 0.03 * np.ones(6)
-        self.mpc = MPCTracker(dt, alpha, u_min, u_max, self.N_mpc, Qp, Qf, R, Qdq=Qdq, S=S, du_max=du_max)
-        ##############################################################################
-        ##############################################################################
+        # ##############################################################################
+        # ##############################################################################
+        # # MPC controller
+        # alpha = np.array([0.03, 0.03, 0.035, 0.025, 0.02, 0.02])  # simplified plant model
+        # u_max = np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100])/10
+        # u_min = -u_max
+        # self.N_mpc = 8
+        # Qp = np.diag([2.0, 2.0, 2.0])
+        # Qf = 2.0 * Qp
+        # R = 1e-2 * np.eye(6)
+        # Qdq = 1e-2 * np.eye(6)
+        # S = 1e-2 * np.eye(6)
+        # du_max = 0.03 * np.ones(6)
+        # self.mpc = MPCTracker(dt, alpha, u_min, u_max, self.N_mpc, Qp, Qf, R, Qdq=Qdq, S=S, du_max=du_max)
+        # ##############################################################################
+        # ##############################################################################
 
     def pseudoInverseMat(self, A, ld):
         # Input: Any m-by-n matrix, and a damping factor.
@@ -897,8 +899,10 @@ Robotic Manipulation" by Murry et al.
 
         J_t_biased_ = np.asarray(linearJacobian_biased_)[:, :6]
         J_t = np.asarray(linearJacobian)[:, :6]
+        Jpinv_t = self.pseudoInverseMat(J_t, ld=0.01)
         # # save initial jacobian matrix and q0 at k=0
         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/J_k0.npy",J_t)
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/pihatJ_k0.npy",self.pseudoInverseMat(J_t_biased_, ld=0.01))
         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/q_k0.npy",np.array(q_t)[:6])
         Jpinv_t = self.pseudoInverseMat(J_t, ld=0.01)
         # ATTENTION: here we calculate the self.dqc_PID ready but we do not step simulation, and keep it for "step" to set with a
@@ -1097,25 +1101,25 @@ Robotic Manipulation" by Murry et al.
         # ATTENTION set back simulation frequency after startup phase
         pb.setTimeStep(timeStep=dt_pb_sim, physicsClientId=physics_client)
 
-        #############################################################################
-        #############################################################################
-        # MPC initial command
-        x0_ = np.append(np.asarray(dq_t)[:6], r_hat_t)  # replace with your measured/estimated state
-        # pad each trajectory by repeating its last value N_mpc times
-        xdp_ = np.pad(self.xd, (0, self.N_mpc), mode='edge')
-        ydp_ = np.pad(self.yd, (0, self.N_mpc), mode='edge')
-        zdp_ = np.pad(self.zd, (0, self.N_mpc), mode='edge')
-        # slice the (N_mpc+1)-long preview starting at k
-        p_ref_seq_ = np.column_stack((
-            xdp_[self.k: self.k + self.N_mpc + 1],
-            ydp_[self.k: self.k + self.N_mpc + 1],
-            zdp_[self.k: self.k + self.N_mpc + 1],
-        ))
-        # p_ref_seq_ = np.array(
-        #     [self.xd[self.k:self.k+self.N_mpc+1], self.yd[self.k:self.k+self.N_mpc+1], self.zd[self.k:self.k+self.N_mpc+1]]).T
-        self.dqc_mpc = self.mpc.step(J_t_biased_, x0_, p_ref_seq_)
-        #############################################################################
-        #############################################################################
+        # #############################################################################
+        # #############################################################################
+        # # MPC initial command
+        # x0_ = np.append(np.asarray(dq_t)[:6], r_hat_t)  # replace with your measured/estimated state
+        # # pad each trajectory by repeating its last value N_mpc times
+        # xdp_ = np.pad(self.xd, (0, self.N_mpc), mode='edge')
+        # ydp_ = np.pad(self.yd, (0, self.N_mpc), mode='edge')
+        # zdp_ = np.pad(self.zd, (0, self.N_mpc), mode='edge')
+        # # slice the (N_mpc+1)-long preview starting at k
+        # p_ref_seq_ = np.column_stack((
+        #     xdp_[self.k: self.k + self.N_mpc + 1],
+        #     ydp_[self.k: self.k + self.N_mpc + 1],
+        #     zdp_[self.k: self.k + self.N_mpc + 1],
+        # ))
+        # # p_ref_seq_ = np.array(
+        # #     [self.xd[self.k:self.k+self.N_mpc+1], self.yd[self.k:self.k+self.N_mpc+1], self.zd[self.k:self.k+self.N_mpc+1]]).T
+        # self.dqc_mpc = self.mpc.step(J_t_biased_, x0_, p_ref_seq_)
+        # #############################################################################
+        # #############################################################################
         self.plot_data_t = [r_hat_t[0],
                             r_hat_t[1],
                             r_hat_t[2],
@@ -1221,8 +1225,8 @@ Robotic Manipulation" by Murry et al.
         # print("0")
         # dqc_t_PID = self.state[21:27]
         # ATTENTION: here apply SAC action
-        # dqc_t = self.dqc_PID + a
-        dqc_t = self.dqc_mpc
+        dqc_t = self.dqc_PID + a
+        # dqc_t = self.dqc_mpc
         # TODO check
         # command joint speeds (only 6 joints)
         pb.setJointMotorControlArray(
@@ -1371,27 +1375,27 @@ Robotic Manipulation" by Murry et al.
         J_tp1_TRUE = np.asarray(linearJacobian_TRUE_tp1)[:, :6]
         rd_tp1_error = np.matmul(J_tp1_TRUE, self.pseudoInverseMat(J_tp1, ld=0.0001)) @ rd_tp1 - rd_tp1
 
-        ################################################################################################################
-        ################################################################################################################
-        # FOR MPC
-        # get J(q_k) from PyBullet/URDF; x0 = [dq; p]; build p_ref_seq
-        x0_ = np.append(dq_tp1,r_hat_tp1)  # replace with your measured/estimated state
-        # pad each trajectory by repeating its last value N_mpc times
-        xdp_ = np.pad(self.xd, (0, self.N_mpc), mode='edge')
-        ydp_ = np.pad(self.yd, (0, self.N_mpc), mode='edge')
-        zdp_ = np.pad(self.zd, (0, self.N_mpc), mode='edge')
-        # slice the (N_mpc+1)-long preview starting at k
-        p_ref_seq_ = np.column_stack((
-            xdp_[self.k: self.k + self.N_mpc + 1],
-            ydp_[self.k: self.k + self.N_mpc + 1],
-            zdp_[self.k: self.k + self.N_mpc + 1],
-        ))
-        # p_ref_seq_ = np.array(
-        #     [self.xd[self.k:self.k+self.N_mpc+1], self.yd[self.k:self.k+self.N_mpc+1], self.zd[self.k:self.k+self.N_mpc+1]]).T
-        self.dqc_mpc = self.mpc.step(J_tp1, x0_, p_ref_seq_)  # -> (6,) joint speeds to apply
-        print("self.dqc_mpc:", np.round(self.dqc_mpc, 4))
-        ################################################################################################################
-        ################################################################################################################
+        # ################################################################################################################
+        # ################################################################################################################
+        # # FOR MPC
+        # # get J(q_k) from PyBullet/URDF; x0 = [dq; p]; build p_ref_seq
+        # x0_ = np.append(dq_tp1,r_hat_tp1)  # replace with your measured/estimated state
+        # # pad each trajectory by repeating its last value N_mpc times
+        # xdp_ = np.pad(self.xd, (0, self.N_mpc), mode='edge')
+        # ydp_ = np.pad(self.yd, (0, self.N_mpc), mode='edge')
+        # zdp_ = np.pad(self.zd, (0, self.N_mpc), mode='edge')
+        # # slice the (N_mpc+1)-long preview starting at k
+        # p_ref_seq_ = np.column_stack((
+        #     xdp_[self.k: self.k + self.N_mpc + 1],
+        #     ydp_[self.k: self.k + self.N_mpc + 1],
+        #     zdp_[self.k: self.k + self.N_mpc + 1],
+        # ))
+        # # p_ref_seq_ = np.array(
+        # #     [self.xd[self.k:self.k+self.N_mpc+1], self.yd[self.k:self.k+self.N_mpc+1], self.zd[self.k:self.k+self.N_mpc+1]]).T
+        # self.dqc_mpc = self.mpc.step(J_tp1, x0_, p_ref_seq_)  # -> (6,) joint speeds to apply
+        # print("self.dqc_mpc:", np.round(self.dqc_mpc, 4))
+        # ################################################################################################################
+        # ################################################################################################################
 
 
         ################################################################################################################
@@ -1803,7 +1807,7 @@ Robotic Manipulation" by Murry et al.
             ci_lower_ = mean_ - 1.96 * sem_
             data_list_PIonly = []
             for n in range(n_episodes):
-                arr = np.load(output_dir_rendering + f"/PIonly_plot_data_buffer_episode_{n}.npy")
+                arr = np.load(output_dir_rendering + f"/PIstar_plot_data_buffer_episode_{n}.npy")
                 data_list_PIonly.append(arr)
             data_PIonly = np.stack(data_list_PIonly, axis=2)
             data_ = abs(data_PIonly[:, 0, :] - data_PIonly[:, 3, :])  # shape: (136, 5)
@@ -1825,8 +1829,8 @@ Robotic Manipulation" by Murry et al.
             axs3[0].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower_, ci_upper_, color='m',
                                  alpha=0.3,
                                  label='95% CI RSAC-PI')
-            axs3[0].set_ylabel(r"$|\hat{x}-\tilde{x}^*|$ [mm]")
-            axs3[0].set_ylim([0, 6])
+            axs3[0].set_ylabel(r"$|{x}-\tilde{x}^*|$ [mm]")
+            axs3[0].set_ylim([0, 4])
             axs3[0].legend(loc="upper right")
             data_list = []
             for n in range(n_episodes):
@@ -1842,7 +1846,7 @@ Robotic Manipulation" by Murry et al.
             ci_lower_ = mean_ - 1.96 * sem_
             data_list_PIonly = []
             for n in range(n_episodes):
-                arr = np.load(output_dir_rendering + f"/PIonly_plot_data_buffer_episode_{n}.npy")
+                arr = np.load(output_dir_rendering + f"/PIstar_plot_data_buffer_episode_{n}.npy")
                 data_list_PIonly.append(arr)
             data_PIonly = np.stack(data_list_PIonly, axis=2)
             data_ = abs(data_PIonly[:, 1, :] - data_PIonly[:, 4, :])
@@ -1864,8 +1868,8 @@ Robotic Manipulation" by Murry et al.
             axs3[1].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower_, ci_upper_, color='m',
                                  alpha=0.3,
                                  label='')
-            axs3[1].set_ylabel(r"$|\hat{y}-\tilde{y}^*|$ [mm]")
-            axs3[1].set_ylim([0, 6])
+            axs3[1].set_ylabel(r"$|{y}-\tilde{y}^*|$ [mm]")
+            axs3[1].set_ylim([0, 4])
             # axs3[1].legend(loc="upper left")
             data_list = []
             for n in range(n_episodes):
@@ -1881,7 +1885,7 @@ Robotic Manipulation" by Murry et al.
             ci_lower_ = mean_ - 1.96 * sem_
             data_list_PIonly = []
             for n in range(n_episodes):
-                arr = np.load(output_dir_rendering + f"/PIonly_plot_data_buffer_episode_{n}.npy")
+                arr = np.load(output_dir_rendering + f"/PIstar_plot_data_buffer_episode_{n}.npy")
                 data_list_PIonly.append(arr)
             data_PIonly = np.stack(data_list_PIonly, axis=2)
             data_ = abs(data_PIonly[:, 2, :] - data_PIonly[:, 5, :])
@@ -1903,8 +1907,8 @@ Robotic Manipulation" by Murry et al.
             axs3[2].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower_, ci_upper_, color='m',
                                  alpha=0.3,
                                  label='')
-            axs3[2].set_ylabel(r"$|\hat{z}-\tilde{z}^*|$ [mm]")
-            axs3[2].set_ylim([0, 6])
+            axs3[2].set_ylabel(r"$|{z}-\tilde{z}^*|$ [mm]")
+            axs3[2].set_ylim([0, 4])
             data_list = []
             for n in range(n_episodes):
                 arr = np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy")
@@ -1919,7 +1923,7 @@ Robotic Manipulation" by Murry et al.
             ci_lower = mean_l2 - 1.96 * sem_l2
             data_list_PIonly = []
             for n in range(n_episodes):
-                arr = np.load(output_dir_rendering + f"/PIonly_plot_data_buffer_episode_{n}.npy")
+                arr = np.load(output_dir_rendering + f"/PIstar_plot_data_buffer_episode_{n}.npy")
                 data_list_PIonly.append(arr)
             data_PIonly = np.stack(data_list_PIonly, axis=2)
             l2_data = np.linalg.norm((data_PIonly[:, 0:3, :] - data_PIonly[:, 3:6, :]), ord=2,
@@ -1947,18 +1951,21 @@ Robotic Manipulation" by Murry et al.
             # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
             #              e_v_bounds * 1000 * 0.1,
             #              'm--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{{SAC}}(t))||_2.\delta t$")
+            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
+            #              SAC_band_limited_e_lower_bounds,
+            #              'm--', label="RSAC-iJPI - band limited lower bound")
             axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
                          SAC_band_limited_e_lower_bounds,
-                         'm--', label="PI with SAC - band limited lower bound")
-            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
+                         'k--', label="performance lower bound")
+            # # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
             #              e_v_norms * 1000 * 0.1,
             #              'm:', label="")
             # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
             #              e_v_bounds_PIonly * 1000 * 0.1,
             #              'b--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{{PI}}(t))||_2.\delta t$")
-            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-                         PIonly_band_limited_e_lower_bounds,
-                         'b--', label="PI only - band limited lower bound")
+            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
+            #              PIonly_band_limited_e_lower_bounds,
+            #              'b--', label="iJPI - band limited lower bound")
             # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
             #              e_v_norms_PIonly * 1000 * 0.1,
             #              'b:', label="")
@@ -1966,8 +1973,8 @@ Robotic Manipulation" by Murry et al.
             #              np.linalg.norm(plot_data_buffer_no_SAC[:, 30:33], ord=2, axis=1) * 1000,
             #              'b:', label='error bound on PI')
             axs3[3].set_xlabel("t [s]")
-            axs3[3].set_ylabel(r"$\|\hat{\mathbf{p}}-\tilde{\mathbf{p}}^*\|_{2}$ [mm]")
-            axs3[3].set_ylim([0, 6])
+            axs3[3].set_ylabel(r"$\|{\mathbf{p}}-\tilde{\mathbf{p}}^*\|_{2}$ [mm]")
+            axs3[3].set_ylim([0, 4])
             axs3[3].legend(loc="upper right")
             plt.grid(True)
             for ax in axs3:
@@ -1975,9 +1982,9 @@ Robotic Manipulation" by Murry et al.
             # plt.savefig(output_dir_rendering + "/test_position_errors_both.pdf",
             #                 format="pdf",
             #                 bbox_inches='tight')
-            # plt.savefig(output_dir_rendering + "/test_position_errors_both_band_limited_bound.pdf",
-            #             format="pdf",
-            #             bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/test_position_errors_both_band_limited_bound.pdf",
+                        format="pdf",
+                        bbox_inches='tight')
             plt.show()
             # uncomment for plotting multiple episodes
             if True:
