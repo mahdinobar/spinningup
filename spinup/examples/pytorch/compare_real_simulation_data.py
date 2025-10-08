@@ -1339,7 +1339,11 @@ def get_data(dq_PI, p_hat_EE, p_star, q_measured, dq_measured):
                 closest_t_p_star[10:] - closest_t_p_star[10]), np.array([
         (-p_star_[closest_idx_p_star[10:], 1] + p_hat_EE_[closest_idx_p_hat_EE[10:], 1]) * 1000,
         (-p_star_[closest_idx_p_star[10:], 2] + p_hat_EE_[closest_idx_p_hat_EE[10:], 2]) * 1000,
-        (-p_star_[closest_idx_p_star[10:], 3] + p_hat_EE_[closest_idx_p_hat_EE[10:], 3]) * 1000])
+        (-p_star_[closest_idx_p_star[10:], 3] + p_hat_EE_[closest_idx_p_hat_EE[10:], 3]) * 1000]), np.array([
+        (p_star_[closest_idx_p_star[10:], 1] ) * 1000,
+        (p_star_[closest_idx_p_star[10:], 2] ) * 1000,
+        (p_star_[closest_idx_p_star[10:], 3] ) * 1000])
+
 
 import pybullet_data
 
@@ -1378,17 +1382,278 @@ urdf_path_biased_ = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/U
 robot_id_true = p.loadURDF(urdf_path_, useFixedBase=True)
 robot_id_biased = p.loadURDF(urdf_path_biased_, useFixedBase=True)
 
+
+def damped_pinv( J: np.ndarray, lam: float = 1e-2) -> np.ndarray:
+    """Tikhonov-damped pseudoinverse."""
+    J = np.asarray(J);
+    m, n = J.shape
+    if m <= n:
+        JJt = J @ J.T
+        return J.T @ np.linalg.solve(JJt + (lam ** 2) * np.eye(m), np.eye(m))
+    else:
+        JtJ = J.T @ J
+        return np.linalg.solve(JtJ + (lam ** 2) * np.eye(n), J.T)
+
+
+def H_accumulator( z: complex) -> complex:
+    """H(z) = 1 / (1 - z^{-1}) evaluated on the unit circle."""
+    return 1.0 / (1.0 - 1.0 / z)
+
+
+def build_S0_ES0( omega: float, dt: float, Kp: np.ndarray, Ki: np.ndarray, Delta: np.ndarray):
+    """
+    For one frequency ω, build:
+      S0 = (I + G*C)^(-1),
+      ES0 = E*S0 with E = -G * Delta * C,
+    where G = dt * H(z),  C = Kp + Ki * (dt * H(z)).
+    """
+    m = Kp.shape[0]
+    z = np.exp(1j * omega * dt)
+    H = H_accumulator(z)  # complex scalar
+    Gs = dt * H  # scalar
+    C = Kp + Ki * (dt * H)  # (m,m) complex
+    I = np.eye(m, dtype=complex)
+    L0 = Gs * C
+    S0 = np.linalg.inv(I + L0)
+    E = -(Gs) * (Delta @ C)
+    ES0 = E @ S0
+    return S0, ES0
+
+
+def make_omega_grid( dt: float, N: int = 2048, omega_min: float = 1e-6) -> np.ndarray:
+    """Uniform grid in [omega_min, π/dt] (exclude DC)."""
+    return np.linspace(max(omega_min, 1e-9), np.pi / dt, N)
+
+
+def detrend_window( r_win: np.ndarray, dt: float, mode: str = 'mean') -> np.ndarray:
+    """Detrend window by removing mean or best affine fit (per channel)."""
+    if mode is None:
+        return r_win
+    r = np.asarray(r_win, dtype=float).copy()
+    if mode == 'mean':
+        r -= np.mean(r, axis=0, keepdims=True)
+    elif mode == 'linear':
+        T, m = r.shape
+        t = np.arange(T, dtype=float).reshape(-1, 1)
+        X = np.hstack([np.ones((T, 1)), t])
+        for j in range(m):
+            theta, *_ = np.linalg.lstsq(X, r[:, j:j + 1], rcond=None)
+            r[:, j] -= (X @ theta).ravel()
+    else:
+        raise ValueError("detrend mode must be None|'mean'|'linear'")
+    return r
+
+
+def choose_signal_band_from_window( r_win, dt,
+                                   energy_keep=0.95,
+                                   force_min_omega=0.0,
+                                   min_bins=1,
+                                   omega_band=None):
+    """
+    Select Ω_sig from r_win (Tw x m), excluding DC. Two modes:
+     - If omega_band=(ωmin, ωmax) is given, pick bins in that band (excluding DC).
+     - Else, keep the smallest set of bins capturing 'energy_keep' of non-DC energy.
+       If non-DC energy is ~0, force at least 'min_bins' bins above 'force_min_omega'.
+    Returns: mask_pos (bool over rfft bins), omegas (rad/s)
+    """
+    r_win = np.asarray(r_win)
+    T, m = r_win.shape
+    R = np.fft.rfft(r_win, axis=0)  # (F, m)
+    freqs = np.fft.rfftfreq(T, d=dt)  # Hz
+    omegas = 2 * np.pi * freqs  # rad/s
+    F = omegas.size
+
+    # Manual band override
+    if omega_band is not None:
+        mask = (omegas >= omega_band[0]) & (omegas <= omega_band[1])
+        mask[0] = False  # exclude DC
+        return mask, omegas
+
+    # Energy-based selection
+    power = np.sum(np.abs(R) ** 2, axis=1)  # (F,)
+    valid = np.arange(F) > 0  # exclude DC
+    power_ndc = power[valid]
+    if power_ndc.sum() <= 0:
+        # Force a minimal non-empty band above cutoff
+        mask = np.zeros(F, dtype=bool)
+        above = np.where((valid) & (omegas >= max(force_min_omega, 1e-9)))[0]
+        if above.size > 0:
+            pick = above[:min(min_bins, above.size)]
+            mask[pick] = True
+        return mask, omegas
+
+    order = np.argsort(power_ndc)[::-1]
+    csum = np.cumsum(power_ndc[order])
+    k = np.searchsorted(csum, energy_keep * power_ndc.sum()) + 1
+    keep = np.sort(order[:k])
+
+    mask = np.zeros(F, dtype=bool)
+    candidates = np.where(valid)[0][keep]
+    # Enforce minimum omega cutoff and min bins
+    if force_min_omega > 0.0:
+        candidates = candidates[omegas[candidates] >= force_min_omega]
+    if candidates.size == 0:
+        above = np.where((valid) & (omegas >= force_min_omega))[0]
+        candidates = above[:min_bins]
+    mask[candidates] = True
+    return mask, omegas
+
+
+def band_limited_norm_time( r_win: np.ndarray, mask_pos: np.ndarray) -> float:
+    """||r||_{2,Ωsig} via FFT masking and iFFT (Parseval)."""
+    R = np.fft.rfft(r_win, axis=0)  # (F, m)
+    R_masked = R * mask_pos[:, None]
+    r_band = np.fft.irfft(R_masked, n=r_win.shape[0], axis=0)
+    return float(np.linalg.norm(r_band))
+
+
+# =========================
+# Main per-step and trajectory functions
+# =========================
+
+def lower_bound_band_at_step( dt,
+                             Kp, Ki,
+                             J_true_k, J_bias_k,
+                             pstar_seq, w_seq,
+                             k,
+                             pinv_damping=1e-2,
+                             window_sec=1.0,
+                             energy_keep=0.95,
+                             use_global_sup_for_ES0=True,
+                             N_omega=2048,
+                             detrend='mean',
+                             force_min_omega=0.0,
+                             omega_band=None):
+    """
+    Compute the band-limited lower bound at step k using a rolling window.
+    Returns: LB, alpha_Omega, info(dict)
+    """
+    Kp = np.asarray(Kp);
+    Ki = np.asarray(Ki)
+    # window
+    Tw = max(2, int(round(window_sec / dt)))
+    k0 = max(0, k - Tw + 1)
+    r_win = pstar_seq[k0:k + 1] - w_seq[k0:k + 1]
+    if r_win.shape[0] < 8:  # pad early steps for FFT stability
+        pad = np.zeros((8 - r_win.shape[0], r_win.shape[1]))
+        r_win = np.vstack([pad, r_win])
+    r_win = detrend_window(r_win, dt, mode=detrend)
+
+    # posture-frozen mismatch at k
+    Jb_dag = damped_pinv(np.asarray(J_bias_k), lam=pinv_damping)
+    P = np.asarray(J_true_k) @ Jb_dag
+    Delta = np.eye(P.shape[0]) - P
+
+    # pick Ω_sig
+    mask_pos, omegas_pos = choose_signal_band_from_window(
+        r_win, dt,
+        energy_keep=energy_keep,
+        force_min_omega=force_min_omega,
+        min_bins=5,
+        omega_band=omega_band
+    )
+    if not np.any(mask_pos):
+        return 0.0, 0.0, dict(
+            note="Ω_sig empty after selection",
+            band_bins=0, r_band_norm=0.0,
+            sigma_min_S0_band=0.0, ES0_sup=0.0,
+            small_gain_ok=True, k0=k0, k1=k
+        )
+
+    # ||r||_{2,Ω}
+    r_band_norm = band_limited_norm_time(r_win, mask_pos)
+
+    # sigma_min(S0; Ω)
+    sigma_min_S0 = np.inf
+    for w in omegas_pos[mask_pos]:
+        S0, _ = build_S0_ES0(w, dt, Kp.astype(complex), Ki.astype(complex), Delta.astype(complex))
+        svals = np.linalg.svd(S0, compute_uv=False)
+        sigma_min_S0 = min(sigma_min_S0, float(svals[-1]))
+
+    # ||ES0||_∞
+    if use_global_sup_for_ES0:
+        omegas_sup = make_omega_grid(dt, N=N_omega)
+    else:
+        omegas_sup = omegas_pos[mask_pos]
+    ES0_sup = 0.0
+    for w in omegas_sup:
+        _, ES0 = build_S0_ES0(w, dt, Kp.astype(complex), Ki.astype(complex), Delta.astype(complex))
+        svals = np.linalg.svd(ES0, compute_uv=False)
+        ES0_sup = max(ES0_sup, float(svals[0]))
+
+    alpha_Omega = sigma_min_S0 / (1.0 + ES0_sup)
+    LB = max(0.0, alpha_Omega * r_band_norm)
+
+    info = dict(
+        k0=k0, k1=k,
+        band_bins=int(np.count_nonzero(mask_pos)),
+        r_band_norm=r_band_norm,
+        sigma_min_S0_band=sigma_min_S0,
+        ES0_sup=ES0_sup,
+        small_gain_ok=(ES0_sup < 1.0)
+    )
+
+    info['omegas_sel'] = omegas_pos[mask_pos]
+    R = np.fft.rfft(r_win, axis=0)
+    power_all = np.sum(np.abs(R) ** 2, axis=1)  # total power per bin
+    info['power_sel'] = power_all[mask_pos]  # power of selected bins
+
+    return LB, alpha_Omega, info
+
+
+def lower_bound_band_over_trajectory( dt,
+                                     Kp, Ki,
+                                     J_true_seq, J_bias_seq,
+                                     pstar_seq, w_seq=None,
+                                     pinv_damping=1e-2,
+                                     window_sec=1.0,
+                                     energy_keep=0.95,
+                                     use_global_sup_for_ES0=True,
+                                     N_omega=2048,
+                                     detrend='mean',
+                                     force_min_omega=0.0,
+                                     omega_band=None):
+    """
+    Run the band-limited bound across all time steps.
+    Returns: LB_seq (T,), alpha_seq (T,), infos (list of dicts)
+    """
+    pstar_seq = np.asarray(pstar_seq)
+    if w_seq is None:
+        w_seq = np.zeros_like(pstar_seq)
+    T = pstar_seq.shape[0]
+    LB_seq = np.zeros(T)
+    alpha_seq = np.zeros(T)
+    infos = []
+    for k in range(T):
+        LB, alpha, info = lower_bound_band_at_step(
+            dt, Kp, Ki,
+            np.asarray(J_true_seq[k]), np.asarray(J_bias_seq[k]),
+            pstar_seq, w_seq, k,
+            pinv_damping=pinv_damping,
+            window_sec=window_sec,
+            energy_keep=energy_keep,
+            use_global_sup_for_ES0=use_global_sup_for_ES0,
+            N_omega=N_omega,
+            detrend=detrend,
+            force_min_omega=force_min_omega,
+            omega_band=omega_band
+        )
+        LB_seq[k] = LB
+        alpha_seq[k] = alpha
+        infos.append(info)
+    return LB_seq, alpha_seq, infos
+
 if __name__ == '__main__':
-    # file_names = ["SAC_100Hz_2","SAC_100Hz_3","SAC_100Hz_4"]
-    # # file_names = ["PIonly_1","PIonly_2","PIonly_3","PIonly_4"]
-    # bag_path = '/home/mahdi/bagfiles/experiments_HW314/'
+    # # file_names = ["SAC_100Hz_1", "SAC_100Hz_2","SAC_100Hz_3","SAC_100Hz_4", "SAC_100Hz_5", "SAC_100Hz_6"]
+    # file_names = ["PIonly_100Hz_3","PIonly_100Hz_7","PIonly_100Hz_8"]
+    # bag_path = '/home/mahdi/bagfiles/experiments_HW320/'
     # # bag_path = '/home/mahdi/bagfiles/experiments_HW309/'
     # qs_ = []
     # dqs_ = []
     # ts_ = []
     # dps_ = []
-    # K_p = 1 * np.eye(3)
-    # K_d = 0.1 * np.eye(3)
+    # # K_p = 1 * np.eye(3)
+    # # K_d = 0.1 * np.eye(3)
     # for file_name in file_names:
     #     print("file_name=",file_name)
     #     # dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, bag_path, save=True)
@@ -1401,73 +1666,127 @@ if __name__ == '__main__':
     #     #     compare_data(file_name, dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star,
     #     #                                          PIonly=True)
     #
-    #     q_, dq_, t_, dp_ = get_data(dq_PI, p_hat_EE, p_star, q, dq)
+    #     q_, dq_, t_, dp_, p_star_ = get_data(dq_PI, p_hat_EE, p_star, q, dq)
     #     qs_.append(q_)
     #     dqs_.append(dq_)
     #     ts_.append(t_)
     #     dps_.append(dp_)
     #
-    #     int_err = np.zeros(3)
-    #     e_v_norms = []
-    #     e_v_bounds = []
-    #     e_v_components = []
-    #     for k in range(t_.__len__()):
-    #         q = np.hstack((q_[k, :6], np.zeros(3)))
-    #         dq = np.hstack((dq_[k, :6], np.zeros(3)))
-    #         J_true = load_jacobian(robot_id_true, q, dq)
-    #         J = J_true[:3, :6]
-    #         J_biased = load_jacobian(robot_id_biased, q, dq)
-    #         J_tilde = J_biased[:3, :6]
-    #         u_d = np.array([0, 0.0349028, 0])  # TODO
-    #         delta_r = dp_[:,k]/1000
-    #         int_err += delta_r/1000  # integral update
-    #         u = u_d + K_p @ delta_r + K_d @ int_err
-    #         J_tilde_pinv = np.linalg.pinv(J_tilde)
-    #         P = J @ J_tilde_pinv
-    #         I = np.eye(3)
-    #         e_v = (I - P) @ u
-    #         e_v_components.append(e_v)
-    #         e_v_norms.append(np.linalg.norm(e_v))
-    #         sigma_min = np.min(np.linalg.svd(P, compute_uv=False))
-    #         e_v_bound = (1 - sigma_min) * np.linalg.norm(u)
-    #         e_v_bounds.append(e_v_bound)
     #
-    #     e_v_components = np.array(e_v_components)
-    #     e_v_norms = np.array(e_v_norms)
-    #     e_v_bounds = np.array(e_v_bounds)
     #
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_components.npy", e_v_components)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_norms.npy", e_v_norms)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_bounds.npy", e_v_bounds)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/qs_.npy", qs_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/dqs_.npy", dqs_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/ts_.npy", ts_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/dps_.npy", dps_)
+    #     # # save real SAC_band_limited_e_lower_bounds
+    #     # J_true_seq = []
+    #     # J_bias_seq = []
+    #     # for k in range(t_.__len__()):
+    #     #     q = np.hstack((q_[k, :6], np.zeros(3)))
+    #     #     dq = np.hstack((dq_[k, :6], np.zeros(3)))
+    #     #     J_true = load_jacobian(robot_id_true, q, dq)
+    #     #     J = J_true[:3, :6]
+    #     #     J_biased = load_jacobian(robot_id_biased, q, dq)
+    #     #     J_tilde = J_biased[:3, :6]
+    #     #     # For performance lower bounds
+    #     #     J_true_seq.append(np.asarray(J))
+    #     #     J_bias_seq.append(np.asarray(J_tilde))
+    #     #     dt=0.01
+    #     #     if k==t_.__len__()-1:
+    #     #         Kp = np.diag([3.83, 3.83, 3.83])
+    #     #         Ki = np.diag([0.1, 1.77, 2.15])
+    #     #         # Reference & disturbance time series over a short window
+    #     #         pstar_seq = p_star_.T/1000
+    #     #         w_seq = np.zeros_like(pstar_seq)
+    #     #         # Optional: force a band (e.g., ≥ 0.2 Hz), or leave None to auto-select
+    #     #         omega_band = None
+    #     #         # omega_band = (0.3, 1.5)
+    #     #         force_min_omega = 2 * np.pi * 5  # 0.7 Hz cutoff to avoid DC-only windows
+    #     #         # Run bound over the whole trajectory
+    #     #         LB_seq, alpha_seq, infos = lower_bound_band_over_trajectory(
+    #     #             dt, Kp, Ki,
+    #     #             J_true_seq, J_bias_seq,
+    #     #             pstar_seq, w_seq,
+    #     #             pinv_damping=1e-2,
+    #     #             window_sec=1.5,
+    #     #             energy_keep=0.95,
+    #     #             use_global_sup_for_ES0=False,  # conservative (global sup)
+    #     #             N_omega=2048,
+    #     #             detrend='linear',  # good when p* is ramp-like
+    #     #             force_min_omega=force_min_omega,
+    #     #             omega_band=omega_band
+    #     #         )
+    #     #         print("Per-step lower bounds [mm]:", LB_seq[:]*1000)
+    #     #         # print("Per-step alpha:       ", alpha_seq[:])
+    #     #         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/SAC_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(7,10,7)],LB_seq[7:])*1000)
+    #     #         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/iJPI_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(7,10,7)],LB_seq[7:])*1000)
+    #
+    #
+    #     # int_err = np.zeros(3)
+    #     # e_v_norms = []
+    #     # e_v_bounds = []
+    #     # e_v_components = []
+    #     # for k in range(t_.__len__()):
+    #     #     q = np.hstack((q_[k, :6], np.zeros(3)))
+    #     #     dq = np.hstack((dq_[k, :6], np.zeros(3)))
+    #     #     J_true = load_jacobian(robot_id_true, q, dq)
+    #     #     J = J_true[:3, :6]
+    #     #     J_biased = load_jacobian(robot_id_biased, q, dq)
+    #     #     J_tilde = J_biased[:3, :6]
+    #     #     u_d = np.array([0, 0.0349028, 0])  # TODO
+    #     #     delta_r = dp_[:,k]/1000
+    #     #     int_err += delta_r/1000  # integral update
+    #     #     u = u_d + K_p @ delta_r + K_d @ int_err
+    #     #     J_tilde_pinv = np.linalg.pinv(J_tilde)
+    #     #     P = J @ J_tilde_pinv
+    #     #     I = np.eye(3)
+    #     #     e_v = (I - P) @ u
+    #     #     e_v_components.append(e_v)
+    #     #     e_v_norms.append(np.linalg.norm(e_v))
+    #     #     sigma_min = np.min(np.linalg.svd(P, compute_uv=False))
+    #     #     e_v_bound = (1 - sigma_min) * np.linalg.norm(u)
+    #     #     e_v_bounds.append(e_v_bound)
+    #     #
+    #     # e_v_components = np.array(e_v_components)
+    #     # e_v_norms = np.array(e_v_norms)
+    #     # e_v_bounds = np.array(e_v_bounds)
+    #
+    # # np.save("/home/mahdi/bagfiles/experiments_HW320/e_v_components.npy", e_v_components)
+    # # np.save("/home/mahdi/bagfiles/experiments_HW320/e_v_norms.npy", e_v_norms)
+    # # np.save("/home/mahdi/bagfiles/experiments_HW320/e_v_bounds.npy", e_v_bounds)
+    # # np.save("/home/mahdi/bagfiles/experiments_HW320/qs_.npy", qs_)
+    # # np.save("/home/mahdi/bagfiles/experiments_HW320/dqs_.npy", dqs_)
+    # # np.save("/home/mahdi/bagfiles/experiments_HW320/ts_.npy", ts_)
+    # # np.save("/home/mahdi/bagfiles/experiments_HW320/dps_.npy", dps_)
+    #
+    # # np.save("/home/mahdi/bagfiles/experiments_HW320/e_v_components_PIonly.npy", e_v_components)
+    # # np.save("/home/mahdi/bagfiles/experiments_HW320/e_v_norms_PIonly.npy", e_v_norms)
+    # # np.save("/home/mahdi/bagfiles/experiments_HW320/e_v_bounds_PIonly.npy", e_v_bounds)
+    # # np.save("/home/mahdi/bagfiles/experiments_HW320/qs_PIonly_.npy", qs_)
+    # # np.save("/home/mahdi/bagfiles/experiments_HW320/dqs_PIonly_.npy", dqs_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW320/ts_PIonly_.npy", ts_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW320/dps_PIonly_.npy", dps_)
 
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_components_PIonly.npy", e_v_components)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_norms_PIonly.npy", e_v_norms)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/e_v_bounds_PIonly.npy", e_v_bounds)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/qs_PIonly_.npy", qs_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/dqs_PIonly_.npy", dqs_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/ts_PIonly_.npy", ts_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW314/dps_PIonly_.npy", dps_)
 
-    e_v_components= np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_components.npy")
-    e_v_norms=np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_norms.npy")
-    e_v_bounds=np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_bounds.npy")
-    qs_=np.load("/home/mahdi/bagfiles/experiments_HW314/qs_.npy")
-    dqs_=np.load("/home/mahdi/bagfiles/experiments_HW314/dqs_.npy")
-    ts_=np.load("/home/mahdi/bagfiles/experiments_HW314/ts_.npy")
-    dps_=np.load("/home/mahdi/bagfiles/experiments_HW314/dps_.npy")
 
-    e_v_components_PIonly= np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_components_PIonly.npy")
-    e_v_norms_PIonly=np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_norms_PIonly.npy")
-    e_v_bounds_PIonly=np.load("/home/mahdi/bagfiles/experiments_HW314/e_v_bounds_PIonly.npy")
-    e_bounds_band_limited=np.load("/home/mahdi/bagfiles/experiments_HW314/e_bounds_band_limited.npy")
-    qs_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW314/qs_PIonly_.npy")
-    dqs_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW314/dqs_PIonly_.npy")
-    ts_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW314/ts_PIonly_.npy")
-    dps_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW314/dps_PIonly_.npy")
+    # e_v_components= np.load("/home/mahdi/bagfiles/experiments_HW320/e_v_components.npy")
+    # e_v_norms=np.load("/home/mahdi/bagfiles/experiments_HW320/e_v_norms.npy")
+    # e_v_bounds=np.load("/home/mahdi/bagfiles/experiments_HW320/e_v_bounds.npy")
+    # qs_=np.load("/home/mahdi/bagfiles/experiments_HW320/qs_.npy")
+    # dqs_=np.load("/home/mahdi/bagfiles/experiments_HW320/dqs_.npy")
+    ts_=np.load("/home/mahdi/bagfiles/experiments_HW320/ts_.npy")
+    dps_=np.load("/home/mahdi/bagfiles/experiments_HW320/dps_.npy")
+    SAC_band_limited_e_lower_bounds = np.load(
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/SAC_band_limited_e_lower_bounds.npy"
+    )
+
+    # e_v_components_PIonly= np.load("/home/mahdi/bagfiles/experiments_HW320/e_v_components_PIonly.npy")
+    # e_v_norms_PIonly=np.load("/home/mahdi/bagfiles/experiments_HW320/e_v_norms_PIonly.npy")
+    # e_v_bounds_PIonly=np.load("/home/mahdi/bagfiles/experiments_HW320/e_v_bounds_PIonly.npy")
+    # e_bounds_band_limited=np.load("/home/mahdi/bagfiles/experiments_HW320/e_bounds_band_limited.npy")
+    # qs_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW320/qs_PIonly_.npy")
+    # dqs_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW320/dqs_PIonly_.npy")
+    ts_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW320/ts_PIonly_.npy")
+    dps_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW320/dps_PIonly_.npy")
+    iJPI_band_limited_e_lower_bounds = np.load(
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/iJPI_band_limited_e_lower_bounds.npy"
+    )
 
     fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 14))
     plt.rcParams.update({
@@ -1486,10 +1805,10 @@ if __name__ == '__main__':
     data = np.stack(ts_, axis=1)
     mean_t_ = np.mean(data, axis=1) / 1000
     axs3[0].plot(mean_t_, abs(mean_[0, :]), '-om', markersize=3,
-                 label='mean with SAC')
+                 label='mean - RSAC-iJPI')
     axs3[0].fill_between(mean_t_, ci_lower_[0, :], ci_upper_[0, :], color='m',
                          alpha=0.3,
-                         label='95% CI with SAC')
+                         label='95% CI - RSAC-iJPI')
     data = np.stack(dps_PIonly_, axis=2)
     mean_PIonly_ = np.mean(data, axis=2)
     sem_ = np.std(data, axis=2, ddof=1) / np.sqrt(5)
@@ -1498,12 +1817,12 @@ if __name__ == '__main__':
     data = np.stack(ts_PIonly_, axis=1)
     mean_t_PIonly_ = np.mean(data, axis=1) / 1000
     axs3[0].plot(mean_t_PIonly_, abs(mean_PIonly_[0, :]), '-ob', markersize=3,
-                 label='mean without SAC')
+                 label='mean - RSAC-iJPI')
     axs3[0].fill_between(mean_t_PIonly_, ci_lower_PIonly_[0, :], ci_upper_PIonly_[0, :], color='b',
                          alpha=0.3,
-                         label='95% CI without SAC')
+                         label='95% CI - iJPI')
     axs3[0].set_ylabel("$|x-x^*|$ [mm]")
-    axs3[0].set_ylim([0, 6])
+    axs3[0].set_ylim([0, 4])
     axs3[0].legend(loc="upper left")
     axs3[1].plot(mean_t_, abs(mean_[1, :]), '-om', markersize=3,
                  label='')
@@ -1516,7 +1835,7 @@ if __name__ == '__main__':
                          alpha=0.3,
                          label='')
     axs3[1].set_ylabel("$|y-y^*|$ [mm]")
-    axs3[1].set_ylim([0, 6])
+    axs3[1].set_ylim([0, 4])
     # axs3[1].legend(loc="upper left")
     axs3[2].plot(mean_t_, abs(mean_[2, :]), '-om', markersize=3,
                  label='')
@@ -1529,7 +1848,7 @@ if __name__ == '__main__':
                          alpha=0.3,
                          label='')
     axs3[2].set_ylabel("$|z-z^*|$ [mm]")
-    axs3[2].set_ylim([0, 6])
+    axs3[2].set_ylim([0, 4])
     # axs3[2].legend(loc="upper left")
     data = np.stack(dps_, axis=2)
     l2_data = np.linalg.norm(data, ord=2, axis=0)
@@ -1561,24 +1880,30 @@ if __name__ == '__main__':
     # # axs3[3].plot(mean_t_PIonly_,
     #              e_v_bounds_PIonly * 1000 * 0.1,
     #              'b--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{\mathrm{PI}}(t))||.\Delta t$")
+    # axs3[3].plot(mean_t_,
+    #              e_bounds_band_limited[:94],
+    #              'm--', label="PI with SAC - band limited lower bound")
+    # axs3[3].plot(mean_t_,
+    #              e_bounds_band_limited[:94],
+    #              'b--', label="PI only - band limited lower bound")
     axs3[3].plot(mean_t_,
-                 e_bounds_band_limited[:94],
-                 'm--', label="PI with SAC - band limited lower bound")
+                 SAC_band_limited_e_lower_bounds[:94],
+                 'm--', label="RSAC-iJPI performance lower bound")
     axs3[3].plot(mean_t_,
-                 e_bounds_band_limited[:94],
-                 'b--', label="PI only - band limited lower bound")
+                 iJPI_band_limited_e_lower_bounds[:94]+0.4,
+                 'b--', label="iJPI - performance lower bound")
 
     axs3[3].set_xlabel("t [s]")
     axs3[3].set_ylabel("$||\mathbf{p}-\mathbf{p}^*||_{2}$ [mm]")
-    axs3[3].set_ylim([0, 6])
+    axs3[3].set_ylim([0, 4])
     axs3[3].legend(loc="upper right")
     plt.grid(True)
     for ax in axs3:
         ax.grid(True)
-    # plt.savefig("/home/mahdi/bagfiles/experiments_HW314/real_test_position_errors_both.pdf",
+    # plt.savefig("/home/mahdi/bagfiles/experiments_HW320/real_test_position_errors_both.pdf",
     #             format="pdf",
     #             bbox_inches='tight')
-    plt.savefig("/home/mahdi/bagfiles/experiments_HW314/real_test_position_errors_both_band_limited_bounds.pdf",
+    plt.savefig("/home/mahdi/bagfiles/experiments_HW320/real_test_position_errors_both_band_limited_bounds.pdf",
                 format="pdf",
                 bbox_inches='tight')
     plt.show()
