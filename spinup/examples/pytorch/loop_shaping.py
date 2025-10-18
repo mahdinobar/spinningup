@@ -237,20 +237,21 @@ if __name__ == "__main__":
     alpha=np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/alpha_dt0004.npy")
 
     pm_target_deg = 60.0
-    wc_target = 1/(4*np.max(alpha))
+    wc_target = 1/(4*np.mean(alpha))
 
     print("wc_target=",wc_target)
-    wgrid = np.linspace(0.1, 0.6/(4*np.max(alpha)), 400)
+    wgrid = np.linspace(0.1, 0.6/(np.max(alpha)), 400)
     Pjw = build_P_of_omega(J0, alpha, dt, wgrid)  # list of 3x6 matrices over w
 
     # --- TUNE GAINS ---
     Kp, Ki, wc, pm = tune_PI_gains(
         J0, J0hat_dag, alpha, dt,
-        wc_target=wc_target, pm_target_deg=pm_target_deg,
+        wc_target=wc_target,
+        pm_target_deg=pm_target_deg,
         kp_range=(0.1, 10.0),
         ki_range=(0.1, 10.0),
         wmin=0.1,
-        wmax=0.6 * 1/(4*np.max(alpha)),
+        wmax=0.6 * 1/(np.max(alpha)),
         n_w=800
     )
 

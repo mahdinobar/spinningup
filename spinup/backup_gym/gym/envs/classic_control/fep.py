@@ -162,11 +162,26 @@ Robotic Manipulation" by Murry et al.
         self.reward_eta_ddqc = 0
         # TODO: User defined linear position gain
         # self.K_p = 1
-        # self.K_i = 0.1
-        self.K_p = np.diag([3.83,3.83,3.83])
-        self.K_i = np.diag([0.1,1.77,2.15])
-        # self.K_p = np.diag([1,1.46,1.21])
-        # self.K_i = np.diag([0.56,0.68,0.56])
+        # # self.K_i = 0.1
+
+        # self.K_p = np.diag([0.21,1.77,1.47])
+        # self.K_i = np.diag([2.15,1.0,0.82])
+
+        self.K_p = np.diag([5.6,6.8,5.6])
+        self.K_i = np.diag([0.38,8.25,4.64])
+        # wc_target= 11.750488684284845
+        # Kp =
+        #  [[5.62341325 0.         0.        ]
+        #  [0.         6.81292069 0.        ]
+        #  [0.         0.         5.62341325]]
+        # Ki =
+        #  [[0.38311868 0.         0.        ]
+        #  [0.         8.25404185 0.        ]
+        #  [0.         0.         4.64158883]]
+        # Per-axis achieved crossover (rad/s): [6.06907702 6.02178307 6.05891749]
+        # Per-axis achieved phase margin (deg): [60.01576164 60.53015844 67.84011042]
+
+
         self.K_d = 0
         self.korque_noise_max = 0.  # TODO
         self.viewer = None
@@ -1225,7 +1240,7 @@ Robotic Manipulation" by Murry et al.
         # print("0")
         # dqc_t_PID = self.state[21:27]
         # ATTENTION: here apply SAC action
-        dqc_t = self.dqc_PID + a
+        dqc_t = self.dqc_PID #+ a
         # dqc_t = self.dqc_mpc
         # TODO check
         # command joint speeds (only 6 joints)
@@ -1982,9 +1997,9 @@ Robotic Manipulation" by Murry et al.
             # plt.savefig(output_dir_rendering + "/test_position_errors_both.pdf",
             #                 format="pdf",
             #                 bbox_inches='tight')
-            plt.savefig(output_dir_rendering + "/test_position_errors_both_band_limited_bound.pdf",
-                        format="pdf",
-                        bbox_inches='tight')
+            # plt.savefig(output_dir_rendering + "/test_position_errors_both_band_limited_bound.pdf",
+            #             format="pdf",
+            #             bbox_inches='tight')
             plt.show()
             # uncomment for plotting multiple episodes
             if True:
