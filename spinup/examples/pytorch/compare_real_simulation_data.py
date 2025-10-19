@@ -1644,154 +1644,154 @@ def lower_bound_band_over_trajectory( dt,
     return LB_seq, alpha_seq, infos
 
 if __name__ == '__main__':
-    # # file_names = ["SAC_100Hz_2","SAC_100Hz_3","SAC_100Hz_4", "SAC_100Hz_5", "SAC_100Hz_6"]
-    # file_names = ["PIonly_100Hz_3","PIonly_100Hz_7","PIonly_100Hz_8"]
-    # bag_path = '/home/mahdi/bagfiles/experiments_HW320/'
-    # # bag_path = '/home/mahdi/bagfiles/experiments_HW309/'
-    # qs_ = []
-    # dqs_ = []
-    # ts_ = []
-    # dps_ = []
-    # LB_all = []
-    # # K_p = 1 * np.eye(3)
-    # # K_d = 0.1 * np.eye(3)
-    # for file_name in file_names:
-    #     print("file_name=",file_name)
-    #     # dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, bag_path, save=True)
-    #     dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star = load_bags(file_name, bag_path, save=True)
-    #     #
-    #     # if file_name[0:3] == "SAC":
-    #     #     compare_data(file_name, dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star,
-    #     #                                          PIonly=False)
-    #     # elif file_name[0:6] == "PIonly":
-    #     #     compare_data(file_name, dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star,
-    #     #                                          PIonly=True)
-    #
-    #     q_, dq_, t_, dp_, p_star_ = get_data(dq_PI, p_hat_EE, p_star, q, dq)
-    #     qs_.append(q_)
-    #     dqs_.append(dq_)
-    #     ts_.append(t_)
-    #     dps_.append(dp_)
-    #
-    #
-    #
-    #     # save real SAC_band_limited_e_lower_bounds
-    #     J_true_seq = []
-    #     J_bias_seq = []
-    #     for k in range(t_.__len__()):
-    #         q = np.hstack((q_[k, :6], np.zeros(3)))
-    #         dq = np.hstack((dq_[k, :6], np.zeros(3)))
-    #         J_true = load_jacobian(robot_id_true, q, dq)
-    #         J = J_true[:3, :6]
-    #         J_biased = load_jacobian(robot_id_biased, q, dq)
-    #         J_tilde = J_biased[:3, :6]
-    #         # For performance lower bounds
-    #         J_true_seq.append(np.asarray(J))
-    #         J_bias_seq.append(np.asarray(J_tilde))
-    #         dt=0.01
-    #         if k==t_.__len__()-1:
-    #             Kp = np.diag([3.83, 3.83, 3.83])
-    #             Ki = np.diag([0.1, 1.77, 2.15])
-    #             # Reference & disturbance time series over a short window
-    #             pstar_seq = p_star_.T/1000
-    #             w_seq = np.zeros_like(pstar_seq)
-    #             # Optional: force a band (e.g., ≥ 0.2 Hz), or leave None to auto-select
-    #             omega_band = None
-    #             # omega_band = (0.3, 1.5)
-    #             force_min_omega = 2 * np.pi * 5  # 0.7 Hz cutoff to avoid DC-only windows
-    #             # Run bound over the whole trajectory
-    #             LB_seq, alpha_seq, infos = lower_bound_band_over_trajectory(
-    #                 dt, Kp, Ki,
-    #                 J_true_seq, J_bias_seq,
-    #                 pstar_seq, w_seq,
-    #                 pinv_damping=1e-2,
-    #                 window_sec=1.5,
-    #                 energy_keep=0.95,
-    #                 use_global_sup_for_ES0=False,  # conservative (global sup)
-    #                 N_omega=2048,
-    #                 detrend='linear',  # good when p* is ramp-like
-    #                 force_min_omega=force_min_omega,
-    #                 omega_band=omega_band
-    #             )
-    #             print("Per-step lower bounds [mm]:", LB_seq[:]*1000)
-    #
-    #             plt.figure(figsize=(6, 3))
-    #             plt.plot(LB_seq[7:] * 1000, linewidth=2)
-    #             plt.xlabel('Time [s]')
-    #             plt.ylabel('Lower bound [mm]')
-    #             plt.ylim([0, 4])
-    #             plt.title(file_name)
-    #             plt.grid(True)
-    #             plt.tight_layout()
-    #             plt.show()
-    #             print("Per-step alpha:       ", alpha_seq[:])
-    #             data_=np.append(LB_seq[np.random.randint(7,10,7)],LB_seq[7:])*1000
-    #             LB_all.append(data_)
-    #
-    #             # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/SAC_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(7,10,7)],LB_seq[7:])*1000)
-    #             # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/iJPI_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(7,10,7)],LB_seq[7:])*1000)
-    # # np.save(
-    # #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/SAC_band_limited_e_lower_bounds_all.npy",
-    # #     LB_all)
+    # file_names = ["SAC_100Hz_2","SAC_100Hz_3","SAC_100Hz_4", "SAC_100Hz_5", "SAC_100Hz_6"]
+    file_names = ["PIonly_100Hz_3","PIonly_100Hz_7","PIonly_100Hz_8"]
+    bag_path = '/home/mahdi/bagfiles/experiments_HW321/'
+    # bag_path = '/home/mahdi/bagfiles/experiments_HW309/'
+    qs_ = []
+    dqs_ = []
+    ts_ = []
+    dps_ = []
+    LB_all = []
+    # K_p = 1 * np.eye(3)
+    # K_d = 0.1 * np.eye(3)
+    for file_name in file_names:
+        print("file_name=",file_name)
+        # dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_measured = load_bags(file_name, bag_path, save=True)
+        dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star = load_bags(file_name, bag_path, save=True)
+        #
+        # if file_name[0:3] == "SAC":
+        #     compare_data(file_name, dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star,
+        #                                          PIonly=False)
+        # elif file_name[0:6] == "PIonly":
+        #     compare_data(file_name, dq_PI, dq_SAC, dq, dq_desired, q, p_hat_EE, p_star,
+        #                                          PIonly=True)
+
+        q_, dq_, t_, dp_, p_star_ = get_data(dq_PI, p_hat_EE, p_star, q, dq)
+        qs_.append(q_)
+        dqs_.append(dq_)
+        ts_.append(t_)
+        dps_.append(dp_)
+
+
+
+        # save real SAC_band_limited_e_lower_bounds
+        J_true_seq = []
+        J_bias_seq = []
+        for k in range(t_.__len__()):
+            q = np.hstack((q_[k, :6], np.zeros(3)))
+            dq = np.hstack((dq_[k, :6], np.zeros(3)))
+            J_true = load_jacobian(robot_id_true, q, dq)
+            J = J_true[:3, :6]
+            J_biased = load_jacobian(robot_id_biased, q, dq)
+            J_tilde = J_biased[:3, :6]
+            # For performance lower bounds
+            J_true_seq.append(np.asarray(J))
+            J_bias_seq.append(np.asarray(J_tilde))
+            dt=0.01
+            if k==t_.__len__()-1:
+                Kp = np.diag([3.83, 3.83, 3.83])
+                Ki = np.diag([0.1, 1.77, 2.15])
+                # Reference & disturbance time series over a short window
+                pstar_seq = p_star_.T/1000
+                w_seq = np.zeros_like(pstar_seq)
+                # Optional: force a band (e.g., ≥ 0.2 Hz), or leave None to auto-select
+                omega_band = None
+                # omega_band = (0.3, 1.5)
+                force_min_omega = 2 * np.pi * 5  # 0.7 Hz cutoff to avoid DC-only windows
+                # Run bound over the whole trajectory
+                LB_seq, alpha_seq, infos = lower_bound_band_over_trajectory(
+                    dt, Kp, Ki,
+                    J_true_seq, J_bias_seq,
+                    pstar_seq, w_seq,
+                    pinv_damping=1e-2,
+                    window_sec=1.5,
+                    energy_keep=0.95,
+                    use_global_sup_for_ES0=False,  # conservative (global sup)
+                    N_omega=2048,
+                    detrend='linear',  # good when p* is ramp-like
+                    force_min_omega=force_min_omega,
+                    omega_band=omega_band
+                )
+                print("Per-step lower bounds [mm]:", LB_seq[:]*1000)
+
+                plt.figure(figsize=(6, 3))
+                plt.plot(LB_seq[7:] * 1000, linewidth=2)
+                plt.xlabel('Time [s]')
+                plt.ylabel('Lower bound [mm]')
+                plt.ylim([0, 4])
+                plt.title(file_name)
+                plt.grid(True)
+                plt.tight_layout()
+                plt.show()
+                print("Per-step alpha:       ", alpha_seq[:])
+                data_=np.append(LB_seq[np.random.randint(7,10,7)],LB_seq[7:])*1000
+                LB_all.append(data_)
+
+                # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/SAC_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(7,10,7)],LB_seq[7:])*1000)
+                # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/iJPI_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(7,10,7)],LB_seq[7:])*1000)
     # np.save(
-    #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/iJPI_band_limited_e_lower_bounds_all.npy",
+    #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/SAC_band_limited_e_lower_bounds_all.npy",
     #     LB_all)
-    #
-    #
-    #     # int_err = np.zeros(3)
-    #     # e_v_norms = []
-    #     # e_v_bounds = []
-    #     # e_v_components = []
-    #     # for k in range(t_.__len__()):
-    #     #     q = np.hstack((q_[k, :6], np.zeros(3)))
-    #     #     dq = np.hstack((dq_[k, :6], np.zeros(3)))
-    #     #     J_true = load_jacobian(robot_id_true, q, dq)
-    #     #     J = J_true[:3, :6]
-    #     #     J_biased = load_jacobian(robot_id_biased, q, dq)
-    #     #     J_tilde = J_biased[:3, :6]
-    #     #     u_d = np.array([0, 0.0349028, 0])  # TODO
-    #     #     delta_r = dp_[:,k]/1000
-    #     #     int_err += delta_r/1000  # integral update
-    #     #     u = u_d + K_p @ delta_r + K_d @ int_err
-    #     #     J_tilde_pinv = np.linalg.pinv(J_tilde)
-    #     #     P = J @ J_tilde_pinv
-    #     #     I = np.eye(3)
-    #     #     e_v = (I - P) @ u
-    #     #     e_v_components.append(e_v)
-    #     #     e_v_norms.append(np.linalg.norm(e_v))
-    #     #     sigma_min = np.min(np.linalg.svd(P, compute_uv=False))
-    #     #     e_v_bound = (1 - sigma_min) * np.linalg.norm(u)
-    #     #     e_v_bounds.append(e_v_bound)
-    #     #
-    #     # e_v_components = np.array(e_v_components)
-    #     # e_v_norms = np.array(e_v_norms)
-    #     # e_v_bounds = np.array(e_v_bounds)
-    #
-    # # np.save("/home/mahdi/bagfiles/experiments_HW320/e_v_components.npy", e_v_components)
-    # # np.save("/home/mahdi/bagfiles/experiments_HW320/e_v_norms.npy", e_v_norms)
-    # # np.save("/home/mahdi/bagfiles/experiments_HW320/e_v_bounds.npy", e_v_bounds)
-    # # np.save("/home/mahdi/bagfiles/experiments_HW320/qs_.npy", qs_)
-    # # np.save("/home/mahdi/bagfiles/experiments_HW320/dqs_.npy", dqs_)
-    # # np.save("/home/mahdi/bagfiles/experiments_HW320/ts_.npy", ts_)
-    # # np.save("/home/mahdi/bagfiles/experiments_HW320/dps_.npy", dps_)
-    #
-    # # np.save("/home/mahdi/bagfiles/experiments_HW320/e_v_components_PIonly.npy", e_v_components)
-    # # np.save("/home/mahdi/bagfiles/experiments_HW320/e_v_norms_PIonly.npy", e_v_norms)
-    # # np.save("/home/mahdi/bagfiles/experiments_HW320/e_v_bounds_PIonly.npy", e_v_bounds)
-    # # np.save("/home/mahdi/bagfiles/experiments_HW320/qs_PIonly_.npy", qs_)
-    # # np.save("/home/mahdi/bagfiles/experiments_HW320/dqs_PIonly_.npy", dqs_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW320/ts_PIonly_.npy", ts_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW320/dps_PIonly_.npy", dps_)
+    np.save(
+        "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/iJPI_band_limited_e_lower_bounds_all.npy",
+        LB_all)
+
+
+        # int_err = np.zeros(3)
+        # e_v_norms = []
+        # e_v_bounds = []
+        # e_v_components = []
+        # for k in range(t_.__len__()):
+        #     q = np.hstack((q_[k, :6], np.zeros(3)))
+        #     dq = np.hstack((dq_[k, :6], np.zeros(3)))
+        #     J_true = load_jacobian(robot_id_true, q, dq)
+        #     J = J_true[:3, :6]
+        #     J_biased = load_jacobian(robot_id_biased, q, dq)
+        #     J_tilde = J_biased[:3, :6]
+        #     u_d = np.array([0, 0.0349028, 0])  # TODO
+        #     delta_r = dp_[:,k]/1000
+        #     int_err += delta_r/1000  # integral update
+        #     u = u_d + K_p @ delta_r + K_d @ int_err
+        #     J_tilde_pinv = np.linalg.pinv(J_tilde)
+        #     P = J @ J_tilde_pinv
+        #     I = np.eye(3)
+        #     e_v = (I - P) @ u
+        #     e_v_components.append(e_v)
+        #     e_v_norms.append(np.linalg.norm(e_v))
+        #     sigma_min = np.min(np.linalg.svd(P, compute_uv=False))
+        #     e_v_bound = (1 - sigma_min) * np.linalg.norm(u)
+        #     e_v_bounds.append(e_v_bound)
+        #
+        # e_v_components = np.array(e_v_components)
+        # e_v_norms = np.array(e_v_norms)
+        # e_v_bounds = np.array(e_v_bounds)
+
+    # np.save("/home/mahdi/bagfiles/experiments_HW321/e_v_components.npy", e_v_components)
+    # np.save("/home/mahdi/bagfiles/experiments_HW321/e_v_norms.npy", e_v_norms)
+    # np.save("/home/mahdi/bagfiles/experiments_HW321/e_v_bounds.npy", e_v_bounds)
+    # np.save("/home/mahdi/bagfiles/experiments_HW321/qs_.npy", qs_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW321/dqs_.npy", dqs_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW321/ts_.npy", ts_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW321/dps_.npy", dps_)
+
+    # np.save("/home/mahdi/bagfiles/experiments_HW321/e_v_components_PIonly.npy", e_v_components)
+    # np.save("/home/mahdi/bagfiles/experiments_HW321/e_v_norms_PIonly.npy", e_v_norms)
+    # np.save("/home/mahdi/bagfiles/experiments_HW321/e_v_bounds_PIonly.npy", e_v_bounds)
+    # np.save("/home/mahdi/bagfiles/experiments_HW321/qs_PIonly_.npy", qs_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW321/dqs_PIonly_.npy", dqs_)
+    np.save("/home/mahdi/bagfiles/experiments_HW321/ts_PIonly_.npy", ts_)
+    np.save("/home/mahdi/bagfiles/experiments_HW321/dps_PIonly_.npy", dps_)
 
 
 
-    # e_v_components= np.load("/home/mahdi/bagfiles/experiments_HW320/e_v_components.npy")
-    # e_v_norms=np.load("/home/mahdi/bagfiles/experiments_HW320/e_v_norms.npy")
-    # e_v_bounds=np.load("/home/mahdi/bagfiles/experiments_HW320/e_v_bounds.npy")
-    # qs_=np.load("/home/mahdi/bagfiles/experiments_HW320/qs_.npy")
-    # dqs_=np.load("/home/mahdi/bagfiles/experiments_HW320/dqs_.npy")
-    ts_=np.load("/home/mahdi/bagfiles/experiments_HW320/ts_.npy")
-    dps_=np.load("/home/mahdi/bagfiles/experiments_HW320/dps_.npy")
+    # e_v_components= np.load("/home/mahdi/bagfiles/experiments_HW321/e_v_components.npy")
+    # e_v_norms=np.load("/home/mahdi/bagfiles/experiments_HW321/e_v_norms.npy")
+    # e_v_bounds=np.load("/home/mahdi/bagfiles/experiments_HW321/e_v_bounds.npy")
+    # qs_=np.load("/home/mahdi/bagfiles/experiments_HW321/qs_.npy")
+    # dqs_=np.load("/home/mahdi/bagfiles/experiments_HW321/dqs_.npy")
+    ts_=np.load("/home/mahdi/bagfiles/experiments_HW321/ts_.npy")
+    dps_=np.load("/home/mahdi/bagfiles/experiments_HW321/dps_.npy")
     SAC_band_limited_e_lower_bounds = np.load(
         "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/SAC_band_limited_e_lower_bounds.npy"
     )
@@ -1799,14 +1799,14 @@ if __name__ == '__main__':
         "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/SAC_band_limited_e_lower_bounds_all.npy"
     )
 
-    # e_v_components_PIonly= np.load("/home/mahdi/bagfiles/experiments_HW320/e_v_components_PIonly.npy")
-    # e_v_norms_PIonly=np.load("/home/mahdi/bagfiles/experiments_HW320/e_v_norms_PIonly.npy")
-    # e_v_bounds_PIonly=np.load("/home/mahdi/bagfiles/experiments_HW320/e_v_bounds_PIonly.npy")
-    # e_bounds_band_limited=np.load("/home/mahdi/bagfiles/experiments_HW320/e_bounds_band_limited.npy")
-    # qs_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW320/qs_PIonly_.npy")
-    # dqs_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW320/dqs_PIonly_.npy")
-    ts_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW320/ts_PIonly_.npy")
-    dps_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW320/dps_PIonly_.npy")
+    # e_v_components_PIonly= np.load("/home/mahdi/bagfiles/experiments_HW321/e_v_components_PIonly.npy")
+    # e_v_norms_PIonly=np.load("/home/mahdi/bagfiles/experiments_HW321/e_v_norms_PIonly.npy")
+    # e_v_bounds_PIonly=np.load("/home/mahdi/bagfiles/experiments_HW321/e_v_bounds_PIonly.npy")
+    # e_bounds_band_limited=np.load("/home/mahdi/bagfiles/experiments_HW321/e_bounds_band_limited.npy")
+    # qs_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW321/qs_PIonly_.npy")
+    # dqs_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW321/dqs_PIonly_.npy")
+    ts_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW321/ts_PIonly_.npy")
+    dps_PIonly_=np.load("/home/mahdi/bagfiles/experiments_HW321/dps_PIonly_.npy")
     iJPI_band_limited_e_lower_bounds = np.load(
         "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/iJPI_band_limited_e_lower_bounds.npy"
     )
@@ -1953,10 +1953,10 @@ if __name__ == '__main__':
     plt.grid(True)
     for ax in axs3:
         ax.grid(True)
-    # plt.savefig("/home/mahdi/bagfiles/experiments_HW320/real_test_position_errors_both.pdf",
+    # plt.savefig("/home/mahdi/bagfiles/experiments_HW321/real_test_position_errors_both.pdf",
     #             format="pdf",
     #             bbox_inches='tight')
-    plt.savefig("/home/mahdi/bagfiles/experiments_HW320/real_test_position_errors_both_band_limited_bounds.pdf",
+    plt.savefig("/home/mahdi/bagfiles/experiments_HW321/real_test_position_errors_both_band_limited_bounds.pdf",
                 format="pdf",
                 bbox_inches='tight')
     plt.show()

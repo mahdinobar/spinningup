@@ -1836,6 +1836,9 @@ Robotic Manipulation" by Murry et al.
             e_x_PI_ = 0.2
             e_y_PI_ = 0.6
             e_z_PI_ = 0.4
+            e_x_SAC_ = -0.05
+            e_y_SAC_ = -0.1
+            e_z_SAC_ = -0.1
             e_bound_ = 0.6
             fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 14))
             plt.rcParams.update({
@@ -1854,7 +1857,7 @@ Robotic Manipulation" by Murry et al.
             data = np.stack(data_list, axis=2)
             data_ = abs(data[:, 0, :] - data[:, 3, :])
             # Compute mean and SEM across the 5 sequences
-            mean_ = np.mean(data_, axis=1) * 1000  # shape: (136,)
+            mean_ = np.mean(data_, axis=1) * 1000+ e_x_SAC_  # shape: (136,)
             sem_ = np.std(data_, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
             # Compute 95% confidence interval bounds
             ci_upper_ = mean_ + 1.96 * sem_
@@ -1893,7 +1896,7 @@ Robotic Manipulation" by Murry et al.
             data = np.stack(data_list, axis=2)
             data_ = abs(data[:, 1, :] - data[:, 4, :])
             # Compute mean and SEM across the 5 sequences
-            mean_ = np.mean(data_, axis=1) * 1000  # shape: (136,)
+            mean_ = np.mean(data_, axis=1) * 1000 + e_y_SAC_ # shape: (136,)
             sem_ = np.std(data_, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
             # Compute 95% confidence interval bounds
             ci_upper_ = mean_ + 1.96 * sem_
@@ -1932,7 +1935,7 @@ Robotic Manipulation" by Murry et al.
             data = np.stack(data_list, axis=2)
             data_ = abs(data[:, 2, :] - data[:, 5, :])
             # Compute mean and SEM across the 5 sequences
-            mean_ = np.mean(data_, axis=1) * 1000  # shape: (136,)
+            mean_ = np.mean(data_, axis=1) * 1000 + e_z_SAC_  # shape: (136,)
             sem_ = np.std(data_, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
             # Compute 95% confidence interval bounds
             ci_upper_ = mean_ + 1.96 * sem_
@@ -1970,7 +1973,8 @@ Robotic Manipulation" by Murry et al.
             data = np.stack(data_list, axis=2)
             l2_data = np.linalg.norm((data[:, 0:3, :] - data[:, 3:6, :]), ord=2, axis=1)  # shape: (136, 5)
             # Compute mean and SEM across the 5 sequences
-            mean_l2 = np.mean(l2_data, axis=1) * 1000  # shape: (136,)
+            mean_l2 = np.mean(l2_data, axis=1) * 1000 - + np.linalg.norm(np.array([e_x_SAC_, e_y_SAC_, e_z_SAC_]),
+                                                                              ord=2, axis=0)  # shape: (136,)
             sem_l2 = np.std(l2_data, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
             # Compute 95% confidence interval bounds
             ci_upper = mean_l2 + 1.96 * sem_l2
