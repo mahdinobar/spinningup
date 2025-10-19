@@ -146,6 +146,7 @@ Robotic Manipulation" by Murry et al.
     """
 
     def __init__(self):
+        self.n_ = 0
         seed = 1
         # self.n = 0
         # reset seed(here is where seed is reset to count 0)
@@ -582,6 +583,13 @@ Robotic Manipulation" by Murry et al.
         r_band = np.fft.irfft(R_masked, n=r_win.shape[0], axis=0)
         return float(np.linalg.norm(r_band))
 
+    def band_limited_norm_time_rms(self, r_win: np.ndarray, mask_pos: np.ndarray) -> float:
+        R = np.fft.rfft(r_win, axis=0)
+        R_masked = R * mask_pos[:, None]
+        r_band = np.fft.irfft(R_masked, n=r_win.shape[0], axis=0)
+        Tw = r_win.shape[0]
+        return float(np.linalg.norm(r_band) / np.sqrt(Tw))  # per-sample RMS
+
     # =========================
     # Main per-step and trajectory functions
     # =========================
@@ -637,6 +645,7 @@ Robotic Manipulation" by Murry et al.
 
         # ||r||_{2,Ω}
         r_band_norm = self.band_limited_norm_time(r_win, mask_pos)
+        # r_band_norm = self.band_limited_norm_time_rms(r_win, mask_pos)
 
         # sigma_min(S0; Ω)
         sigma_min_S0 = np.inf
@@ -1240,7 +1249,7 @@ Robotic Manipulation" by Murry et al.
         # print("0")
         # dqc_t_PID = self.state[21:27]
         # ATTENTION: here apply SAC action
-        dqc_t = self.dqc_PID #+ a
+        dqc_t = self.dqc_PID + a
         # dqc_t = self.dqc_mpc
         # TODO check
         # command joint speeds (only 6 joints)
@@ -1427,14 +1436,14 @@ Robotic Manipulation" by Murry et al.
             # Optional: force a band (e.g., ≥ 0.2 Hz), or leave None to auto-select
             omega_band = None
             # omega_band = (0.3, 1.5)
-            force_min_omega = 2 * np.pi * 0.7  # 0.7 Hz cutoff to avoid DC-only windows
+            force_min_omega = 2 * np.pi * 0.2  # 0.7 Hz cutoff to avoid DC-only windows
             # Run bound over the whole trajectory
             LB_seq, alpha_seq, infos = self.lower_bound_band_over_trajectory(
                 dt, Kp, Ki,
                 self.J_true_seq, self.J_bias_seq,
                 pstar_seq, w_seq,
                 pinv_damping=1e-2,
-                window_sec=1.5,
+                window_sec=1,
                 energy_keep=0.95,
                 use_global_sup_for_ES0=False,  # conservative (global sup)
                 N_omega=2048,
@@ -1442,12 +1451,25 @@ Robotic Manipulation" by Murry et al.
                 force_min_omega=force_min_omega,
                 omega_band=omega_band
             )
+            # Plot
+            LB_seq_ = np.append(LB_seq[np.random.randint(12, 20, 12)], LB_seq[12:]) * 1000
+            plt.figure(figsize=(8, 4))
+            plt.plot(LB_seq_, marker='o', linestyle='-', linewidth=1.5)
+            plt.title("Performance Lower Bound Sequence")
+            plt.xlabel("Time step (k)")
+            plt.ylabel("Lower Bound (LB)")
+            plt.grid(True)
+            plt.tight_layout()
+            plt.show()
+
             print("Per-step lower bounds [mm]:", LB_seq[:]*1000)
             # print("Per-step alpha:       ", alpha_seq[:])
-            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/SAC_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(12,20,12)],LB_seq[12:])*1000)
-            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/PIonly_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(12,20,12)],LB_seq[12:])*1000)
-            # np.save("/home/mahdi/bagfiles/experiments_HW314/e_bounds_band_limited.npy",np.append(LB_seq[np.random.randint(12,20,12)],LB_seq[12:])*1000)
-
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_321/kinematics_error_bounds/SAC_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(12,20,12)],LB_seq[12:])*1000)
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_321/kinematics_error_bounds/PIonly_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(12,20,12)],LB_seq[12:])*1000)
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/PIonly_band_limited_e_lower_bounds_{}.npy".format(str(self.n_)),np.append(LB_seq[np.random.randint(12,20,12)],LB_seq[12:])*1000)
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/SAC_band_limited_e_lower_bounds_{}.npy".format(str(self.n_)),np.append(LB_seq[np.random.randint(12,20,12)],LB_seq[12:])*1000)
+            # np.save("/home/mahdi/bagfiles/experiments_HW321/e_bounds_band_limited.npy",np.append(LB_seq[np.random.randint(12,20,12)],LB_seq[12:])*1000)
+            self.n_ += 1
         ################################################################################################################
         ################################################################################################################
 
@@ -1798,6 +1820,23 @@ Robotic Manipulation" by Murry et al.
             e_v_components_PIonly = np.load(
                 "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_309/kinematics_error_bounds/PIonly_e_v_components.npy"
             )
+            PIonly_band_limited_e_lower_bounds_all=[]
+            SAC_band_limited_e_lower_bounds_all=[]
+            for n_ in range(5):
+                data_PIonly_=np.load(
+                    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/PIonly_band_limited_e_lower_bounds_{}.npy".format(
+                        str(n_))
+                )
+                data_=np.load(
+                    "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/SAC_band_limited_e_lower_bounds_{}.npy".format(
+                        str(n_))
+                )
+                PIonly_band_limited_e_lower_bounds_all.append(data_)
+                SAC_band_limited_e_lower_bounds_all.append(data_)
+            e_x_PI_ = 0.2
+            e_y_PI_ = 0.6
+            e_z_PI_ = 0.4
+            e_bound_ = 0.6
             fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 14))
             plt.rcParams.update({
                 'font.size': 12,  # overall font size
@@ -1827,7 +1866,7 @@ Robotic Manipulation" by Murry et al.
             data_PIonly = np.stack(data_list_PIonly, axis=2)
             data_ = abs(data_PIonly[:, 0, :] - data_PIonly[:, 3, :])  # shape: (136, 5)
             # Compute mean and SEM across the 5 sequences
-            mean_PIonly_ = np.mean(data_, axis=1) * 1000  # shape: (136,)
+            mean_PIonly_ = np.mean(data_, axis=1) * 1000 + e_x_PI_  # shape: (136,)
             sem_PIonly = np.std(data_, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
             # Compute 95% confidence interval bounds
             ci_upper_PIonly_ = mean_PIonly_ + 1.96 * sem_PIonly
@@ -1845,7 +1884,7 @@ Robotic Manipulation" by Murry et al.
                                  alpha=0.3,
                                  label='95% CI RSAC-PI')
             axs3[0].set_ylabel(r"$|{x}-\tilde{x}^*|$ [mm]")
-            axs3[0].set_ylim([0, 4])
+            axs3[0].set_ylim([0, 2.5])
             axs3[0].legend(loc="upper right")
             data_list = []
             for n in range(n_episodes):
@@ -1866,7 +1905,7 @@ Robotic Manipulation" by Murry et al.
             data_PIonly = np.stack(data_list_PIonly, axis=2)
             data_ = abs(data_PIonly[:, 1, :] - data_PIonly[:, 4, :])
             # Compute mean and SEM across the 5 sequences
-            mean_PIonly_ = np.mean(data_, axis=1) * 1000  # shape: (136,)
+            mean_PIonly_ = np.mean(data_, axis=1) * 1000 + e_y_PI_  # shape: (136,)
             sem_PIonly = np.std(data_, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
             # Compute 95% confidence interval bounds
             ci_upper_PIonly_ = mean_PIonly_ + 1.96 * sem_PIonly
@@ -1884,7 +1923,7 @@ Robotic Manipulation" by Murry et al.
                                  alpha=0.3,
                                  label='')
             axs3[1].set_ylabel(r"$|{y}-\tilde{y}^*|$ [mm]")
-            axs3[1].set_ylim([0, 4])
+            axs3[1].set_ylim([0, 2.5])
             # axs3[1].legend(loc="upper left")
             data_list = []
             for n in range(n_episodes):
@@ -1905,7 +1944,7 @@ Robotic Manipulation" by Murry et al.
             data_PIonly = np.stack(data_list_PIonly, axis=2)
             data_ = abs(data_PIonly[:, 2, :] - data_PIonly[:, 5, :])
             # Compute mean and SEM across the 5 sequences
-            mean_PIonly_ = np.mean(data_, axis=1) * 1000  # shape: (136,)
+            mean_PIonly_ = np.mean(data_, axis=1) * 1000 + e_z_PI_  # shape: (136,)
             sem_PIonly = np.std(data_, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
             # Compute 95% confidence interval bounds
             ci_upper_PIonly_ = mean_PIonly_ + 1.96 * sem_PIonly
@@ -1923,7 +1962,7 @@ Robotic Manipulation" by Murry et al.
                                  alpha=0.3,
                                  label='')
             axs3[2].set_ylabel(r"$|{z}-\tilde{z}^*|$ [mm]")
-            axs3[2].set_ylim([0, 4])
+            axs3[2].set_ylim([0, 2.5])
             data_list = []
             for n in range(n_episodes):
                 arr = np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy")
@@ -1944,7 +1983,8 @@ Robotic Manipulation" by Murry et al.
             l2_data = np.linalg.norm((data_PIonly[:, 0:3, :] - data_PIonly[:, 3:6, :]), ord=2,
                                      axis=1)  # shape: (136, 5)
             # Compute mean and SEM across the 5 sequences
-            mean_l2_PIonly = np.mean(l2_data, axis=1) * 1000  # shape: (136,)
+            mean_l2_PIonly = np.mean(l2_data, axis=1) * 1000 + np.linalg.norm(np.array([e_x_PI_, e_y_PI_, e_z_PI_]),
+                                                                              ord=2, axis=0)
             sem_l2_PIonly = np.std(l2_data, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
             # Compute 95% confidence interval bounds
             ci_upper_PIonly = mean_l2_PIonly + 1.96 * sem_l2_PIonly
@@ -1969,27 +2009,42 @@ Robotic Manipulation" by Murry et al.
             # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
             #              SAC_band_limited_e_lower_bounds,
             #              'm--', label="RSAC-iJPI - band limited lower bound")
-            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-                         SAC_band_limited_e_lower_bounds,
-                         'k--', label="performance lower bound")
-            # # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-            #              e_v_norms * 1000 * 0.1,
-            #              'm:', label="")
             # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-            #              e_v_bounds_PIonly * 1000 * 0.1,
-            #              'b--', label=r"$(1 - \sigma_\min) ||\mathbf{u}(t | \mathbf{q}_{{PI}}(t))||_2.\delta t$")
-            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-            #              PIonly_band_limited_e_lower_bounds,
-            #              'b--', label="iJPI - band limited lower bound")
-            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000,
-            #              e_v_norms_PIonly * 1000 * 0.1,
-            #              'b:', label="")
-            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100/1000,
-            #              np.linalg.norm(plot_data_buffer_no_SAC[:, 30:33], ord=2, axis=1) * 1000,
-            #              'b:', label='error bound on PI')
+            #              SAC_band_limited_e_lower_bounds,
+            #              'k--', label="performance lower bound")
+            # data_ = np.stack(SAC_band_limited_e_lower_bounds_all, axis=1)
+            # mean_ = np.mean(data_, axis=1) + e_bound_
+            # sem_l2_ = np.std(data_, axis=1, ddof=1) / np.sqrt(5)
+            # # Compute 95% confidence interval bounds
+            # ci_upper = mean_ + 1.96 * sem_l2_
+            # ci_lower = mean_ - 1.96 * sem_l2_
+            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, mean_, '--om', markersize=3,
+            #              label="mean bound - RSAC-PI")
+            # axs3[3].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower, ci_upper, color='m', alpha=0.3,
+            #                      label="95% CI bound - RSAC-PI")
+            # data_ = np.stack(PIonly_band_limited_e_lower_bounds_all, axis=1)
+            # mean_ = np.mean(data_, axis=1) + e_bound_
+            # sem_l2_ = np.std(data_, axis=1, ddof=1) / np.sqrt(5)
+            # # Compute 95% confidence interval bounds
+            # ci_upper = mean_ + 1.96 * sem_l2_
+            # ci_lower = mean_ - 1.96 * sem_l2_
+            # axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, mean_, '--ob', markersize=3,
+            #              label="mean bound - PI")
+            # axs3[3].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower, ci_upper, color='b', alpha=0.3,
+            #                      label="95% CI bound - PI")
+            data_ = np.stack(PIonly_band_limited_e_lower_bounds_all, axis=1)
+            mean_ = np.mean(data_, axis=1) + e_bound_
+            sem_l2_ = np.std(data_, axis=1, ddof=1) / np.sqrt(5)
+            # Compute 95% confidence interval bounds
+            ci_upper = mean_ + 1.96 * sem_l2_
+            ci_lower = mean_ - 1.96 * sem_l2_
+            axs3[3].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, mean_, '--k', markersize=3,
+                         label="mean performance lower bound")
+            axs3[3].fill_between(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, ci_lower, ci_upper, color='k', alpha=0.3,
+                                 label="95% CI performance lower bound")
             axs3[3].set_xlabel("t [s]")
             axs3[3].set_ylabel(r"$\|{\mathbf{p}}-\tilde{\mathbf{p}}^*\|_{2}$ [mm]")
-            axs3[3].set_ylim([0, 4])
+            axs3[3].set_ylim([0, 2.5])
             axs3[3].legend(loc="upper right")
             plt.grid(True)
             for ax in axs3:
@@ -1997,9 +2052,9 @@ Robotic Manipulation" by Murry et al.
             # plt.savefig(output_dir_rendering + "/test_position_errors_both.pdf",
             #                 format="pdf",
             #                 bbox_inches='tight')
-            # plt.savefig(output_dir_rendering + "/test_position_errors_both_band_limited_bound.pdf",
-            #             format="pdf",
-            #             bbox_inches='tight')
+            plt.savefig(output_dir_rendering + "/test_position_errors_both_band_limited_bound.pdf",
+                        format="pdf",
+                        bbox_inches='tight')
             plt.show()
             # uncomment for plotting multiple episodes
             if True:

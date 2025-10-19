@@ -11,7 +11,7 @@ import os
 
 TRAIN=0
 env_fn = lambda: gym.make('Fep-v0')
-exp_name = "Fep_HW_320"
+exp_name = "Fep_HW_314"
 exp_name_checkpoint = "Fep_HW_309"
 Euler_server=False
 if __name__ == '__main__':
@@ -38,4 +38,4 @@ if __name__ == '__main__':
     else:
         env_loaded, get_action = load_policy_and_env(output_dir, deterministic=True)
         env=env_fn()
-        run_policy(env, get_action,num_episodes=5, output_dir=output_dir)
+        run_policy(env, get_action,num_episodes=2, output_dir=output_dir)
