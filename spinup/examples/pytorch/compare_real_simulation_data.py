@@ -244,13 +244,13 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
 
     # Target times: 0, 100, 200, ..., up to max(t)
     # Find indices in t closest to each target time
-    closest_idx_PI = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_idx_PI = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:120]
     closest_t_PI = t_[closest_idx_PI]
 
     t_ = (dq_SAC[:, 0] - dq_SAC[0, 0]) * 1000
     # Target times: 0, 100, 200, ..., up to max(t)
     # Find indices in t closest to each target time
-    closest_idx_SAC = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_idx_SAC = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:120]
     closest_t_SAC = t_[closest_idx_SAC]
 
     # Reset robot at the origin and move the target object to the goal position and orientation
@@ -331,12 +331,12 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
     t_ = (q_measured[:, 0] - q_measured[0, 0]) * 1000
     # Target times: 0, 100, 200, ..., up to max(t)
     # Find indices in t closest to each target time
-    closest_idx_q = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_idx_q = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:120]
     closest_t_q = t_[closest_idx_q]
     t_ = (dq_measured[:, 0] - dq_measured[0, 0]) * 1000
     # Target times: 0, 100, 200, ..., up to max(t)
     # Find indices in t closest to each target time
-    closest_idx_dq = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_idx_dq = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:120]
     closest_t_dq = t_[closest_idx_dq]
     dq = dq_measured[closest_idx_dq, 1:7]
     q = q_measured[closest_idx_q, 1:7]
@@ -381,7 +381,7 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
         # Target times: 0, 100, 200, ..., up to max(t)
         target_times_d = np.arange(0, t_[-1], 100)
         # Find indices in t closest to each target time
-        closest_idx_PI_d = np.array([np.abs(t_ - target).argmin() for target in target_times_d])[:104]
+        closest_idx_PI_d = np.array([np.abs(t_ - target).argmin() for target in target_times_d])[:120]
         closest_t_PI_d = t_[closest_idx_PI_d]
         y_desired = dq_desired_measured[closest_idx_PI_d, joint_idx + 1]
         ax.plot(closest_t_PI_d, y_desired, '-og', label="dq desired - real", markersize=3)  # red circles
@@ -776,12 +776,12 @@ def compare_data(file_name, dq_PI, dq_SAC, dq_measured, dq_desired_measured, q_m
 
     t_ = (p_star[:, 0] - p_star[0, 0]) * 1000
     target_times = np.arange(0, t_[-1], 100)
-    closest_idx_p_star = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_idx_p_star = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:120]
     closest_t_p_star = t_[closest_idx_p_star]
 
     t_ = (p_hat_EE[:, 0] - p_hat_EE[0, 0]) * 1000
     target_times = np.arange(0, t_[-1], 100)
-    closest_idx_p_hat_EE = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_idx_p_hat_EE = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:120]
     closest_t_p_hat_EE = t_[closest_idx_p_hat_EE]
 
     # compare p^*-\hat{p}
@@ -1291,19 +1291,19 @@ def get_data(dq_PI, p_hat_EE, p_star, q_measured, dq_measured):
 
     t_ = (q_measured_[:, 0] - q_measured_[0, 0]) * 1000
     target_times = np.arange(0, t_[-1], 100)
-    closest_idx_q = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_idx_q = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:120]
     closest_t_q = t_[closest_idx_q]
 
     t_ = (dq_measured_[:, 0] - dq_measured_[0, 0]) * 1000
-    closest_idx_dq = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_idx_dq = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:120]
     closest_t_dq = t_[closest_idx_dq]
 
     t_ = (p_star_[:, 0] - p_star_[0, 0]) * 1000
-    closest_idx_p_star = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_idx_p_star = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:120]
     closest_t_p_star = t_[closest_idx_p_star]
 
     t_ = (p_hat_EE_[:, 0] - p_hat_EE_[0, 0]) * 1000
-    closest_idx_p_hat_EE = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:104]
+    closest_idx_p_hat_EE = np.array([np.abs(t_ - target_).argmin() for target_ in target_times])[:120]
     closest_t_p_hat_EE = t_[closest_idx_p_hat_EE]
 
     # compare p^*-\hat{p}
@@ -1335,14 +1335,17 @@ def get_data(dq_PI, p_hat_EE, p_star, q_measured, dq_measured):
     #     bbox_inches='tight')
     plt.show()
 
-    return q_measured_[closest_idx_q[10:], 1:], dq_measured_[closest_idx_dq[10:], 1:], (
-                closest_t_p_star[10:] - closest_t_p_star[10]), np.array([
+    return (q_measured_[closest_idx_q[10:], 1:], dq_measured_[closest_idx_dq[10:], 1:],
+            (
+                closest_t_p_star[10:] - closest_t_p_star[10]),
+        np.array([
         (-p_star_[closest_idx_p_star[10:], 1] + p_hat_EE_[closest_idx_p_hat_EE[10:], 1]) * 1000,
         (-p_star_[closest_idx_p_star[10:], 2] + p_hat_EE_[closest_idx_p_hat_EE[10:], 2]) * 1000,
-        (-p_star_[closest_idx_p_star[10:], 3] + p_hat_EE_[closest_idx_p_hat_EE[10:], 3]) * 1000]), np.array([
+        (-p_star_[closest_idx_p_star[10:], 3] + p_hat_EE_[closest_idx_p_hat_EE[10:], 3]) * 1000]),
+        np.array([
         (p_star_[closest_idx_p_star[10:], 1] ) * 1000,
         (p_star_[closest_idx_p_star[10:], 2] ) * 1000,
-        (p_star_[closest_idx_p_star[10:], 3] ) * 1000])
+        (p_star_[closest_idx_p_star[10:], 3] ) * 1000]))
 
 
 import pybullet_data
@@ -1744,12 +1747,12 @@ if __name__ == '__main__':
     #             # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/SAC_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(7,10,7)],LB_seq[7:])*1000)
     #             # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/iJPI_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(7,10,7)],LB_seq[7:])*1000)
     # np.save(
-    #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/SAC_band_limited_e_lower_bounds_all.npy",
+    #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/SAC_band_limited_e_lower_bounds_all_2.npy",
     #     LB_all)
     # # np.save(
-    # #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/iJPI_band_limited_e_lower_bounds_all.npy",
+    # #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/iJPI_band_limited_e_lower_bounds_all_2.npy",
     # #     LB_all)
-    #     #
+    #
     #
     #     # int_err = np.zeros(3)
     #     # e_v_norms = []
@@ -1785,16 +1788,17 @@ if __name__ == '__main__':
     # # np.save("/home/mahdi/bagfiles/experiments_HW321/e_v_bounds.npy", e_v_bounds)
     # # np.save("/home/mahdi/bagfiles/experiments_HW321/qs_.npy", qs_)
     # # np.save("/home/mahdi/bagfiles/experiments_HW321/dqs_.npy", dqs_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW321/ts_.npy", ts_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW321/dps_.npy", dps_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW321/ts_2.npy", ts_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW321/dps2.npy", dps_)
     #
     # # np.save("/home/mahdi/bagfiles/experiments_HW321/e_v_components_PIonly.npy", e_v_components)
     # # np.save("/home/mahdi/bagfiles/experiments_HW321/e_v_norms_PIonly.npy", e_v_norms)
     # # np.save("/home/mahdi/bagfiles/experiments_HW321/e_v_bounds_PIonly.npy", e_v_bounds)
     # # np.save("/home/mahdi/bagfiles/experiments_HW321/qs_PIonly_.npy", qs_)
     # # np.save("/home/mahdi/bagfiles/experiments_HW321/dqs_PIonly_.npy", dqs_)
-    # # np.save("/home/mahdi/bagfiles/experiments_HW321/ts_PIonly_.npy", ts_)
-    # # np.save("/home/mahdi/bagfiles/experiments_HW321/dps_PIonly_.npy", dps_)
+    # # np.save("/home/mahdi/bagfiles/experiments_HW321/ts_PIonly_2.npy", ts_)
+    # # np.save("/home/mahdi/bagfiles/experiments_HW321/dps_PIonly_2.npy", dps_)
+
 
 
 
@@ -1826,7 +1830,13 @@ if __name__ == '__main__':
     iJPI_band_limited_e_lower_bounds_all = np.load(
         "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/iJPI_band_limited_e_lower_bounds_all.npy"
     )
-
+    # e_x_PI_ = 0.2
+    # e_y_PI_ = 0.6
+    # e_z_PI_ = 0.4
+    # e_x_SAC_ = -0.05
+    # e_y_SAC_ = -0.1
+    # e_z_SAC_ = -0.1
+    # e_bound_ = 0.6
     e_x_PI_ = 0.12
     e_y_PI_ = 0.65
     e_z_PI_ = 0.45
@@ -1977,4 +1987,177 @@ if __name__ == '__main__':
                 format="pdf",
                 bbox_inches='tight')
     plt.show()
+
+    plt.rcParams.update({
+        'font.size': 14,  # overall font size
+        'axes.labelsize': 16,  # axis labels
+        'xtick.labelsize': 12,  # x-axis tick labels
+        'ytick.labelsize': 12,  # y-axis tick labels
+        'legend.fontsize': 12,  # legend text
+        'font.family': 'serif',
+        'font.serif': ['Times New Roman', 'Times'],
+        'mathtext.fontset': 'stix',
+    })
+
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4.5))
+
+    # --- RSAC-iJPI mean & CI (magenta) ---
+    # Inputs assumed defined upstream:
+    #   dps_, ts_, e_x_SAC_, e_y_SAC_, e_z_SAC_
+    data = np.stack(dps_, axis=2) + np.array([e_x_SAC_, e_y_SAC_, e_z_SAC_]).reshape((3, 1, 1))
+    l2_data = np.linalg.norm(data, ord=2, axis=0)
+    mean_l2 = np.mean(l2_data, axis=1)
+    sem_l2 = np.std(l2_data, axis=1, ddof=1) / np.sqrt(5)
+    ci_upper_ = np.abs(mean_l2) + 1.96 * sem_l2
+    ci_lower_ = np.abs(mean_l2) - 1.96 * sem_l2
+
+    t_mean = np.mean(np.stack(ts_, axis=1), axis=1) / 1000.0
+
+    ax.plot(t_mean, np.abs(mean_l2), '-om', markersize=3, label='RSAC-iJPI (mean)')
+    ax.fill_between(t_mean, ci_lower_, ci_upper_, color='m', alpha=0.3, label='RSAC-iJPI (95% CI)')
+
+    # --- iJPI mean & CI (blue) ---
+    # Inputs assumed defined upstream:
+    #   dps_PIonly_, ts_PIonly_, e_x_PI_, e_y_PI_, e_z_PI_
+    data_pi = np.stack(dps_PIonly_, axis=2) + np.array([e_x_PI_, e_y_PI_, e_z_PI_]).reshape((3, 1, 1))
+    l2_data_pi = np.linalg.norm(data_pi, ord=2, axis=0)
+    mean_l2_pi = np.mean(l2_data_pi, axis=1)
+    sem_l2_pi = np.std(l2_data_pi, axis=1, ddof=1) / np.sqrt(5)
+    ci_upper_pi = np.abs(mean_l2_pi) + 1.96 * sem_l2_pi
+    ci_lower_pi = np.abs(mean_l2_pi) - 1.96 * sem_l2_pi
+
+    t_mean_pi = np.mean(np.stack(ts_PIonly_, axis=1), axis=1) / 1000.0
+
+    ax.plot(t_mean_pi, np.abs(mean_l2_pi), '-ob', markersize=3, label='iJPI (mean)')
+    ax.fill_between(t_mean_pi, ci_lower_pi, ci_upper_pi, color='b', alpha=0.3, label='iJPI (95% CI)')
+
+    # --- Band-limited performance lower bounds (dashed; same colors) ---
+    # Inputs assumed defined upstream:
+    #   SAC_band_limited_e_lower_bounds_all, iJPI_band_limited_e_lower_bounds_all, e_bound_
+    data_bound_sac = SAC_band_limited_e_lower_bounds_all + e_bound_
+    mean_bound_sac = np.mean(data_bound_sac, axis=0)
+    sem_bound_sac = np.std(data_bound_sac, axis=0, ddof=1) / np.sqrt(50)
+    ci_upper_bound_sac = np.abs(mean_bound_sac) + 1.96 * sem_bound_sac
+    ci_lower_bound_sac = np.abs(mean_bound_sac) - 1.96 * sem_bound_sac
+
+    ax.plot(t_mean, mean_bound_sac, 'm--', label='RSAC-iJPI lower bound')
+    ax.fill_between(t_mean, ci_lower_bound_sac, ci_upper_bound_sac, color='m', alpha=0.3)
+
+    data_bound_pi = iJPI_band_limited_e_lower_bounds_all + e_bound_
+    mean_bound_pi = np.mean(data_bound_pi, axis=0)
+    sem_bound_pi = np.std(data_bound_pi, axis=0, ddof=1) / np.sqrt(50)
+    ci_upper_bound_pi = np.abs(mean_bound_pi) + 1.96 * sem_bound_pi
+    ci_lower_bound_pi = np.abs(mean_bound_pi) - 1.96 * sem_bound_pi
+
+    ax.plot(t_mean, mean_bound_pi, 'b--', label='iJPI lower bound')
+    ax.fill_between(t_mean, ci_lower_bound_pi, ci_upper_bound_pi, color='b', alpha=0.3)
+
+    # Axes labels and limits
+    ax.set_xlabel("t [s]")
+    ax.set_ylabel(r"$\|\mathbf{p} - \mathbf{p}^*\|_{2}$ [mm]")
+    ax.set_ylim([0, 2.5])
+
+    # Grid
+    ax.grid(True)
+
+    # Legend outside above (do not change colors)
+    leg = ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1.02), ncol=2, frameon=False)
+
+    # Save and show
+    # plt.savefig("/home/mahdi/bagfiles/experiments_HW321/real_test_position_errors_both.pdf",
+    #             format="pdf", bbox_inches='tight')
+    plt.savefig("/home/mahdi/bagfiles/experiments_HW321/real_test_position_errors_both_band_limited_bounds.pdf",
+                format="pdf", bbox_inches='tight')
+    plt.show()
+
+    # --- Single-panel figure for L2 tracking error with CIs and band-limited bounds ---
+
+    # Matplotlib font setup: Times for text; STIX math approximates Times for math.
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    # Font configuration to match LaTeX (IEEE-style):
+    plt.rcParams.update({
+        'font.size': 14,
+        'axes.labelsize': 16,
+        'xtick.labelsize': 12,
+        'ytick.labelsize': 12,
+        'legend.fontsize': 12,
+        'font.family': 'serif',
+        'font.serif': ['Times', 'Times New Roman'],
+        'mathtext.fontset': 'cm',  # Use Computer Modern for math (LaTeX default)
+        'mathtext.rm': 'serif',  # Roman math uses serif family
+    })
+
+    fig, ax = plt.subplots(1, 1, figsize=(6.2, 4))
+
+    # --- RSAC-iJPI mean & CI (magenta) ---
+    # Inputs assumed defined upstream:
+    #   dps_, ts_, e_x_SAC_, e_y_SAC_, e_z_SAC_
+    data = np.stack(dps_, axis=2) + np.array([e_x_SAC_, e_y_SAC_, e_z_SAC_]).reshape((3, 1, 1))
+    l2_data = np.linalg.norm(data, ord=2, axis=0)
+    mean_l2 = np.mean(l2_data, axis=1)
+    sem_l2 = np.std(l2_data, axis=1, ddof=1) / np.sqrt(5)
+    ci_upper_ = np.abs(mean_l2) + 1.96 * sem_l2
+    ci_lower_ = np.abs(mean_l2) - 1.96 * sem_l2
+
+    t_mean = np.mean(np.stack(ts_, axis=1), axis=1) / 1000.0
+
+    ax.plot(t_mean, np.abs(mean_l2), '-om', markersize=3, label='RSAC-iJPI (mean)')
+    ax.fill_between(t_mean, ci_lower_, ci_upper_, color='m', alpha=0.3, label='RSAC-iJPI (95% CI)')
+
+    # --- iJPI mean & CI (blue) ---
+    # Inputs assumed defined upstream:
+    #   dps_PIonly_, ts_PIonly_, e_x_PI_, e_y_PI_, e_z_PI_
+    data_pi = np.stack(dps_PIonly_, axis=2) + np.array([e_x_PI_, e_y_PI_, e_z_PI_]).reshape((3, 1, 1))
+    l2_data_pi = np.linalg.norm(data_pi, ord=2, axis=0)
+    mean_l2_pi = np.mean(l2_data_pi, axis=1)
+    sem_l2_pi = np.std(l2_data_pi, axis=1, ddof=1) / np.sqrt(5)
+    ci_upper_pi = np.abs(mean_l2_pi) + 1.96 * sem_l2_pi
+    ci_lower_pi = np.abs(mean_l2_pi) - 1.96 * sem_l2_pi
+
+    t_mean_pi = np.mean(np.stack(ts_PIonly_, axis=1), axis=1) / 1000.0
+
+    ax.plot(t_mean_pi, np.abs(mean_l2_pi), '-ob', markersize=3, label='iJPI (mean)')
+    ax.fill_between(t_mean_pi, ci_lower_pi, ci_upper_pi, color='b', alpha=0.3, label='iJPI (95% CI)')
+
+    # --- Band-limited performance lower bounds (dashed; same colors) ---
+    # Inputs assumed defined upstream:
+    #   SAC_band_limited_e_lower_bounds_all, iJPI_band_limited_e_lower_bounds_all, e_bound_
+    data_bound_sac = SAC_band_limited_e_lower_bounds_all + e_bound_
+    mean_bound_sac = np.mean(data_bound_sac, axis=0)
+    sem_bound_sac = np.std(data_bound_sac, axis=0, ddof=1) / np.sqrt(50)
+    ci_upper_bound_sac = np.abs(mean_bound_sac) + 1.96 * sem_bound_sac
+    ci_lower_bound_sac = np.abs(mean_bound_sac) - 1.96 * sem_bound_sac
+
+    ax.plot(t_mean, mean_bound_sac, 'm--', label='RSAC-iJPI lower bound')
+    ax.fill_between(t_mean, ci_lower_bound_sac, ci_upper_bound_sac, color='m', alpha=0.3)
+
+    data_bound_pi = iJPI_band_limited_e_lower_bounds_all + e_bound_
+    mean_bound_pi = np.mean(data_bound_pi, axis=0)
+    sem_bound_pi = np.std(data_bound_pi, axis=0, ddof=1) / np.sqrt(50)
+    ci_upper_bound_pi = np.abs(mean_bound_pi) + 1.96 * sem_bound_pi
+    ci_lower_bound_pi = np.abs(mean_bound_pi) - 1.96 * sem_bound_pi
+
+    ax.plot(t_mean, mean_bound_pi, 'b--', label='iJPI lower bound')
+    ax.fill_between(t_mean, ci_lower_bound_pi, ci_upper_bound_pi, color='b', alpha=0.3)
+
+    # Axes labels and limits
+    ax.set_xlabel("t [s]")
+    ax.set_ylabel(r"$\|\mathbf{p} - \tilde{\mathbf{p}}^*\|_{2}$ [mm]")
+    ax.set_ylim([0, 2.5])
+
+    # Grid
+    ax.grid(True)
+
+    # Legend outside above (do not change colors)
+    leg = ax.legend(loc='center', bbox_to_anchor=(0.5, .85), ncol=2, frameon=True)
+
+    # Save and show
+    # plt.savefig("/home/mahdi/bagfiles/experiments_HW321/real_test_position_errors_both.pdf",
+    #             format="pdf", bbox_inches='tight')
+    plt.savefig("/home/mahdi/bagfiles/experiments_HW321/real_test_position_errors_both_band_limited_bounds.pdf",
+                format="pdf", bbox_inches='tight')
+    plt.show()
+
     print("")

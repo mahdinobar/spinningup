@@ -466,6 +466,7 @@ Robotic Manipulation" by Murry et al.
     # =========================
     # =========================
 
+
     def damped_pinv(self,J: np.ndarray, lam: float = 1e-2) -> np.ndarray:
         """Tikhonov-damped pseudoinverse."""
         J = np.asarray(J);
@@ -522,59 +523,126 @@ Robotic Manipulation" by Murry et al.
             raise ValueError("detrend mode must be None|'mean'|'linear'")
         return r
 
-    def choose_signal_band_from_window(self,r_win, dt,
-                                       energy_keep= 0.95,
-                                       force_min_omega= 0.0,
-                                       min_bins= 1,
-                                       omega_band= None):
+    def choose_signal_band_from_window(self,
+                                       r_win,
+                                       dt,
+                                       energy_keep=0.95,
+                                       force_min_omega=0.0,
+                                       min_bins=1,
+                                       omega_band=None,
+                                       include_dc=False,
+                                       return_extra=False):
         """
-        Select Ω_sig from r_win (Tw x m), excluding DC. Two modes:
-         - If omega_band=(ωmin, ωmax) is given, pick bins in that band (excluding DC).
-         - Else, keep the smallest set of bins capturing 'energy_keep' of non-DC energy.
-           If non-DC energy is ~0, force at least 'min_bins' bins above 'force_min_omega'.
-        Returns: mask_pos (bool over rfft bins), omegas (rad/s)
+        Select Ω_sig from r_win (Tw x m).
+        Two modes:
+          - If omega_band=(ωmin, ωmax) is given, pick bins in that band.
+          - Else, keep the smallest set of bins capturing 'energy_keep' of *valid* energy,
+            where 'valid' includes DC iff include_dc=True.
+
+        Args
+        ----
+        r_win : array (Tw, m)
+        dt : float
+        energy_keep : float in (0,1]
+        force_min_omega : float (rad/s), discard bins with ω < this (unless it would empty the set)
+        min_bins : int, enforce at least this many bins if energy is ~0 after filters
+        omega_band : tuple (ωmin, ωmax) or None
+        include_dc : bool, if True allow ω=0 to be considered/selected
+        return_extra : bool, if True also return dict with spectrum etc.
+
+        Returns
+        -------
+        mask : bool[F] over rfft bins
+        omegas : float[F] (rad/s)
+        (optional) extra : dict with keys 'power', 'power_valid_sum', 'order', 'keep_indices', ...
         """
         r_win = np.asarray(r_win)
         T, m = r_win.shape
+
         R = np.fft.rfft(r_win, axis=0)  # (F, m)
         freqs = np.fft.rfftfreq(T, d=dt)  # Hz
-        omegas = 2 * np.pi * freqs  # rad/s
+        omegas = 2.0 * np.pi * freqs  # rad/s
         F = omegas.size
 
-        # Manual band override
+        power = np.sum(np.abs(R) ** 2, axis=1)  # total power per bin, (F,)
+
+        # Manual override band
         if omega_band is not None:
             mask = (omegas >= omega_band[0]) & (omegas <= omega_band[1])
-            mask[0] = False  # exclude DC
-            return mask, omegas
+            # respect include_dc: don't force-clear DC unless include_dc=False
+            if not include_dc and F > 0:
+                mask[0] = False
+            if force_min_omega > 0.0:
+                mask &= (omegas >= force_min_omega)
+            # ensure not empty
+            if not np.any(mask):
+                # fallback: take the first >= force_min_omega bin(s)
+                idx = np.where(omegas >= force_min_omega)[0]
+                if not include_dc:
+                    idx = idx[idx > 0]
+                take = idx[:max(1, min_bins)]
+                mask = np.zeros(F, dtype=bool)
+                mask[take] = True
+            return (mask, omegas, {"power": power} if return_extra else None)
 
         # Energy-based selection
-        power = np.sum(np.abs(R) ** 2, axis=1)  # (F,)
-        valid = np.arange(F) > 0  # exclude DC
-        power_ndc = power[valid]
-        if power_ndc.sum() <= 0:
-            # Force a minimal non-empty band above cutoff
-            mask = np.zeros(F, dtype=bool)
-            above = np.where((valid) & (omegas >= max(force_min_omega, 1e-9)))[0]
-            if above.size > 0:
-                pick = above[:min(min_bins, above.size)]
-                mask[pick] = True
-            return mask, omegas
+        # valid indices: include DC iff requested
+        valid = np.ones(F, dtype=bool)
+        if not include_dc:
+            valid[0] = False  # drop DC when not included
 
-        order = np.argsort(power_ndc)[::-1]
-        csum = np.cumsum(power_ndc[order])
-        k = np.searchsorted(csum, energy_keep * power_ndc.sum()) + 1
-        keep = np.sort(order[:k])
+        # apply ω cutoff to 'valid' for the energy accounting (but keep DC if include_dc and cutoff=0)
+        if force_min_omega > 0.0:
+            valid &= (omegas >= force_min_omega)
+
+        power_valid = power[valid]
+        power_valid_sum = power_valid.sum()
 
         mask = np.zeros(F, dtype=bool)
-        candidates = np.where(valid)[0][keep]
-        # Enforce minimum omega cutoff and min bins
-        if force_min_omega > 0.0:
-            candidates = candidates[omegas[candidates] >= force_min_omega]
-        if candidates.size == 0:
-            above = np.where((valid) & (omegas >= force_min_omega))[0]
-            candidates = above[:min_bins]
-        mask[candidates] = True
-        return mask, omegas
+
+        if power_valid_sum <= 0:
+            # no energy in valid region: force at least min_bins above cutoff
+            idx = np.where((omegas >= max(force_min_omega, 0.0)))[0]
+            if not include_dc:
+                idx = idx[idx > 0]
+            take = idx[:max(1, min_bins)]
+            if take.size > 0:
+                mask[take] = True
+            extra = {
+                "power": power,
+                "power_valid_sum": float(power_valid_sum),
+                "order": np.array([], dtype=int),
+                "keep_indices": take
+            }
+            return (mask, omegas, extra) if return_extra else (mask, omegas)
+
+        # sort valid bins by descending power and take enough to reach 'energy_keep'
+        valid_idx = np.where(valid)[0]
+        order_local = np.argsort(power_valid)[::-1]  # indices in power_valid
+        csum = np.cumsum(power_valid[order_local])
+        k = np.searchsorted(csum, energy_keep * power_valid_sum) + 1
+        k = min(k, order_local.size)
+        keep_local = np.sort(order_local[:k])  # in power_valid coordinates
+        keep_bins = valid_idx[keep_local]  # map back to absolute bin indices
+
+        # final mask
+        mask[keep_bins] = True
+
+        # Guard: ensure at least min_bins
+        if mask.sum() < min_bins:
+            # add smallest-ω remaining valid bins until reaching min_bins
+            remaining = valid_idx[~np.isin(valid_idx, keep_bins)]
+            add = remaining[:(min_bins - mask.sum())]
+            mask[add] = True
+            keep_bins = np.sort(np.concatenate([keep_bins, add]))
+
+        extra = {
+            "power": power,
+            "power_valid_sum": float(power_valid_sum),
+            "order": valid_idx[order_local],  # absolute indices sorted by power within 'valid'
+            "keep_indices": keep_bins
+        }
+        return (mask, omegas, extra) if return_extra else (mask, omegas)
 
     def band_limited_norm_time(self,r_win: np.ndarray, mask_pos: np.ndarray) -> float:
         """||r||_{2,Ωsig} via FFT masking and iFFT (Parseval)."""
@@ -606,7 +674,8 @@ Robotic Manipulation" by Murry et al.
                                  N_omega=2048,
                                  detrend='mean',
                                  force_min_omega=0.0,
-                                 omega_band=None):
+                                 omega_band=None,
+                                 include_dc=False):
         """
         Compute the band-limited lower bound at step k using a rolling window.
         Returns: LB, alpha_Omega, info(dict)
@@ -627,14 +696,41 @@ Robotic Manipulation" by Murry et al.
         P = np.asarray(J_true_k) @ Jb_dag
         Delta = np.eye(P.shape[0]) - P
 
-        # pick Ω_sig
-        mask_pos, omegas_pos = self.choose_signal_band_from_window(
+        # # pick Ω_sig
+        mask_pos, omegas_pos, extra = self.choose_signal_band_from_window(
             r_win, dt,
             energy_keep=energy_keep,
             force_min_omega=force_min_omega,
-            min_bins=5,
-            omega_band=omega_band
+            min_bins=10,
+            omega_band=omega_band,
+            include_dc=include_dc,
+            return_extra=True
         )
+
+        def plot_band_selection(omegas, power, mask, title="Band selection (includes DC)"):
+            total = power.sum()
+            pct = 100.0 * (power[mask].sum() / total) if total > 0 else 0.0
+
+            fig, ax = plt.subplots(figsize=(7, 3.5))
+            ax.stem(omegas, power, basefmt=" ", use_line_collection=True, label="Power per bin")
+            ax.stem(omegas[mask], power[mask], basefmt=" ", linefmt="C3-", markerfmt="C3o", use_line_collection=True,
+                    label="Selected bins")
+
+            # Highlight DC if present
+            if omegas.size > 0 and omegas[0] == 0.0:
+                ax.axvline(0.0, linestyle="--", linewidth=1, label="DC (ω=0)")
+
+            ax.set_xlabel("ω (rad/s)")
+            ax.set_ylabel("Power")
+            ax.set_title(f"{title} — captured ≈ {pct:.1f}% of valid energy")
+            ax.legend(loc="best")
+            ax.grid(True, which="both", linestyle=":")
+            # plt.tight_layout()
+            plt.show()
+        if self.i_%30==0:
+            plot_band_selection(omegas_pos, extra["power"], mask_pos,
+                                title="95% energy keep, include_dc=True, force_min_omega=0")
+
         if not np.any(mask_pos):
             return 0.0, 0.0, dict(
                 note="Ω_sig empty after selection",
@@ -644,12 +740,17 @@ Robotic Manipulation" by Murry et al.
             )
 
         # ||r||_{2,Ω}
-        r_band_norm = self.band_limited_norm_time(r_win, mask_pos)
-        # r_band_norm = self.band_limited_norm_time_rms(r_win, mask_pos)
+        # r_band_norm = self.band_limited_norm_time(r_win, mask_pos)
+        r_band_norm = self.band_limited_norm_time_rms(r_win, mask_pos)
 
-        # sigma_min(S0; Ω)
+        # # sigma_min(S0; Ω)
         sigma_min_S0 = np.inf
         for w in omegas_pos[mask_pos]:
+            # --- handle DC limit explicitly ---
+            if np.isclose(w, 0.0):
+                sigma_min_S0 = 0.0
+                continue
+
             S0, _ = self.build_S0_ES0(w, dt, Kp.astype(complex), Ki.astype(complex), Delta.astype(complex))
             svals = np.linalg.svd(S0, compute_uv=False)
             sigma_min_S0 = min(sigma_min_S0, float(svals[-1]))
@@ -695,7 +796,8 @@ Robotic Manipulation" by Murry et al.
                                              N_omega=2048,
                                              detrend='mean',
                                              force_min_omega=0.0,
-                                             omega_band=None):
+                                             omega_band=None,
+                                                include_dc=False):
 
         """
         Run the band-limited bound across all time steps.
@@ -708,7 +810,9 @@ Robotic Manipulation" by Murry et al.
         LB_seq = np.zeros(T)
         alpha_seq = np.zeros(T)
         infos = []
+        self.i_=0
         for k in range(T):
+            self.i_+=1
             LB, alpha, info = self.lower_bound_band_at_step(
                 dt, Kp, Ki,
                 np.asarray(J_true_seq[k]), np.asarray(J_bias_seq[k]),
@@ -720,7 +824,8 @@ Robotic Manipulation" by Murry et al.
                 N_omega=N_omega,
                 detrend=detrend,
                 force_min_omega=force_min_omega,
-                omega_band=omega_band
+                omega_band=omega_band,
+                include_dc=include_dc
             )
             LB_seq[k] = LB
             alpha_seq[k] = alpha
@@ -1435,21 +1540,24 @@ Robotic Manipulation" by Murry et al.
             w_seq = np.zeros_like(pstar_seq)
             # Optional: force a band (e.g., ≥ 0.2 Hz), or leave None to auto-select
             omega_band = None
-            # omega_band = (0.3, 1.5)
-            force_min_omega = 2 * np.pi * 0.2  # 0.7 Hz cutoff to avoid DC-only windows
+            # omega_c = 11.75
+            # omega_band = (omega_c / 3, 3 * omega_c)
+            window_sec = 1
+            force_min_omega = 2 * np.pi * 5
             # Run bound over the whole trajectory
             LB_seq, alpha_seq, infos = self.lower_bound_band_over_trajectory(
                 dt, Kp, Ki,
                 self.J_true_seq, self.J_bias_seq,
                 pstar_seq, w_seq,
                 pinv_damping=1e-2,
-                window_sec=1,
+                window_sec=window_sec,
                 energy_keep=0.95,
                 use_global_sup_for_ES0=False,  # conservative (global sup)
                 N_omega=2048,
-                detrend='linear',  # good when p* is ramp-like
+                detrend=None,  # good when p* is ramp-like
                 force_min_omega=force_min_omega,
-                omega_band=omega_band
+                omega_band=omega_band,
+                include_dc=True
             )
             # Plot
             LB_seq_ = np.append(LB_seq[np.random.randint(12, 20, 12)], LB_seq[12:]) * 1000
