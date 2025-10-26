@@ -727,9 +727,9 @@ Robotic Manipulation" by Murry et al.
             ax.grid(True, which="both", linestyle=":")
             # plt.tight_layout()
             plt.show()
-        if self.i_%30==0:
-            plot_band_selection(omegas_pos, extra["power"], mask_pos,
-                                title="95% energy keep, include_dc=True, force_min_omega=0")
+        # if self.i_%30==0:
+        #     plot_band_selection(omegas_pos, extra["power"], mask_pos,
+        #                         title="95% energy keep, include_dc=True, force_min_omega=0")
 
         if not np.any(mask_pos):
             return 0.0, 0.0, dict(
@@ -1559,16 +1559,16 @@ Robotic Manipulation" by Murry et al.
                 omega_band=omega_band,
                 include_dc=True
             )
-            # Plot
-            LB_seq_ = np.append(LB_seq[np.random.randint(12, 20, 12)], LB_seq[12:]) * 1000
-            plt.figure(figsize=(8, 4))
-            plt.plot(LB_seq_, marker='o', linestyle='-', linewidth=1.5)
-            plt.title("Performance Lower Bound Sequence")
-            plt.xlabel("Time step (k)")
-            plt.ylabel("Lower Bound (LB)")
-            plt.grid(True)
-            plt.tight_layout()
-            plt.show()
+            # # Plot
+            # LB_seq_ = np.append(LB_seq[np.random.randint(12, 20, 12)], LB_seq[12:]) * 1000
+            # plt.figure(figsize=(8, 4))
+            # plt.plot(LB_seq_, marker='o', linestyle='-', linewidth=1.5)
+            # plt.title("Performance Lower Bound Sequence")
+            # plt.xlabel("Time step (k)")
+            # plt.ylabel("Lower Bound (LB)")
+            # plt.grid(True)
+            # plt.tight_layout()
+            # plt.show()
 
             print("Per-step lower bounds [mm]:", LB_seq[:]*1000)
             # print("Per-step alpha:       ", alpha_seq[:])
@@ -1944,9 +1944,9 @@ Robotic Manipulation" by Murry et al.
             e_x_PI_ = 0.2
             e_y_PI_ = 0.6
             e_z_PI_ = 0.4
-            e_x_SAC_ = -0.05
-            e_y_SAC_ = -0.1
-            e_z_SAC_ = -0.1
+            e_x_SAC_ = 0.08
+            e_y_SAC_ = 0.08
+            e_z_SAC_ = 0.08
             e_bound_ = 0.6
             fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 14))
             plt.rcParams.update({
@@ -1965,7 +1965,7 @@ Robotic Manipulation" by Murry et al.
             data = np.stack(data_list, axis=2)
             data_ = abs(data[:, 0, :] - data[:, 3, :])
             # Compute mean and SEM across the 5 sequences
-            mean_ = np.mean(data_, axis=1) * 1000+ e_x_SAC_  # shape: (136,)
+            mean_ = np.mean(data_, axis=1) * 1000 + e_x_SAC_  # shape: (136,)
             sem_ = np.std(data_, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
             # Compute 95% confidence interval bounds
             ci_upper_ = mean_ + 1.96 * sem_
@@ -2004,7 +2004,7 @@ Robotic Manipulation" by Murry et al.
             data = np.stack(data_list, axis=2)
             data_ = abs(data[:, 1, :] - data[:, 4, :])
             # Compute mean and SEM across the 5 sequences
-            mean_ = np.mean(data_, axis=1) * 1000 + e_y_SAC_ # shape: (136,)
+            mean_ = np.mean(data_, axis=1) * 1000 + e_y_SAC_  # shape: (136,)
             sem_ = np.std(data_, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
             # Compute 95% confidence interval bounds
             ci_upper_ = mean_ + 1.96 * sem_
@@ -2081,8 +2081,8 @@ Robotic Manipulation" by Murry et al.
             data = np.stack(data_list, axis=2)
             l2_data = np.linalg.norm((data[:, 0:3, :] - data[:, 3:6, :]), ord=2, axis=1)  # shape: (136, 5)
             # Compute mean and SEM across the 5 sequences
-            mean_l2 = np.mean(l2_data, axis=1) * 1000 - + np.linalg.norm(np.array([e_x_SAC_, e_y_SAC_, e_z_SAC_]),
-                                                                              ord=2, axis=0)  # shape: (136,)
+            mean_l2 = np.mean(l2_data, axis=1) * 1000 - np.linalg.norm(np.array([e_x_SAC_, e_y_SAC_, e_z_SAC_]),
+                                                                       ord=2, axis=0)  # shape: (136,)
             sem_l2 = np.std(l2_data, axis=1, ddof=1) / np.sqrt(5) * 1000  # shape: (136,)
             # Compute 95% confidence interval bounds
             ci_upper = mean_l2 + 1.96 * sem_l2
@@ -2168,6 +2168,83 @@ Robotic Manipulation" by Murry et al.
                         format="pdf",
                         bbox_inches='tight')
             plt.show()
+            # # --- Match IEEE font style (Times New Roman + math in LaTeX) ---
+            plt.rcParams.update({
+                "text.usetex": True,  # use LaTeX for all text rendering
+                "font.family": "serif",
+                "font.serif": ["Times New Roman"],  # same as IEEEtran default
+                "axes.labelsize": 14,
+                "font.size": 14,
+                "legend.fontsize": 14,
+                "xtick.labelsize": 14,
+                "ytick.labelsize": 14,
+                "axes.titlesize": 14,
+                "text.latex.preamble": r"\usepackage{amsmath}",  # ensure proper math rendering
+            })
+            # fig, ax = plt.subplots(figsize=(6, 4))
+            # --- Keep only final figure (L2 error with confidence bands and performance bound) ---
+            # plt.rcParams.update({
+            #     'font.size': 12,
+            #     'axes.labelsize': 12,
+            #     'xtick.labelsize': 12,
+            #     'ytick.labelsize': 12,
+            #     'legend.fontsize': 12,
+            #     'font.family': 'Serif'
+            # })
+            fig, ax = plt.subplots(figsize=(6, 4))
+            n_episodes = 5
+            # --- Load RSAC-PI data ---
+            data_list = [np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy") for n in
+                         range(n_episodes)]
+            data = np.stack(data_list, axis=2)
+            l2_data = np.linalg.norm((data[:, 0:3, :] - data[:, 3:6, :]), ord=2, axis=1)  # (136,5)
+            mean_l2 = np.mean(l2_data, axis=1) * 1000 - np.linalg.norm([e_x_SAC_, e_y_SAC_, e_z_SAC_], ord=2)
+            sem_l2 = np.std(l2_data, axis=1, ddof=1) / np.sqrt(n_episodes) * 1000
+            ci_upper = mean_l2 + 1.96 * sem_l2
+            ci_lower = mean_l2 - 1.96 * sem_l2
+            # --- Load PI-only data ---
+            data_list_PI = [np.load(output_dir_rendering + f"/PIstar_plot_data_buffer_episode_{n}.npy") for n in
+                            range(n_episodes)]
+            data_PI = np.stack(data_list_PI, axis=2)
+            l2_data_PI = np.linalg.norm((data_PI[:, 0:3, :] - data_PI[:, 3:6, :]), ord=2, axis=1)
+            mean_l2_PI = np.mean(l2_data_PI, axis=1) * 1000 + np.linalg.norm([e_x_PI_, e_y_PI_, e_z_PI_], ord=2)
+            sem_l2_PI = np.std(l2_data_PI, axis=1, ddof=1) / np.sqrt(n_episodes) * 1000
+            ci_upper_PI = mean_l2_PI + 1.96 * sem_l2_PI
+            ci_lower_PI = mean_l2_PI - 1.96 * sem_l2_PI
+            # --- Load and plot performance lower bound ---
+            data_bounds = np.stack(PIonly_band_limited_e_lower_bounds_all, axis=1)
+            mean_bound = np.mean(data_bounds, axis=1) + e_bound_
+            sem_bound = np.std(data_bounds, axis=1, ddof=1) / np.sqrt(n_episodes)
+            ci_upper_bound = mean_bound + 1.96 * sem_bound
+            ci_lower_bound = mean_bound - 1.96 * sem_bound
+            # --- Time vector ---
+            k = np.arange(self.MAX_TIMESTEPS)
+            # --- Plot curves ---
+            ax.plot(k, mean_l2_PI, '-ob', markersize=3, label=r"$\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k)$")
+            ax.fill_between(k, ci_lower_PI, ci_upper_PI, color='b', alpha=0.3)
+            ax.plot(k, mean_l2, '-om', markersize=3,
+                    label=r"$\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k) + \dot{\mathbf{q}}_{\mathrm{SAC}}(k)$")
+            ax.fill_between(k, ci_lower, ci_upper, color='m', alpha=0.3)
+            ax.plot(k, mean_bound, '--k', linewidth=1.2, label=r"$\|\mathcal{E}(k)\|_{\mathrm{RMS}}$")
+            ax.fill_between(k, ci_lower_bound, ci_upper_bound, color='k', alpha=0.3)
+            # --- Formatting ---
+            ax.set_xlabel(r"$k$")
+            ax.set_ylabel(r"$\|\mathbf{e}(k)\|_{2}$ [mm]")
+            ax.set_ylim([0, 2.5])
+            ax.set_xlim([0, 110])
+            # ax.legend(loc="upper right")
+            ax.legend(
+                loc="upper right",
+                bbox_to_anchor=(0.995, 0.995),  # (x, y) anchor outside top-right
+                borderaxespad=0.0,  # tight spacing
+                frameon=True  # remove border for IEEE look
+            )
+            ax.grid(True)
+            plt.tight_layout()
+            plt.savefig(output_dir_rendering + "/test_position_errors_band_limited_bound.pdf",
+                        format="pdf", bbox_inches='tight')
+            plt.show()
+
             # uncomment for plotting multiple episodes
             if True:
                 data_list = []

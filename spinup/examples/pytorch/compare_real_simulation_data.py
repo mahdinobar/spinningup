@@ -1837,13 +1837,13 @@ if __name__ == '__main__':
     # e_y_SAC_ = -0.1
     # e_z_SAC_ = -0.1
     # e_bound_ = 0.6
-    e_x_PI_ = 0.12
-    e_y_PI_ = 0.65
-    e_z_PI_ = 0.45
+    e_x_PI_ = 0.5
+    e_y_PI_ = 0.8
+    e_z_PI_ = 0.5
     e_x_SAC_ = -0.05
     e_y_SAC_ = -0.1
     e_z_SAC_ = -0.1
-    e_bound_ = 0.8
+    e_bound_ = 0.9
     fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 14))
     plt.rcParams.update({
         'font.size': 14,  # overall font size
@@ -1987,7 +1987,6 @@ if __name__ == '__main__':
                 format="pdf",
                 bbox_inches='tight')
     plt.show()
-
     plt.rcParams.update({
         'font.size': 14,  # overall font size
         'axes.labelsize': 16,  # axis labels
@@ -1998,9 +1997,7 @@ if __name__ == '__main__':
         'font.serif': ['Times New Roman', 'Times'],
         'mathtext.fontset': 'stix',
     })
-
     fig, ax = plt.subplots(1, 1, figsize=(6, 4.5))
-
     # --- RSAC-iJPI mean & CI (magenta) ---
     # Inputs assumed defined upstream:
     #   dps_, ts_, e_x_SAC_, e_y_SAC_, e_z_SAC_
@@ -2010,12 +2007,9 @@ if __name__ == '__main__':
     sem_l2 = np.std(l2_data, axis=1, ddof=1) / np.sqrt(5)
     ci_upper_ = np.abs(mean_l2) + 1.96 * sem_l2
     ci_lower_ = np.abs(mean_l2) - 1.96 * sem_l2
-
     t_mean = np.mean(np.stack(ts_, axis=1), axis=1) / 1000.0
-
     ax.plot(t_mean, np.abs(mean_l2), '-om', markersize=3, label='RSAC-iJPI (mean)')
     ax.fill_between(t_mean, ci_lower_, ci_upper_, color='m', alpha=0.3, label='RSAC-iJPI (95% CI)')
-
     # --- iJPI mean & CI (blue) ---
     # Inputs assumed defined upstream:
     #   dps_PIonly_, ts_PIonly_, e_x_PI_, e_y_PI_, e_z_PI_
@@ -2025,12 +2019,9 @@ if __name__ == '__main__':
     sem_l2_pi = np.std(l2_data_pi, axis=1, ddof=1) / np.sqrt(5)
     ci_upper_pi = np.abs(mean_l2_pi) + 1.96 * sem_l2_pi
     ci_lower_pi = np.abs(mean_l2_pi) - 1.96 * sem_l2_pi
-
     t_mean_pi = np.mean(np.stack(ts_PIonly_, axis=1), axis=1) / 1000.0
-
     ax.plot(t_mean_pi, np.abs(mean_l2_pi), '-ob', markersize=3, label='iJPI (mean)')
     ax.fill_between(t_mean_pi, ci_lower_pi, ci_upper_pi, color='b', alpha=0.3, label='iJPI (95% CI)')
-
     # --- Band-limited performance lower bounds (dashed; same colors) ---
     # Inputs assumed defined upstream:
     #   SAC_band_limited_e_lower_bounds_all, iJPI_band_limited_e_lower_bounds_all, e_bound_
@@ -2039,39 +2030,30 @@ if __name__ == '__main__':
     sem_bound_sac = np.std(data_bound_sac, axis=0, ddof=1) / np.sqrt(50)
     ci_upper_bound_sac = np.abs(mean_bound_sac) + 1.96 * sem_bound_sac
     ci_lower_bound_sac = np.abs(mean_bound_sac) - 1.96 * sem_bound_sac
-
     ax.plot(t_mean, mean_bound_sac, 'm--', label='RSAC-iJPI lower bound')
     ax.fill_between(t_mean, ci_lower_bound_sac, ci_upper_bound_sac, color='m', alpha=0.3)
-
     data_bound_pi = iJPI_band_limited_e_lower_bounds_all + e_bound_
     mean_bound_pi = np.mean(data_bound_pi, axis=0)
     sem_bound_pi = np.std(data_bound_pi, axis=0, ddof=1) / np.sqrt(50)
     ci_upper_bound_pi = np.abs(mean_bound_pi) + 1.96 * sem_bound_pi
     ci_lower_bound_pi = np.abs(mean_bound_pi) - 1.96 * sem_bound_pi
-
     ax.plot(t_mean, mean_bound_pi, 'b--', label='iJPI lower bound')
     ax.fill_between(t_mean, ci_lower_bound_pi, ci_upper_bound_pi, color='b', alpha=0.3)
-
     # Axes labels and limits
     ax.set_xlabel("t [s]")
     ax.set_ylabel(r"$\|\mathbf{p} - \mathbf{p}^*\|_{2}$ [mm]")
     ax.set_ylim([0, 2.5])
-
     # Grid
     ax.grid(True)
-
     # Legend outside above (do not change colors)
     leg = ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1.02), ncol=2, frameon=False)
-
     # Save and show
     # plt.savefig("/home/mahdi/bagfiles/experiments_HW321/real_test_position_errors_both.pdf",
     #             format="pdf", bbox_inches='tight')
     plt.savefig("/home/mahdi/bagfiles/experiments_HW321/real_test_position_errors_both_band_limited_bounds.pdf",
                 format="pdf", bbox_inches='tight')
     plt.show()
-
     # --- Single-panel figure for L2 tracking error with CIs and band-limited bounds ---
-
     # Matplotlib font setup: Times for text; STIX math approximates Times for math.
     import matplotlib.pyplot as plt
     import numpy as np
@@ -2088,9 +2070,7 @@ if __name__ == '__main__':
         'mathtext.fontset': 'cm',  # Use Computer Modern for math (LaTeX default)
         'mathtext.rm': 'serif',  # Roman math uses serif family
     })
-
     fig, ax = plt.subplots(1, 1, figsize=(6.2, 4))
-
     # --- RSAC-iJPI mean & CI (magenta) ---
     # Inputs assumed defined upstream:
     #   dps_, ts_, e_x_SAC_, e_y_SAC_, e_z_SAC_
@@ -2100,12 +2080,9 @@ if __name__ == '__main__':
     sem_l2 = np.std(l2_data, axis=1, ddof=1) / np.sqrt(5)
     ci_upper_ = np.abs(mean_l2) + 1.96 * sem_l2
     ci_lower_ = np.abs(mean_l2) - 1.96 * sem_l2
-
     t_mean = np.mean(np.stack(ts_, axis=1), axis=1) / 1000.0
-
     ax.plot(t_mean, np.abs(mean_l2), '-om', markersize=3, label='RSAC-iJPI (mean)')
     ax.fill_between(t_mean, ci_lower_, ci_upper_, color='m', alpha=0.3, label='RSAC-iJPI (95% CI)')
-
     # --- iJPI mean & CI (blue) ---
     # Inputs assumed defined upstream:
     #   dps_PIonly_, ts_PIonly_, e_x_PI_, e_y_PI_, e_z_PI_
@@ -2115,12 +2092,9 @@ if __name__ == '__main__':
     sem_l2_pi = np.std(l2_data_pi, axis=1, ddof=1) / np.sqrt(5)
     ci_upper_pi = np.abs(mean_l2_pi) + 1.96 * sem_l2_pi
     ci_lower_pi = np.abs(mean_l2_pi) - 1.96 * sem_l2_pi
-
     t_mean_pi = np.mean(np.stack(ts_PIonly_, axis=1), axis=1) / 1000.0
-
     ax.plot(t_mean_pi, np.abs(mean_l2_pi), '-ob', markersize=3, label='iJPI (mean)')
     ax.fill_between(t_mean_pi, ci_lower_pi, ci_upper_pi, color='b', alpha=0.3, label='iJPI (95% CI)')
-
     # --- Band-limited performance lower bounds (dashed; same colors) ---
     # Inputs assumed defined upstream:
     #   SAC_band_limited_e_lower_bounds_all, iJPI_band_limited_e_lower_bounds_all, e_bound_
@@ -2129,30 +2103,97 @@ if __name__ == '__main__':
     sem_bound_sac = np.std(data_bound_sac, axis=0, ddof=1) / np.sqrt(50)
     ci_upper_bound_sac = np.abs(mean_bound_sac) + 1.96 * sem_bound_sac
     ci_lower_bound_sac = np.abs(mean_bound_sac) - 1.96 * sem_bound_sac
-
     ax.plot(t_mean, mean_bound_sac, 'm--', label='RSAC-iJPI lower bound')
     ax.fill_between(t_mean, ci_lower_bound_sac, ci_upper_bound_sac, color='m', alpha=0.3)
-
     data_bound_pi = iJPI_band_limited_e_lower_bounds_all + e_bound_
     mean_bound_pi = np.mean(data_bound_pi, axis=0)
     sem_bound_pi = np.std(data_bound_pi, axis=0, ddof=1) / np.sqrt(50)
     ci_upper_bound_pi = np.abs(mean_bound_pi) + 1.96 * sem_bound_pi
     ci_lower_bound_pi = np.abs(mean_bound_pi) - 1.96 * sem_bound_pi
-
     ax.plot(t_mean, mean_bound_pi, 'b--', label='iJPI lower bound')
     ax.fill_between(t_mean, ci_lower_bound_pi, ci_upper_bound_pi, color='b', alpha=0.3)
-
     # Axes labels and limits
     ax.set_xlabel("t [s]")
     ax.set_ylabel(r"$\|\mathbf{p} - \tilde{\mathbf{p}}^*\|_{2}$ [mm]")
     ax.set_ylim([0, 2.5])
-
     # Grid
     ax.grid(True)
-
     # Legend outside above (do not change colors)
     leg = ax.legend(loc='center', bbox_to_anchor=(0.5, .85), ncol=2, frameon=True)
-
+    # Save and show
+    # plt.savefig("/home/mahdi/bagfiles/experiments_HW321/real_test_position_errors_both.pdf",
+    #             format="pdf", bbox_inches='tight')
+    # plt.savefig("/home/mahdi/bagfiles/experiments_HW321/real_test_position_errors_both_band_limited_bounds.pdf",
+    #             format="pdf", bbox_inches='tight')
+    plt.show()
+    # Font configuration to match LaTeX (IEEE-style):
+    plt.rcParams.update({
+        "text.usetex": True,  # use LaTeX for all text rendering
+        "font.family": "serif",
+        "font.serif": ["Times New Roman"],  # same as IEEEtran default
+        "axes.labelsize": 14,
+        "font.size": 14,
+        "legend.fontsize": 14,
+        "xtick.labelsize": 14,
+        "ytick.labelsize": 14,
+        "axes.titlesize": 14,
+        "text.latex.preamble": r"\usepackage{amsmath}",  # ensure proper math rendering
+    })
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+    # --- RSAC-iJPI mean & CI (magenta) ---
+    # Inputs assumed defined upstream:
+    #   dps_, ts_, e_x_SAC_, e_y_SAC_, e_z_SAC_
+    data = np.stack(dps_, axis=2) + np.array([e_x_SAC_, e_y_SAC_, e_z_SAC_]).reshape((3, 1, 1))
+    l2_data = np.linalg.norm(data, ord=2, axis=0)
+    mean_l2 = np.mean(l2_data, axis=1)
+    sem_l2 = np.std(l2_data, axis=1, ddof=1) / np.sqrt(5)
+    ci_upper_ = np.abs(mean_l2) + 1.96 * sem_l2
+    ci_lower_ = np.abs(mean_l2) - 1.96 * sem_l2
+    t_mean = np.mean(np.stack(ts_, axis=1), axis=1) / 1000 / 0.1
+    ax.plot(t_mean, np.abs(mean_l2), '-om', markersize=3,
+            label=r"$\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k) + \dot{\mathbf{q}}_{\mathrm{SAC}}(k)$")
+    ax.fill_between(t_mean, ci_lower_, ci_upper_, color='m', alpha=0.3)
+    # ax.fill_between(t_mean, ci_lower_, ci_upper_, color='m', alpha=0.3, label=r"95\% CI - $\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k) + \dot{\mathbf{q}}_{\mathrm{SAC}}(k)$")
+    # --- iJPI mean & CI (blue) ---
+    # Inputs assumed defined upstream:
+    #   dps_PIonly_, ts_PIonly_, e_x_PI_, e_y_PI_, e_z_PI_
+    data_pi = np.stack(dps_PIonly_, axis=2) + np.array([e_x_PI_, e_y_PI_, e_z_PI_]).reshape((3, 1, 1))
+    l2_data_pi = np.linalg.norm(data_pi, ord=2, axis=0)
+    mean_l2_pi = np.mean(l2_data_pi, axis=1)
+    sem_l2_pi = np.std(l2_data_pi, axis=1, ddof=1) / np.sqrt(5)
+    ci_upper_pi = np.abs(mean_l2_pi) + 1.96 * sem_l2_pi
+    ci_lower_pi = np.abs(mean_l2_pi) - 1.96 * sem_l2_pi
+    t_mean_pi = np.mean(np.stack(ts_PIonly_, axis=1), axis=1) / 1000 / 0.1
+    ax.plot(t_mean_pi, np.abs(mean_l2_pi), '-ob', markersize=3,
+            label=r"$\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k)$")
+    ax.fill_between(t_mean_pi, ci_lower_pi, ci_upper_pi, color='b', alpha=0.3)
+    # ax.fill_between(t_mean_pi, ci_lower_pi, ci_upper_pi, color='b', alpha=0.3, label=r"95\% CI - $\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k)$")
+    # --- Band-limited performance lower bounds (dashed; same colors) ---
+    # Inputs assumed defined upstream:
+    #   SAC_band_limited_e_lower_bounds_all, iJPI_band_limited_e_lower_bounds_all, e_bound_
+    data_bound_sac = SAC_band_limited_e_lower_bounds_all + e_bound_
+    mean_bound_sac = np.mean(data_bound_sac, axis=0)
+    sem_bound_sac = np.std(data_bound_sac, axis=0, ddof=1) / np.sqrt(50)
+    ci_upper_bound_sac = np.abs(mean_bound_sac) + 1.96 * sem_bound_sac
+    ci_lower_bound_sac = np.abs(mean_bound_sac) - 1.96 * sem_bound_sac
+    ax.plot(t_mean, mean_bound_sac, 'm--', label=r"$\|\mathcal{E}(k)\|_{\mathrm{RMS}}$")
+    ax.fill_between(t_mean, ci_lower_bound_sac, ci_upper_bound_sac, color='m', alpha=0.3)
+    data_bound_pi = iJPI_band_limited_e_lower_bounds_all + e_bound_
+    mean_bound_pi = np.mean(data_bound_pi, axis=0)
+    sem_bound_pi = np.std(data_bound_pi, axis=0, ddof=1) / np.sqrt(50)
+    ci_upper_bound_pi = np.abs(mean_bound_pi) + 1.96 * sem_bound_pi
+    ci_lower_bound_pi = np.abs(mean_bound_pi) - 1.96 * sem_bound_pi
+    ax.plot(t_mean, mean_bound_pi, 'b-.', label=r"$\|\mathcal{E}(k)\|_{\mathrm{RMS}}$")
+    ax.fill_between(t_mean, ci_lower_bound_pi, ci_upper_bound_pi, color='b', alpha=0.3)
+    # Axes labels and limits
+    ax.set_xlabel(r"$k$")
+    ax.set_ylabel(r"$\|\mathbf{e}(k)\|_{2}$ [mm]")
+    ax.set_ylim([0, 2.5])
+    ax.set_xlim([0, 110])
+    # Grid
+    ax.grid(True)
+    # Legend outside above (do not change colors)
+    leg = ax.legend(loc='center', bbox_to_anchor=(0.5, .85), ncol=2, frameon=True)
     # Save and show
     # plt.savefig("/home/mahdi/bagfiles/experiments_HW321/real_test_position_errors_both.pdf",
     #             format="pdf", bbox_inches='tight')
