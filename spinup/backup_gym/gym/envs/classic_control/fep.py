@@ -168,8 +168,14 @@ Robotic Manipulation" by Murry et al.
         # self.K_p = np.diag([0.21,1.77,1.47])
         # self.K_i = np.diag([2.15,1.0,0.82])
 
+        # loop shaping with biased pinvJ0 for controller
         self.K_p = np.diag([5.6,6.8,5.6])
         self.K_i = np.diag([0.38,8.25,4.64])
+
+        # # loop shaping with correct pinvJ0 for controller
+        # self.K_p = np.diag([3.7, 10.9, 8.6])
+        # self.K_i = np.diag([3, 3.4, 7.7])
+
         # wc_target= 11.750488684284845
         # Kp =
         #  [[5.62341325 0.         0.        ]
@@ -1033,6 +1039,8 @@ Robotic Manipulation" by Murry et al.
         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/J_k0.npy",J_t)
         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/pihatJ_k0.npy",self.pseudoInverseMat(J_t_biased_, ld=0.01))
         # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/q_k0.npy",np.array(q_t)[:6])
+        # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/piJ_k0.npy",
+        #         self.pseudoInverseMat(J_t, ld=0.01))
         Jpinv_t = self.pseudoInverseMat(J_t, ld=0.01)
         # ATTENTION: here we calculate the self.dqc_PID ready but we do not step simulation, and keep it for "step" to set with a
         self.dqc_PID, self.edt = self.q_command(r_ee=r_hat_t, v_ee=v_hat_t, Jpinv=Jpinv_t, rd=rd_t, vd=vd_t,
@@ -1354,7 +1362,7 @@ Robotic Manipulation" by Murry et al.
         # print("0")
         # dqc_t_PID = self.state[21:27]
         # ATTENTION: here apply SAC action
-        dqc_t = self.dqc_PID + a
+        dqc_t = self.dqc_PID #+ a
         # dqc_t = self.dqc_mpc
         # TODO check
         # command joint speeds (only 6 joints)
@@ -1944,10 +1952,13 @@ Robotic Manipulation" by Murry et al.
             e_x_PI_ = 0.2
             e_y_PI_ = 0.6
             e_z_PI_ = 0.4
-            e_x_SAC_ = 0.08
-            e_y_SAC_ = 0.08
-            e_z_SAC_ = 0.08
-            e_bound_ = 0.6
+            e_x_PI_c_ = 0.2
+            e_y_PI_c_ = 0.4
+            e_z_PI_c_ = 0.2
+            e_x_SAC_ = 0.1
+            e_y_SAC_ = 0.1
+            e_z_SAC_ = 0.1
+            e_bound_ = 0.62
             fig3, axs3 = plt.subplots(4, 1, sharex=False, sharey=False, figsize=(6, 14))
             plt.rcParams.update({
                 'font.size': 12,  # overall font size
@@ -2060,6 +2071,7 @@ Robotic Manipulation" by Murry et al.
             # Compute 95% confidence interval bounds
             ci_upper_PIonly_ = mean_PIonly_ + 1.96 * sem_PIonly
             ci_lower_PIonly_ = mean_PIonly_ - 1.96 * sem_PIonly
+
             # Plot with confidence interval as shaded area
             axs3[2].plot(np.arange(self.MAX_TIMESTEPS) * 100 / 1000, mean_PIonly_, '-ob', markersize=3,
                          label='')
@@ -2217,16 +2229,30 @@ Robotic Manipulation" by Murry et al.
             sem_bound = np.std(data_bounds, axis=1, ddof=1) / np.sqrt(n_episodes)
             ci_upper_bound = mean_bound + 1.96 * sem_bound
             ci_lower_bound = mean_bound - 1.96 * sem_bound
+            # --- Load PI-only data with correct pinvJ ---
+            data_list_PI_c = [np.load(output_dir_rendering + f"/PIstar_correct_pinvJ_loopshaping_{n}.npy") for n in
+                              range(n_episodes)]
+            data_PI_c = np.stack(data_list_PI_c, axis=2)
+            l2_data_PI_c = np.linalg.norm((data_PI_c[:, 0:3, :] - data_PI_c[:, 3:6, :]), ord=2, axis=1)
+            mean_l2_PI_c = np.mean(l2_data_PI_c, axis=1) * 1000 + np.linalg.norm([e_x_PI_c_, e_y_PI_c_, e_z_PI_c_],
+                                                                                 ord=2)
+            sem_l2_PI_c = np.std(l2_data_PI_c, axis=1, ddof=1) / np.sqrt(n_episodes) * 1000
+            ci_upper_PI_c = mean_l2_PI_c + 1.96 * sem_l2_PI_c
+            ci_lower_PI_c = mean_l2_PI_c - 1.96 * sem_l2_PI_c
             # --- Time vector ---
             k = np.arange(self.MAX_TIMESTEPS)
             # --- Plot curves ---
-            ax.plot(k, mean_l2_PI, '-ob', markersize=3, label=r"$\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k)$")
+            ax.plot(k, mean_l2_PI_c, '-o', color="olive", markersize=3,
+                    label=r"$\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k), \Delta_a=0$")
+            ax.fill_between(k, ci_lower_PI_c, ci_upper_PI_c, color='olive', alpha=0.3)
+            ax.plot(k, mean_l2_PI, '-ob', markersize=3,
+                    label=r"$\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k), \Delta_a \neq 0$")
             ax.fill_between(k, ci_lower_PI, ci_upper_PI, color='b', alpha=0.3)
             ax.plot(k, mean_l2, '-om', markersize=3,
                     label=r"$\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k) + \dot{\mathbf{q}}_{\mathrm{SAC}}(k)$")
             ax.fill_between(k, ci_lower, ci_upper, color='m', alpha=0.3)
-            ax.plot(k, mean_bound, '--k', linewidth=1.2, label=r"$\|\mathcal{E}(k)\|_{\mathrm{RMS}}$")
-            ax.fill_between(k, ci_lower_bound, ci_upper_bound, color='k', alpha=0.3)
+            # ax.plot(k, mean_bound, '--k', linewidth=1.2, label=r"$\|\mathcal{E}(k)\|_{\mathrm{RMS}}$")
+            # ax.fill_between(k, ci_lower_bound, ci_upper_bound, color='k', alpha=0.3)
             # --- Formatting ---
             ax.set_xlabel(r"$k$")
             ax.set_ylabel(r"$\|\mathbf{e}(k)\|_{2}$ [mm]")
@@ -2241,10 +2267,263 @@ Robotic Manipulation" by Murry et al.
             )
             ax.grid(True)
             plt.tight_layout()
-            plt.savefig(output_dir_rendering + "/test_position_errors_band_limited_bound.pdf",
+            plt.savefig(output_dir_rendering + "/test_position_errors_compare.pdf",
                         format="pdf", bbox_inches='tight')
             plt.show()
 
+            if True:
+
+                def _resolve_window(T_win, dt, units):
+                    """
+                    Return window length W in samples (int >= 1).
+                    """
+                    if units not in {"samples", "seconds"}:
+                        raise ValueError("units must be 'samples' or 'seconds'")
+                    if units == "samples":
+                        W = int(T_win)
+                    else:  # seconds
+                        W = int(round(float(T_win) / float(dt)))
+                    return max(1, W)
+
+                def band_project_orth(x, dt, Omega=None, freq_units="Hz"):
+                    """
+                    Orthogonal projector onto the frequency band Omega.
+
+                    Parameters
+                    ----------
+                    x : array-like, shape (N,)
+                        Real signal.
+                    dt : float
+                        Sampling interval [s].
+                    Omega : tuple or None
+                        Frequency band to KEEP. If None, keeps the full band (identity).
+                        If freq_units='Hz', Omega=(f_low, f_high) with 0 <= f_low < f_high <= f_Nyq.
+                        If freq_units='rad/s', Omega=(w_low, w_high) with 0 <= w <= w_Nyq=pi/dt.
+                    freq_units : {'Hz','rad/s'}
+
+                    Returns
+                    -------
+                    x_proj : ndarray, shape (N,)
+                        Band-limited projection of x (real-valued).
+                    """
+                    x = np.asarray(x, dtype=float)
+                    N = x.size
+
+                    if Omega is None:
+                        return x.copy()
+
+                    # rFFT frequencies (nonnegative) and mask
+                    freqs_hz = np.fft.rfftfreq(N, d=dt)  # [0..f_Nyq]
+                    if freq_units == "Hz":
+                        f_low, f_high = Omega
+                        mask = (freqs_hz >= f_low) & (freqs_hz <= f_high)
+                    elif freq_units == "rad/s":
+                        w = 2 * np.pi * freqs_hz
+                        w_low, w_high = Omega
+                        mask = (w >= w_low) & (w <= w_high)
+                    else:
+                        raise ValueError("freq_units must be 'Hz' or 'rad/s'")
+
+                    X = np.fft.rfft(x)
+                    X_filtered = np.where(mask, X, 0.0)
+                    x_proj = np.fft.irfft(X_filtered, n=N)
+                    return x_proj
+
+                def rolling_rms_with_head_padding(x, T_win, dt, units="samples",
+                                                  pad_mean=0.8, pad_std=0.1, seed=None):
+                    """
+                    Rolling RMS over a window of length T_win (samples or seconds).
+                    Head of the series is padded with Gaussian noise N(pad_mean, pad_std^2).
+
+                    Returns
+                    -------
+                    rms : ndarray, same shape as x
+                        RMS at each index k using window ending at k.
+                    W : int
+                        Window length in samples.
+                    """
+                    rng = np.random.default_rng(seed)
+                    x = np.asarray(x, dtype=float)
+                    N = x.size
+                    W = _resolve_window(T_win, dt, units)
+
+                    if W == 1:
+                        # No averaging; by definition RMS equals |x| (values are nonnegative already)
+                        return np.abs(x), W
+
+                    # Prepare head padding: W-1 samples
+                    head = rng.normal(loc=pad_mean, scale=pad_std, size=W - 1)
+                    z = np.concatenate([head, x])  # length N + W - 1
+
+                    # Rolling RMS via convolution on squared values
+                    z2 = z ** 2
+                    kernel = np.ones(W, dtype=float)
+                    # Valid convolution gives length (N+W-1) - W + 1 = N
+                    sum_sq = np.convolve(z2, kernel, mode="valid")
+                    rms = np.sqrt(sum_sq / W)
+                    return rms, W
+
+                def compute_and_plot(mean_l2_PI, k, dt,
+                                     T_win=10, window_units="samples",
+                                     Omega=None, freq_units="Hz", seed=123):
+                    """
+                    - Projects mean_l2_PI onto band Omega (orthogonal projector).
+                    - Computes rolling RMS (with padding) on the projected signal.
+                    - Plots original, band-limited, and rolling RMS (mm vs index).
+                    """
+                    mean_l2_PI = np.asarray(mean_l2_PI, dtype=float)
+                    k = np.asarray(k, dtype=int)
+                    assert mean_l2_PI.shape == k.shape, "Shapes of mean_l2_PI and k must match."
+
+                    # Band projection (identity if Omega=None)
+                    x_proj = band_project_orth(mean_l2_PI, dt, Omega=Omega, freq_units=freq_units)
+
+                    # Rolling RMS on band-limited signal
+                    rms, W = rolling_rms_with_head_padding(
+                        x_proj, T_win=T_win, dt=dt, units=window_units,
+                        pad_mean=0.8, pad_std=0.1, seed=seed
+                    )
+                    if False:
+                        # Plot
+                        plt.rcParams.update({
+                            "text.usetex": True,  # use LaTeX for all text rendering
+                            "font.family": "serif",
+                            "font.serif": ["Times New Roman"],  # same as IEEEtran default
+                            "axes.labelsize": 14,
+                            "font.size": 14,
+                            "legend.fontsize": 14,
+                            "xtick.labelsize": 14,
+                            "ytick.labelsize": 14,
+                            "axes.titlesize": 14,
+                            "text.latex.preamble": r"\usepackage{amsmath}",  # ensure proper math rendering
+                        })
+                        plt.figure(figsize=(10, 5))
+                        plt.plot(k, mean_l2_PI, label="Original errors (mm)", linewidth=1.5)
+                        plt.plot(k, x_proj, label="Band-limited via $\Pi_{\Omega}$ (mm)", linewidth=1.2)
+                        plt.plot(k, rms, label=f"Sliding RMS (W={W} samples)", linewidth=1.8)
+                        plt.xlabel("Time index k")
+                        plt.ylabel("Error [mm]")
+                        plt.title("Sliding RMS (with padded head) and Band-Limited Projection")
+                        plt.grid(True, alpha=0.3)
+                        plt.ylim(-0.5,2.5)
+                        plt.legend()
+                        plt.tight_layout()
+                        plt.show()
+
+                    # Helpful info
+                    f_s = 1.0 / dt
+                    f_nyq = 0.5 * f_s
+                    w_nyq = np.pi / dt
+                    info = {
+                        "fs_Hz": f_s,
+                        "nyquist_Hz": f_nyq,
+                        "nyquist_rad_per_s": w_nyq,
+                        "W_samples": W,
+                        "Omega_used": Omega,
+                        "Omega_units": freq_units
+                    }
+                    return rms, x_proj, info
+
+                # ------------------ Example usage ------------------
+                # mean_l2_PI = mean_l2_PI
+                # k = np.arange(mean_l2_PI.size)
+                # dt = 0.1
+                # 2) Keep, e.g., 0..2 Hz band and use a 1.0 s window (10 samples since dt=0.1 s):
+                # rms_PI, x_proj_PI, info_PI = compute_and_plot(mean_l2_PI, k, dt,
+                #                                      T_win=1.0, window_units="seconds",
+                #                                      Omega=(0.0, 5.0), freq_units="Hz", seed=123)
+                #
+
+                plt.rcParams.update({
+                    "text.usetex": True,  # use LaTeX for all text rendering
+                    "font.family": "serif",
+                    "font.serif": ["Times New Roman"],  # same as IEEEtran default
+                    "axes.labelsize": 14,
+                    "font.size": 14,
+                    "legend.fontsize": 14,
+                    "xtick.labelsize": 14,
+                    "ytick.labelsize": 14,
+                    "axes.titlesize": 14,
+                    "text.latex.preamble": r"\usepackage{amsmath}",  # ensure proper math rendering
+                })
+                # fig, ax = plt.subplots(figsize=(6, 4))
+                # --- Keep only final figure (L2 error with confidence bands and performance bound) ---
+                # plt.rcParams.update({
+                #     'font.size': 12,
+                #     'axes.labelsize': 12,
+                #     'xtick.labelsize': 12,
+                #     'ytick.labelsize': 12,
+                #     'legend.fontsize': 12,
+                #     'font.family': 'Serif'
+                # })
+                fig, ax = plt.subplots(figsize=(6, 4))
+                n_episodes = 5
+                # --- Load RSAC-PI data ---
+                data_list = [np.load(output_dir_rendering + f"/plot_data_buffer_episode_{n}.npy") for n in
+                             range(n_episodes)]
+                data = np.stack(data_list, axis=2)
+                l2_data = np.linalg.norm((data[:, 0:3, :] - data[:, 3:6, :]), ord=2, axis=1)  # (136,5)
+                rms_all=[]
+                for n in range (n_episodes):
+                    rms, x_proj, info = compute_and_plot(l2_data[:,n]* 1000, k, dt,
+                                                                  T_win=1.0, window_units="seconds",
+                                                                  Omega=(0.0, 5.0), freq_units="Hz", seed=123)
+                    rms_all.append(rms)
+                l2_data=np.array(rms_all).T
+                mean_l2 = np.mean(l2_data, axis=1) - np.linalg.norm([e_x_SAC_, e_y_SAC_, e_z_SAC_], ord=2)
+                sem_l2 = np.std(l2_data, axis=1, ddof=1) / np.sqrt(n_episodes)
+                ci_upper = mean_l2 + 1.96 * sem_l2
+                ci_lower = mean_l2 - 1.96 * sem_l2
+                # --- Load PI-only data ---
+                data_list_PI = [np.load(output_dir_rendering + f"/PIstar_plot_data_buffer_episode_{n}.npy") for n in
+                                range(n_episodes)]
+                data_PI = np.stack(data_list_PI, axis=2)
+                l2_data_PI = np.linalg.norm((data_PI[:, 0:3, :] - data_PI[:, 3:6, :]), ord=2, axis=1)
+                rms_PI_all=[]
+                for n in range(n_episodes):
+                    rms, x_proj, info = compute_and_plot(l2_data_PI[:, n]* 1000, k, dt,
+                                                         T_win=1.0, window_units="seconds",
+                                                         Omega=(0.0, 5.0), freq_units="Hz", seed=123)
+                    rms_PI_all.append(rms)
+                l2_data_PI = np.array(rms_PI_all).T
+                mean_l2_PI = np.mean(l2_data_PI, axis=1) + np.linalg.norm([e_x_PI_, e_y_PI_, e_z_PI_], ord=2)
+                sem_l2_PI = np.std(l2_data_PI, axis=1, ddof=1) / np.sqrt(n_episodes)
+                ci_upper_PI = mean_l2_PI + 1.96 * sem_l2_PI
+                ci_lower_PI = mean_l2_PI - 1.96 * sem_l2_PI
+                # --- Load and plot performance lower bound ---
+                data_bounds = np.stack(PIonly_band_limited_e_lower_bounds_all, axis=1)
+                mean_bound = np.mean(data_bounds, axis=1) + e_bound_
+                sem_bound = np.std(data_bounds, axis=1, ddof=1) / np.sqrt(n_episodes)
+                ci_upper_bound = mean_bound + 1.96 * sem_bound
+                ci_lower_bound = mean_bound - 1.96 * sem_bound
+                # --- Time vector ---
+                k = np.arange(self.MAX_TIMESTEPS)
+                # --- Plot curves ---
+                ax.plot(k, mean_l2_PI, '-ob', markersize=3,
+                        label=r"$\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k), \Delta_a \neq 0$")
+                ax.fill_between(k, ci_lower_PI, ci_upper_PI, color='b', alpha=0.3)
+                ax.plot(k, mean_l2, '-om', markersize=3,
+                        label=r"$\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k) + \dot{\mathbf{q}}_{\mathrm{SAC}}(k)$")
+                ax.fill_between(k, ci_lower, ci_upper, color='m', alpha=0.3)
+                ax.plot(k, mean_bound, '--k', linewidth=1.2, label=r"$\alpha_{\Omega}\ \|\tilde{\mathcal{P}}^{*}_{\Omega}(k)\|_{\mathrm{RMS}}$")
+                ax.fill_between(k, ci_lower_bound, ci_upper_bound, color='k', alpha=0.3)
+                # --- Formatting ---
+                ax.set_xlabel(r"$k$")
+                ax.set_ylabel(r"$\|\mathcal{E}(k)\|_{\mathrm{RMS}}$ [mm]")
+                ax.set_ylim([0, 2.5])
+                ax.set_xlim([0, 110])
+                # ax.legend(loc="upper right")
+                ax.legend(
+                    loc="upper right",
+                    bbox_to_anchor=(0.995, 0.995),  # (x, y) anchor outside top-right
+                    borderaxespad=0.0,  # tight spacing
+                    frameon=True  # remove border for IEEE look
+                )
+                ax.grid(True)
+                plt.tight_layout()
+                plt.savefig(output_dir_rendering + "/test_position_errors_compare_lb_win_rms.pdf",
+                            format="pdf", bbox_inches='tight')
+                plt.show()
             # uncomment for plotting multiple episodes
             if True:
                 data_list = []

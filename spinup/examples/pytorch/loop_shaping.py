@@ -234,6 +234,7 @@ if __name__ == "__main__":
     dt = 0.1
     J0 = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/J_k0.npy")
     J0hat_dag = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/pihatJ_k0.npy")
+    J0_dag = np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/piJ_k0.npy")
     alpha=np.load("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/alpha_dt0004.npy")
 
     pm_target_deg = 60.0
