@@ -350,19 +350,22 @@ DIFF_sac_theory = (Pxx_sac - PSD_th_on_sac)[m_sac, :]
 max_abs_theory = np.nanmax(np.abs(np.concatenate([DIFF_pi_theory.ravel(),
                                                   DIFF_sac_theory.ravel()])))
 vlim_theory = 0.95 * max_abs_theory
+
+v_min=-0.5
+v_max=0.5
 cmap_diff = 'RdBu_r'
 
 fig2, axes2 = plt.subplots(2, 1, figsize=(7.2, 10.5), constrained_layout=True)
 ax21, ax22 = axes2
 
 im21 = ax21.pcolormesh(t_pi,  f_pi[m_pi],  DIFF_pi_theory,  shading='gouraud',
-                       vmin=-vlim_theory, vmax=vlim_theory, cmap=cmap_diff)
+                       vmin=v_min, vmax=v_max, cmap=cmap_diff)
 ax21.set_title(r"Difference (PSD): $e_{\mathrm{PI}} - \|S\tilde{\mathbf P}^*\|_2$")
 ax21.set_xlabel(r"Time [s]"); ax21.set_ylabel(r"Frequency [Hz]")
 ax21.set_ylim((f_pi[m_pi].min() if np.any(m_pi) else fmin, fmax))
 
 im22 = ax22.pcolormesh(t_sac, f_sac[m_sac], DIFF_sac_theory, shading='gouraud',
-                       vmin=-vlim_theory, vmax=vlim_theory, cmap=cmap_diff)
+                       vmin=v_min, vmax=v_max, cmap=cmap_diff)
 ax22.set_title(r"Difference (PSD): $e_{\mathrm{SAC}} - \|S\tilde{\mathbf P}^*\|_2$")
 ax22.set_xlabel(r"Time [s]"); ax22.set_ylabel(r"Frequency [Hz]")
 ax22.set_ylim((f_sac[m_sac].min() if np.any(m_sac) else fmin, fmax))
@@ -370,40 +373,52 @@ ax22.set_ylim((f_sac[m_sac].min() if np.any(m_sac) else fmin, fmax))
 cbar2 = fig2.colorbar(im22, ax=axes2, location='right', shrink=0.96, pad=0.02)
 cbar2.set_label(r"$\Delta \mathrm{PSD}(t,f)\;[\mathrm{mm}^2/\mathrm{Hz}]$")
 plt.show()
-
 # ============================================================
 # Figure 3 (per theoretical Lower Bound): Measured − LB
 # Top: e_PI − LB, Bottom: e_SAC − LB
 # Also SAVE as PDF at base_dir/PSD_LB_comparison.pdf
 # ============================================================
-DIFF_pi_lb  = (Pxx_pi  - PSD_lb_on_pi)[m_pi, :]
-DIFF_sac_lb = (Pxx_sac - PSD_lb_on_sac)[m_sac, :]
+
+k_max = 110  # crop limit on k
+idx_pi  = t_pi/dt <= k_max
+idx_sac = t_sac/dt <= k_max
+
+DIFF_pi_lb  = (Pxx_pi  - PSD_lb_on_pi)[m_pi, :][:, idx_pi]
+DIFF_sac_lb = (Pxx_sac - PSD_lb_on_sac)[m_sac, :][:, idx_sac]
+
+t_pi_crop  = (t_pi/dt)[idx_pi]
+t_sac_crop = (t_sac/dt)[idx_sac]
 
 max_abs_lb = np.nanmax(np.abs(np.concatenate([DIFF_pi_lb.ravel(),
                                               DIFF_sac_lb.ravel()])))
 vlim_lb = 0.95 * max_abs_lb
 
-fig3, axes3 = plt.subplots(2, 1, figsize=(7.2, 10.5), constrained_layout=True)
+fig3, axes3 = plt.subplots(2, 1, figsize=(6, 5), constrained_layout=True)
 ax31, ax32 = axes3
 
-im31 = ax31.pcolormesh(t_pi,  f_pi[m_pi],  DIFF_pi_lb,  shading='gouraud',
-                       vmin=-vlim_lb, vmax=vlim_lb, cmap=cmap_diff)
-ax31.set_title(r"Difference (PSD): $e_{\mathrm{PI}} - \sigma_{\min}(S)\,\|\tilde{\mathbf P}^*\|_2$")
-ax31.set_xlabel(r"Time [s]"); ax31.set_ylabel(r"Frequency [Hz]")
+im31 = ax31.pcolormesh(t_pi_crop, f_pi[m_pi], DIFF_pi_lb,
+                       shading='gouraud', vmin=v_min, vmax=v_max, cmap=cmap_diff)
+ax31.set_title(r"inverse Jacobian PI Controller PSD Deviation")
+ax31.set_xlabel(r"k")
+ax31.set_ylabel(r"$\omega_{i}$ [Hz]")
 ax31.set_ylim((f_pi[m_pi].min() if np.any(m_pi) else fmin, fmax))
+ax31.set_xlim((0, k_max))
 
-im32 = ax32.pcolormesh(t_sac, f_sac[m_sac], DIFF_sac_lb, shading='gouraud',
-                       vmin=-vlim_lb, vmax=vlim_lb, cmap=cmap_diff)
-ax32.set_title(r"Difference (PSD): $e_{\mathrm{SAC}} - \sigma_{\min}(S)\,\|\tilde{\mathbf P}^*\|_2$")
-ax32.set_xlabel(r"Time [s]"); ax32.set_ylabel(r"Frequency [Hz]")
+im32 = ax32.pcolormesh(t_sac_crop, f_sac[m_sac], DIFF_sac_lb,
+                       shading='gouraud', vmin=v_min, vmax=v_max, cmap=cmap_diff)
+ax32.set_title(r"Hybrid Controller PSD Deviation")
+ax32.set_xlabel(r"k")
+ax32.set_ylabel(r"$\omega_{i}$ [Hz]")
 ax32.set_ylim((f_sac[m_sac].min() if np.any(m_sac) else fmin, fmax))
+ax32.set_xlim((0, k_max))
 
 cbar3 = fig3.colorbar(im32, ax=axes3, location='right', shrink=0.96, pad=0.02)
-cbar3.set_label(r"$\Delta \mathrm{PSD}(t,f)\;[\mathrm{mm}^2/\mathrm{Hz}]$")
+cbar3.set_label(r"$\Delta\widehat{\Phi}_{e}(k,\omega_i)\;[\mathrm{mm}^2/\mathrm{Hz}]$")
 
 # Save Figure 3 as PDF
 out_pdf = os.path.join(base_dir, "PSD_LB_comparison.pdf")
 fig3.savefig(out_pdf, bbox_inches='tight')
 print(f"Saved Figure 3 (LB comparison) to: {out_pdf}")
-
 plt.show()
+
+print("")

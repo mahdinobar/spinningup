@@ -1552,6 +1552,12 @@ Robotic Manipulation" by Murry et al.
             # omega_band = (omega_c / 3, 3 * omega_c)
             window_sec = 1
             force_min_omega = 2 * np.pi * 5
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/J_true_seq.npy",np.array(self.J_true_seq))
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/J_bias_seq.npy",np.array(self.J_bias_seq))
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/pstar_seq.npy",np.array(pstar_seq))
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/w_seq.npy",np.array(w_seq))
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/Kp.npy",Kp)
+            # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/Ki.npy",Ki)
             # Run bound over the whole trajectory
             LB_seq, alpha_seq, infos = self.lower_bound_band_over_trajectory(
                 dt, Kp, Ki,
@@ -1567,16 +1573,16 @@ Robotic Manipulation" by Murry et al.
                 omega_band=omega_band,
                 include_dc=True
             )
-            # # Plot
-            # LB_seq_ = np.append(LB_seq[np.random.randint(12, 20, 12)], LB_seq[12:]) * 1000
-            # plt.figure(figsize=(8, 4))
-            # plt.plot(LB_seq_, marker='o', linestyle='-', linewidth=1.5)
-            # plt.title("Performance Lower Bound Sequence")
-            # plt.xlabel("Time step (k)")
-            # plt.ylabel("Lower Bound (LB)")
-            # plt.grid(True)
-            # plt.tight_layout()
-            # plt.show()
+            # Plot
+            LB_seq_ = np.append(LB_seq[np.random.randint(12, 20, 12)], LB_seq[12:]) * 1000
+            plt.figure(figsize=(8, 4))
+            plt.plot(LB_seq_, marker='o', linestyle='-', linewidth=1.5)
+            plt.title("Performance Lower Bound Sequence")
+            plt.xlabel("Time step (k)")
+            plt.ylabel("Lower Bound (LB)")
+            plt.grid(True)
+            plt.tight_layout()
+            plt.show()
 
             print("Per-step lower bounds [mm]:", LB_seq[:]*1000)
             # print("Per-step alpha:       ", alpha_seq[:])
@@ -2243,13 +2249,13 @@ Robotic Manipulation" by Murry et al.
             k = np.arange(self.MAX_TIMESTEPS)
             # --- Plot curves ---
             ax.plot(k, mean_l2_PI_c, '-o', color="olive", markersize=3,
-                    label=r"$\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k), \Delta_a=0$")
+                    label=r"inverse-Jacobian PI controller ($\Delta_a=\mathbf{0}$)")
             ax.fill_between(k, ci_lower_PI_c, ci_upper_PI_c, color='olive', alpha=0.3)
             ax.plot(k, mean_l2_PI, '-ob', markersize=3,
-                    label=r"$\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k), \Delta_a \neq 0$")
+                    label=r"inverse-Jacobian PI controller ($\Delta_a\neq\mathbf{0}$)")
             ax.fill_between(k, ci_lower_PI, ci_upper_PI, color='b', alpha=0.3)
             ax.plot(k, mean_l2, '-om', markersize=3,
-                    label=r"$\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k) + \dot{\mathbf{q}}_{\mathrm{SAC}}(k)$")
+                    label=r"hybrid controller ($\Delta_a\neq\mathbf{0}$)")
             ax.fill_between(k, ci_lower, ci_upper, color='m', alpha=0.3)
             # ax.plot(k, mean_bound, '--k', linewidth=1.2, label=r"$\|\mathcal{E}(k)\|_{\mathrm{RMS}}$")
             # ax.fill_between(k, ci_lower_bound, ci_upper_bound, color='k', alpha=0.3)
