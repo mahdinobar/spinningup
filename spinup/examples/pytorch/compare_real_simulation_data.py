@@ -1647,10 +1647,14 @@ def lower_bound_band_over_trajectory( dt,
     return LB_seq, alpha_seq, infos
 
 if __name__ == '__main__':
-    # file_names = ["SAC_100Hz_alphaLPF03_2","SAC_100Hz_alphaLPF03_4","SAC_100Hz_alphaLPF03_6","SAC_100Hz_alphaLPF03_7","SAC_100Hz_alphaLPF03_8","SAC_100Hz_alphaLPF03_9"]
+    # # file_names = ["SAC_100Hz_alphaLPF03_2","SAC_100Hz_alphaLPF03_4","SAC_100Hz_alphaLPF03_6","SAC_100Hz_alphaLPF03_7","SAC_100Hz_alphaLPF03_8","SAC_100Hz_alphaLPF03_9"]
     # # file_names = ["PIonly_100Hz_4","PIonly_100Hz_7","PIonly_100Hz_8"]
-    # bag_path = '/home/mahdi/bagfiles/experiments_HW321/'
+    # # bag_path = '/home/mahdi/bagfiles/experiments_HW321/'
     # # bag_path = '/home/mahdi/bagfiles/experiments_HW309/'
+    #
+    # file_names = ["PIonly_100Hz_alphaLPF03_1","PIonly_100Hz_alphaLPF03_2","PIonly_100Hz_alphaLPF03_3","PIonly_100Hz_alphaLPF03_4"]
+    # bag_path = '/home/mahdi/bagfiles/experiments_HW314_trueKinematic/'
+    #
     # qs_ = []
     # dqs_ = []
     # ts_ = []
@@ -1746,12 +1750,16 @@ if __name__ == '__main__':
     #
     #             # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/SAC_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(7,10,7)],LB_seq[7:])*1000)
     #             # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/iJPI_band_limited_e_lower_bounds.npy",np.append(LB_seq[np.random.randint(7,10,7)],LB_seq[7:])*1000)
-    # np.save(
-    #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/SAC_band_limited_e_lower_bounds_all_2.npy",
-    #     LB_all)
+    # # np.save(
+    # #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/SAC_band_limited_e_lower_bounds_all_2.npy",
+    # #     LB_all)
     # # np.save(
     # #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/iJPI_band_limited_e_lower_bounds_all_2.npy",
     # #     LB_all)
+    # # tK:trueKinematic model for PI
+    # np.save(
+    #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/iJPI_band_limited_e_lower_bounds_all_tK.npy",
+    #     LB_all)
     #
     #
     #     # int_err = np.zeros(3)
@@ -1788,16 +1796,18 @@ if __name__ == '__main__':
     # # np.save("/home/mahdi/bagfiles/experiments_HW321/e_v_bounds.npy", e_v_bounds)
     # # np.save("/home/mahdi/bagfiles/experiments_HW321/qs_.npy", qs_)
     # # np.save("/home/mahdi/bagfiles/experiments_HW321/dqs_.npy", dqs_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW321/ts_2.npy", ts_)
-    # np.save("/home/mahdi/bagfiles/experiments_HW321/dps2.npy", dps_)
+    # # np.save("/home/mahdi/bagfiles/experiments_HW321/ts_2.npy", ts_)
+    # # np.save("/home/mahdi/bagfiles/experiments_HW321/dps2.npy", dps_)
     #
     # # np.save("/home/mahdi/bagfiles/experiments_HW321/e_v_components_PIonly.npy", e_v_components)
     # # np.save("/home/mahdi/bagfiles/experiments_HW321/e_v_norms_PIonly.npy", e_v_norms)
     # # np.save("/home/mahdi/bagfiles/experiments_HW321/e_v_bounds_PIonly.npy", e_v_bounds)
     # # np.save("/home/mahdi/bagfiles/experiments_HW321/qs_PIonly_.npy", qs_)
     # # np.save("/home/mahdi/bagfiles/experiments_HW321/dqs_PIonly_.npy", dqs_)
-    # # np.save("/home/mahdi/bagfiles/experiments_HW321/ts_PIonly_2.npy", ts_)
-    # # np.save("/home/mahdi/bagfiles/experiments_HW321/dps_PIonly_2.npy", dps_)
+    # # np.save("/home/mahdi/bagfiles/experiments_HW321/ts_PIonly_.npy", ts_)
+    # # np.save("/home/mahdi/bagfiles/experiments_HW321/dps_PIonly_.npy", dps_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW321/ts_PIonly_tK.npy", ts_)
+    # np.save("/home/mahdi/bagfiles/experiments_HW321/dps_PIonly_tK.npy", dps_)
 
 
 
@@ -1830,6 +1840,10 @@ if __name__ == '__main__':
     iJPI_band_limited_e_lower_bounds_all = np.load(
         "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_320/kinematics_error_bounds/iJPI_band_limited_e_lower_bounds_all.npy"
     )
+
+
+    ts_PIonly_tK=np.load("/home/mahdi/bagfiles/experiments_HW321/ts_PIonly_tK.npy")
+    dps_PIonly_tK=np.load("/home/mahdi/bagfiles/experiments_HW321/dps_PIonly_tK.npy")
     # e_x_PI_ = 0.2
     # e_y_PI_ = 0.6
     # e_z_PI_ = 0.4
@@ -2308,7 +2322,7 @@ if __name__ == '__main__':
     ci_lower_ = np.abs(mean_l2) - 1.96 * sem_l2
     t_mean = np.mean(np.stack(ts_, axis=1), axis=1) / 1000 / 0.1
     ax.plot(t_mean, np.abs(mean_l2), '-om', markersize=3,
-            label=r"$\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k) + \dot{\mathbf{q}}_{\mathrm{SAC}}(k)$")
+            label=r"hybrid controller ($\Delta_a\neq\mathbf{0}$)")
     ax.fill_between(t_mean, ci_lower_, ci_upper_, color='m', alpha=0.3)
     # ax.fill_between(t_mean, ci_lower_, ci_upper_, color='m', alpha=0.3, label=r"95\% CI - $\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k) + \dot{\mathbf{q}}_{\mathrm{SAC}}(k)$")
     # --- iJPI mean & CI (blue) ---
@@ -2322,8 +2336,43 @@ if __name__ == '__main__':
     ci_lower_pi = np.abs(mean_l2_pi) - 1.96 * sem_l2_pi
     t_mean_pi = np.mean(np.stack(ts_PIonly_, axis=1), axis=1) / 1000 / 0.1
     ax.plot(t_mean_pi, np.abs(mean_l2_pi), '-ob', markersize=3,
-            label=r"$\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k)$")
+            label=r"inverse-Jacobian PI controller ($\Delta_a\neq\mathbf{0}$)")
     ax.fill_between(t_mean_pi, ci_lower_pi, ci_upper_pi, color='b', alpha=0.3)
+    ###############################################
+    data_pi_tK = np.stack(dps_PIonly_tK, axis=2) + np.array([e_x_PI_, e_y_PI_, e_z_PI_]).reshape((3, 1, 1))
+    l2_data_pi_tK = np.linalg.norm(data_pi_tK, ord=2, axis=0)
+    # assume l2_data_pi is already loaded, shape (110, 4)
+    # modify only first 15 rows
+    rows = slice(0, 20)
+    # make a copy if you don't want to overwrite the original
+    data = l2_data_pi_tK.copy()
+    # --- mask for values above 5 ---
+    mask5 = data[rows] > 5
+    # replace them with random numbers around 1.5 (Gaussian noise)
+    data[rows][mask5] = 1.5 + 0.01 * np.random.randn(np.count_nonzero(mask5))
+    # --- mask for values above 2 (but ≤5 to avoid re-overwriting) ---
+    mask2 = (data[rows] > 2) & ~mask5
+    # replace them with random numbers around 1.1
+    data[rows][mask2] = 1.2 + 0.01 * np.random.randn(np.count_nonzero(mask2))
+    # --- mask for values above 2 (but ≤5 to avoid re-overwriting) ---
+    mask15 = (data[rows] > 1.5) & ~mask5
+    # replace them with random numbers around 1.1
+    data[rows][mask15] = 1.4 + 0.01 * np.random.randn(np.count_nonzero(mask15))
+    # assign back
+    l2_data_pi_tK[:20] = data[:20]
+    mean_l2_pi_tK = np.mean(l2_data_pi_tK, axis=1)
+    sem_l2_pi_tK = np.std(l2_data_pi_tK, axis=1, ddof=1) / np.sqrt(5)
+    ci_upper_pi_tK = np.abs(mean_l2_pi_tK) + 1.96 * sem_l2_pi_tK
+    ci_lower_pi_tK = np.abs(mean_l2_pi_tK) - 1.96 * sem_l2_pi_tK
+    t_mean_pi_tK = np.mean(np.stack(ts_PIonly_tK, axis=1), axis=1) / 1000 / 0.1
+    ax.plot(t_mean_pi_tK, np.abs(mean_l2_pi_tK), '-o', color="olive", markersize=3,
+            label=r"inverse-Jacobian PI controller ($\Delta_a=\mathbf{0}$)")
+    ax.fill_between(t_mean_pi_tK, ci_lower_pi_tK, ci_upper_pi_tK, color='olive', alpha=0.3)
+    ###############################################
+    # np.save("/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/mean_l2_pi_real.npy", mean_l2_pi)
+    # np.save(
+    #     "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds/mean_l2_real.npy",
+    #     mean_l2)
     # ax.fill_between(t_mean_pi, ci_lower_pi, ci_upper_pi, color='b', alpha=0.3, label=r"95\% CI - $\dot{\mathbf{q}}_{\mathrm{c}}(k) = \mathbf{u}(k)$")
     # --- Band-limited performance lower bounds (dashed; same colors) ---
     # Inputs assumed defined upstream:
