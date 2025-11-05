@@ -194,47 +194,51 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
     epochs = range(1, len(average_test_returns) + 1)
     # Plot
     plt.figure(figsize=(6, 4), facecolor='white')
+    # plt.rcParams.update({
+    #     'font.size': 14,
+    #     'axes.labelsize': 14,
+    #     'xtick.labelsize': 14,
+    #     'ytick.labelsize': 14,
+    #     'legend.fontsize': 14,
+    #     'font.family': 'Serif'
+    # })
     plt.rcParams.update({
-        'font.size': 14,
-        'axes.labelsize': 14,
-        'xtick.labelsize': 14,
-        'ytick.labelsize': 14,
-        'legend.fontsize': 14,
-        'font.family': 'Serif'
+        "text.usetex": True,  # use LaTeX for all text rendering
+        "font.family": "serif",
+        "font.serif": ["Times New Roman"],  # same as IEEEtran default
+        "axes.labelsize": 14,
+        "font.size": 14,
+        "legend.fontsize": 14,
+        "xtick.labelsize": 14,
+        "ytick.labelsize": 14,
+        "axes.titlesize": 14,
+        "text.latex.preamble": r"\usepackage{amsmath}",  # ensure proper math rendering
     })
-
     ax = plt.gca()
     ax.set_facecolor('white')
-
     # Border box
     for spine in ax.spines.values():
         spine.set_visible(True)
         spine.set_color('black')
         spine.set_linewidth(1.0)
-
     # Plot data
-    plt.plot(epochs, average_test_returns, color="blue")
-
+    plt.plot(epochs, average_test_returns * 110 / 136, color="blue")
     # Horizontal line
-    hline_y = 85.21
+    hline_y = 82.21
     plt.hlines(hline_y, 0, 4000, 'k', linestyles="dashed")
-
     # Annotate text above left end of line
-    plt.text(2830, hline_y + 1, "PI Controller", ha='left', va='bottom',
+    plt.text(2130, hline_y + 1, "inverse-Jacobian PI Controller", ha='left', va='bottom',
              fontsize=12, fontfamily='serif')
-
     # Labels and grid
-    plt.xlabel("Number of Epochs")
+    plt.xlabel("Episode")
     plt.ylabel("Average Test Return")
     plt.xticks(fontproperties=times_new_roman_font, fontsize=12)
     plt.yticks(fontproperties=times_new_roman_font, fontsize=12)
     plt.xlim([0, len(average_test_returns)])
     plt.grid(True, which='both', color='gray', linestyle='--', linewidth=0.5)
-
     plt.tight_layout()
     plt.savefig(all_logdirs[-1] + "/learning_curve.pdf", format="pdf")
     plt.show()
-
     # Register the specific Times New Roman font
     times_new_roman_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"
     times_new_roman_font = font_manager.FontProperties(fname=times_new_roman_path)
