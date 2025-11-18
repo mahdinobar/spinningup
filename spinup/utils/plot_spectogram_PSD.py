@@ -98,10 +98,10 @@ Kp         = np.diag(np.load(os.path.join(base_dir, "Kp.npy")))
 Ki         = np.diag(np.load(os.path.join(base_dir, "Ki.npy")))
 
 # Measured scalar error norms (already in mm)
-# e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_PI.npy")).squeeze()
-# e_sac_mm = np.load(os.path.join(base_dir, "mean_l2.npy")).squeeze()
-e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_pi_real.npy")).squeeze()
-e_sac_mm = np.load(os.path.join(base_dir, "mean_l2_real.npy")).squeeze()
+e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_PI.npy")).squeeze()
+e_sac_mm = np.load(os.path.join(base_dir, "mean_l2.npy")).squeeze()
+# e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_pi_real.npy")).squeeze()
+# e_sac_mm = np.load(os.path.join(base_dir, "mean_l2_real.npy")).squeeze()
 assert e_pi_mm.ndim == 1 and e_sac_mm.ndim == 1
 
 # ============================================================
@@ -267,7 +267,7 @@ fig1, axes1 = plt.subplots(3, 1, figsize=(7.2, 15), constrained_layout=True)
 ax1, ax2, ax3 = axes1
 
 im1 = pmesh_omega(ax1, t_th,  f_th,  PSD_LB_mm2Hz, m_th_omega,
-                  r"PSD lower bound $\widehat{\Phi}_{e,\mathrm{LB}}$ [mm$^2$/Hz]",
+                  r"PSD lower bound $\Phi_{e,\mathrm{LB}}$ [mm$^2$/Hz]",
                   omega_min_plot, omega_max_plot)
 im2 = pmesh_omega(ax2, t_pi,  f_pi,  Pxx_pi,       m_pi_omega,
                   r"PSD of $e_{\mathrm{PI}}$ (mean L$_2$) [mm$^2$/Hz]",
@@ -322,7 +322,7 @@ im31 = ax31.pcolormesh(
     k_pi, omega_pi[mask_pi], DIFF_pi_lb[mask_pi, :],
     shading='gouraud', cmap=cmap_diff, vmin=v_min, vmax=v_max
 )
-ax31.set_title(r"Inverse–Jacobian PI Controller: $\Delta\widehat{\Phi}_{e}(k,\omega)$")
+ax31.set_title(r"Inverse–Jacobian PI Controller: $\Delta\Phi_{e}(k,\omega)$")
 ax31.set_xlabel(r"Sample index $k$")
 ax31.set_ylabel(r"Angular frequency $\omega$ [rad/s]")
 ax31.set_xlim((k_min, k_max))
@@ -334,7 +334,7 @@ im32 = ax32.pcolormesh(
     k_sac, omega_sac[mask_sac], DIFF_sac_lb[mask_sac, :],
     shading='gouraud', cmap=cmap_diff, vmin=v_min, vmax=v_max
 )
-ax32.set_title(r"Hybrid SAC–PI Controller: $\Delta\widehat{\Phi}_{e}(k,\omega)$")
+ax32.set_title(r"Hybrid SAC–PI Controller: $\Delta\Phi_{e}(k,\omega)$")
 ax32.set_xlabel(r"Sample index $k$")
 ax32.set_ylabel(r"Angular frequency $\omega$ [rad/s]")
 ax32.set_xlim((k_min, k_max))
@@ -343,7 +343,7 @@ ax32.set_ylim((omega_min_plot, omega_max_plot))
 
 # --- Shared colorbar ---
 cbar3 = fig3.colorbar(im32, ax=axes3, location='right', shrink=0.96, pad=0.02)
-cbar3.set_label(r"Deviation $\Delta\widehat{\Phi}_{e}(k,\omega)$ [mm$^2$/Hz]")
+cbar3.set_label(r"Deviation $\Delta\Phi_{e}(k,\omega)$ [mm$^2$/Hz]")
 
 # --- Save & show ---
 # out_pdf = os.path.join(base_dir, "PSD_LB_deviation_k_omega_log.pdf")
@@ -391,10 +391,10 @@ ax42.set_yscale('log')
 ax42.set_ylim((omega_focus_min, omega_focus_max))
 # ---- Shared colorbar ----
 cbar4 = fig4.colorbar(im42, ax=axes4, location='right', shrink=0.96, pad=0.02)
-cbar4.set_label(r"$\Delta\widehat{\Phi}_{e}(k,\omega)$ [mm$^2$/Hz]")
+cbar4.set_label(r"$\Delta\Phi_{e}(k,\omega)$ [mm$^2$/Hz]")
 # ---- Save & show ----
-# out_pdf4 = os.path.join(base_dir, "PSD_LB_deviation_k_omega_log_FOCUSED.pdf")
-out_pdf4 = os.path.join(base_dir, "PSD_LB_deviation_k_omega_log_FOCUSED_real.pdf")
+out_pdf4 = os.path.join(base_dir, "PSD_LB_deviation_k_omega_log_FOCUSED.pdf")
+# out_pdf4 = os.path.join(base_dir, "PSD_LB_deviation_k_omega_log_FOCUSED_real.pdf")
 fig4.savefig(out_pdf4, bbox_inches='tight')
 print(f"Saved Figure 4 to: {out_pdf4}")
 plt.show()
@@ -514,8 +514,8 @@ cbar52 = fig5.colorbar(im52, ax=ax52, location='right', shrink=0.96, pad=0.02)
 cbar52.set_label(r"System component  [–]")
 
 # Save & show
-# out_pdf5 = os.path.join(base_dir, "PSD_LB_components_fig5.pdf")
-out_pdf5 = os.path.join(base_dir, "PSD_LB_components_fig5_real.pdf")
+out_pdf5 = os.path.join(base_dir, "PSD_LB_components_fig5.pdf")
+# out_pdf5 = os.path.join(base_dir, "PSD_LB_components_fig5_real.pdf")
 fig5.savefig(out_pdf5, bbox_inches='tight')
 print(f"Saved Figure 5 to: {out_pdf5}")
 plt.show()
