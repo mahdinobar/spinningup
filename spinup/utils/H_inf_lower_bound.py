@@ -42,24 +42,25 @@ fmax = 5.0
 # Switch: include or exclude omega=0 (DC) in ALL analysis
 exclude_dc = True   # set False if you want to include DC
 
-# Tracking phase in sample index k
+# Tracking phase in sample index k (for plotting)
 k_min = 10
 k_max = 109
 
 # Base directory with data files
-base_dir = "/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds"
+base_dir = "/home/mahdi/ETHZ/codes/spinningup/spinup/examples/pytorch/logs/Fep_HW_314/kinematics_error_bounds"
 
 # PI gain search range (SCALAR gains, same on all 3 axes)
-# USER: adjust these to your meaningful range
-Kp_min, Kp_max, n_Kp = 1.0, 10.0, 7    # e.g. 7 values from 100 to 400
-Ki_min, Ki_max, n_Ki = 0.1, 5.0, 7        # e.g. 7 values from 0.1 to 5.0
+Kp_min, Kp_max, n_Kp = 1.0, 10.0, 7
+Ki_min, Ki_max, n_Ki = 0.1, 5.0, 7
 
-# Metric for LB optimization: "max" (H-infty-like) or "mean"
-lb_metric = "max"   # "max" ~ minimize worst-case LB; "mean" ~ average LB
+# Metric for robust LB optimization on sensitivity:
+# "max" -> sup over freq, time windows
+# "mean" -> average over freq, time windows
+lb_metric = "max"
 
 # Focused omega-range for the difference spectrogram (Figure 4 style)
 omega_focus_min = 0.628      # [rad/s]
-omega_focus_max = 31.4     # [rad/s]
+omega_focus_max = 31.4       # [rad/s]
 
 # ============================================================
 # Helpers
@@ -121,89 +122,161 @@ def psd_spectrogram_mm2_per_hz_1d(e_mm, fs, nperseg, noverlap, nfft, window='han
     t_end = t_center + t_shift_to_end
     return f, t_end, Pxx    # Pxx already in [mm^2/Hz]
 
-def psd_spectrogram_LB_mm2_per_hz(
-    dt, Kp_vec, Ki_vec, J_true_seq, J_bias_seq, pstar_seq,
-    nperseg, noverlap, nfft, lam=1e-2, zero_mean_per_window=True
+# ============================================================
+# Robust H-infinity style lower bound on sensitivity (discrete)
+# ============================================================
+
+def compute_gamma_local_and_cost(
+    dt, Kp_vec, Ki_vec,
+    J_true_seq, J_bias_seq,
+    nperseg, noverlap, nfft,
+    fmin, fmax, exclude_dc,
+    lam=1e-2,
+    lb_metric="max"
 ):
     """
-    Compute theoretical PSD lower bound for a given PI gains (Kp_vec, Ki_vec).
+    For a given PI controller (Kp_vec, Ki_vec), compute a discrete approximation
+    of the robust H-infinity lower bound:
+
+        gamma_rob(K) ~ sup_{omega in band, windows} gamma_K(omega, k_w),
+
+    where
+
+        gamma_K(omega, k_w)
+          := sigma_min(S0(omega)) / (1 + ||E(k_w) S0(omega)||_2),
+
+    S0(omega) = (I + L0(omega))^{-1}, L0 = Gz(omega)*C(omega),
+    E(k_w) = J_true(k_w) J_bias^dagger(k_w) - I.
+
     Returns:
-        f_hz, t_end, PSD_LB_mm2Hz [freq x time]
+        f_hz       : frequency grid (Hz)
+        t_end      : window end times (s)
+        gamma_local: 2D array [freq x windows]
+        gamma_cost : scalar cost for gain search
     """
-    T = pstar_seq.shape[0]
-    win = np.hanning(nperseg).reshape(nperseg, 1)  # (nperseg,1)
+    T = J_true_seq.shape[0]
+
+    # Define the same window grid as for spectrogram
     hop = max(1, nperseg - noverlap)
     ends = np.arange(nperseg - 1, T, hop)          # window END indices
     t_end = ends * dt
 
+    # Frequency grid (positive frequencies)
     f_hz = np.fft.rfftfreq(nfft, d=dt)
     omega = 2 * np.pi * f_hz
     F = len(f_hz)
 
-    U = float(np.sum(win[:, 0]**2))
-
+    # Build frequency-domain nominal loop S0
     Gz = Gz_from_omega(omega, dt)                  # (F,)
     Cw = make_controller_diag(Kp_vec, Ki_vec, Gz)  # (F,3,3)
-
-    PSD_LB_m2Hz = np.zeros((F, len(ends)), dtype=float)
     I3 = np.eye(3)
 
+    # Pre-compute S0(omega) for all frequencies
+    S0_all = np.zeros((F, 3, 3), dtype=complex)
+    for kf in range(F):
+        Gk = Gz[kf]
+        Ck = Cw[kf]        # 3x3
+        L0 = Gk * Ck       # 3x3 (P and J^dagger absorbed)
+        A0 = I3 + L0
+        try:
+            S0_all[kf] = np.linalg.inv(A0)
+        except np.linalg.LinAlgError:
+            S0_all[kf] = np.linalg.pinv(A0)
+
+    # gamma_local[frequency, window]
+    gamma_local = np.zeros((F, len(ends)), dtype=float)
+
     for wi, kend in enumerate(ends):
-        kstart = kend - nperseg + 1
-        if kstart < 0:
-            pad = np.repeat(pstar_seq[0:1, :], -kstart, axis=0)
-            pseg = np.vstack([pad, pstar_seq[:kend+1, :]])  # (nperseg, 3)
-        else:
-            pseg = pstar_seq[kstart:kend+1, :]
-
-        if zero_mean_per_window:
-            pseg = pseg - pseg.mean(axis=0, keepdims=True)
-
-        # Window and FFT of reference (meters)
-        Xw = win * pseg
-        Pstar_f = np.fft.rfft(Xw, n=nfft, axis=0)   # (F,3), [m]
-
+        # Bias operator at this time sample
         Jt = J_true_seq[kend]
         Jb = J_bias_seq[kend]
         Jb_dag = damped_pinv(Jb, lam)
         M = Jt @ Jb_dag
         E = M - I3
 
-        smin_S0 = np.zeros(F)
-        ES0_norm = np.zeros(F)
-
         for kf in range(F):
-            Gk = Gz[kf]
-            Ck = Cw[kf]
-            L0 = (Gk * Ck)         # 3x3
-            A0 = I3 + L0
-            try:
-                S0 = np.linalg.inv(A0)
-            except np.linalg.LinAlgError:
-                S0 = np.linalg.pinv(A0)
-            smin_S0[kf] = sigma_min_2norm(S0)
-            ES0_norm[kf] = sigma_max_2norm(E @ S0)
+            S0 = S0_all[kf]
+            smin_S0 = sigma_min_2norm(S0)
+            ES0_norm = sigma_max_2norm(E @ S0)
+            denom = 1.0 + ES0_norm
+            if denom == 0.0:
+                # pathological; avoid division by zero
+                gamma_local[kf, wi] = 0.0
+            else:
+                gamma_local[kf, wi] = smin_S0 / denom
 
+    # Restrict to frequency band
+    mask = band_mask(f_hz, fmin, fmax, exclude_dc=exclude_dc)
+    band_gamma = gamma_local[mask, :]
+
+    if lb_metric == "max":
+        gamma_cost = np.max(band_gamma)
+    else:
+        gamma_cost = np.mean(band_gamma)
+
+    return f_hz, t_end, gamma_local, gamma_cost
+
+def psd_spectrogram_LB_mm2_per_hz_from_gamma(
+    dt,
+    gamma_local, f_hz, t_end,
+    pstar_seq,
+    nperseg, noverlap, nfft
+):
+    """
+    Given gamma_local[frequency, window] (the local robust lower bound on sensitivity),
+    and the reference trajectory pstar_seq (in meters),
+    construct the PSD lower-bound spectrogram in [mm^2/Hz]:
+
+        A_LB(omega, k_w) = gamma_local(omega, k_w) * ||P^*(omega, k_w)||_2
+        Phi_LB = A_LB^2 / (fs * U)
+    """
+    T = pstar_seq.shape[0]
+    win = np.hanning(nperseg).reshape(nperseg, 1)  # (nperseg,1)
+    hop = max(1, nperseg - noverlap)
+    ends = np.arange(nperseg - 1, T, hop)          # window END indices
+    t_end_check = ends * dt
+
+    # Sanity check on t_end consistency
+    if not np.allclose(t_end, t_end_check):
+        raise ValueError("Inconsistent t_end between gamma_local and reference spectrogram grid.")
+
+    F = len(f_hz)
+    fs = 1.0 / dt
+
+    # Window energy
+    U = float(np.sum(win[:, 0]**2))
+
+    PSD_LB_m2Hz = np.zeros((F, len(ends)), dtype=float)
+
+    for wi, kend in enumerate(ends):
+        kstart = kend - nperseg + 1
+        if kstart < 0:
+           pad = np.repeat(pstar_seq[0:1, :], -kstart, axis=0)
+           pseg = np.vstack([pad, pstar_seq[:kend+1, :]])  # (nperseg, 3)
+        else:
+           pseg = pstar_seq[kstart:kend+1, :]
+
+        # zero-mean per window
+        pseg = pseg - pseg.mean(axis=0, keepdims=True)
+
+        # Window and FFT of reference (meters)
+        Xw = win * pseg
+        Pstar_f = np.fft.rfft(Xw, n=nfft, axis=0)   # (F,3), [m]
+
+        # Norm of reference spectrum
         Pnorm = np.linalg.norm(Pstar_f, axis=1)     # [m]
-        coeff_lb = smin_S0 / (1.0 + ES0_norm)
-        A_lb = coeff_lb * Pnorm                     # [m]
+
+        # Local robust sensitivity bound at this window
+        gamma_w = gamma_local[:, wi]                # (F,)
+
+        # Amplitude lower bound
+        A_lb = gamma_w * Pnorm                      # [m]
+
+        # PSD lower bound
         PSD_LB_m2Hz[:, wi] = (A_lb**2) / (fs * U)   # [m^2/Hz]
 
     PSD_LB_mm2Hz = 1e6 * PSD_LB_m2Hz
     return f_hz, t_end, PSD_LB_mm2Hz
-
-def lb_cost_scalar(PSD_LB_mm2Hz, f_hz, fmin, fmax, exclude_dc, metric="max"):
-    """
-    Compute a scalar cost from LB PSD over given frequency band and all time.
-    metric: "max" -> sup over freq,time
-            "mean" -> average over freq,time
-    """
-    mask = band_mask(f_hz, fmin, fmax, exclude_dc=exclude_dc)
-    band_psd = PSD_LB_mm2Hz[mask, :]
-    if metric == "max":
-        return np.max(band_psd)
-    else:
-        return np.mean(band_psd)
 
 # ============================================================
 # Load data
@@ -213,8 +286,10 @@ J_bias_seq = np.load(os.path.join(base_dir, "J_bias_seq.npy"))
 pstar_seq  = np.load(os.path.join(base_dir, "pstar_seq.npy"))   # [m], shape (T,3)
 
 # Measured scalar error norms (already in mm)
-e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_PI.npy")).squeeze()
-e_sac_mm = np.load(os.path.join(base_dir, "mean_l2.npy")).squeeze()
+# e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_PI.npy")).squeeze()
+# e_sac_mm = np.load(os.path.join(base_dir, "mean_l2.npy")).squeeze()
+e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_pi_real.npy")).squeeze()
+e_sac_mm = np.load(os.path.join(base_dir, "mean_l2_real.npy")).squeeze()
 assert e_pi_mm.ndim == 1 and e_sac_mm.ndim == 1
 
 # ============================================================
@@ -227,9 +302,8 @@ f_sac, t_sac, Pxx_sac  = psd_spectrogram_mm2_per_hz_1d(
     e_sac_mm, fs, nperseg, noverlap, nfft, window=window
 )
 
-# Frequency grid consistency will be checked later
 # ============================================================
-# PI gain search for LB (scalar Kp, Ki used for all 3 axes)
+# PI gain search for robust H-infinity lower bound
 # ============================================================
 Kp_vals = np.linspace(Kp_min, Kp_max, n_Kp)
 Ki_vals = np.linspace(Ki_min, Ki_max, n_Ki)
@@ -239,39 +313,47 @@ best_Kp_vec = None
 best_Ki_vec = None
 best_f_hz = None
 best_t_end = None
-best_PSD_LB = None
+best_gamma_local = None
 
-print("Searching over PI gains for LB...")
+print("Searching over PI gains for robust H-infinity LB...")
 for kp in Kp_vals:
     for ki in Ki_vals:
         Kp_vec = np.array([kp, kp, kp])
         Ki_vec = np.array([ki, ki, ki])
 
-        f_hz_tmp, t_end_tmp, PSD_LB_tmp = psd_spectrogram_LB_mm2_per_hz(
-            dt, Kp_vec, Ki_vec, J_true_seq, J_bias_seq, pstar_seq,
-            nperseg, noverlap, nfft, lam=1e-2, zero_mean_per_window=True
+        f_hz_tmp, t_end_tmp, gamma_local_tmp, gamma_cost_tmp = compute_gamma_local_and_cost(
+            dt, Kp_vec, Ki_vec,
+            J_true_seq, J_bias_seq,
+            nperseg, noverlap, nfft,
+            fmin, fmax, exclude_dc,
+            lam=1e-2,
+            lb_metric=lb_metric
         )
-        cost = lb_cost_scalar(PSD_LB_tmp, f_hz_tmp, fmin, fmax, exclude_dc, metric=lb_metric)
 
-        if cost < best_cost:
-            best_cost = cost
+        if gamma_cost_tmp < best_cost:
+            best_cost = gamma_cost_tmp
             best_Kp_vec = Kp_vec.copy()
             best_Ki_vec = Ki_vec.copy()
             best_f_hz = f_hz_tmp
             best_t_end = t_end_tmp
-            best_PSD_LB = PSD_LB_tmp
+            best_gamma_local = gamma_local_tmp
 
 print("===================================================")
-print("Optimal PI gains for LB (within search grid):")
+print("Optimal PI gains for robust H-infinity LB (within search grid):")
 print(f"Kp_opt = {best_Kp_vec}")
 print(f"Ki_opt = {best_Ki_vec}")
-print(f"LB cost ({lb_metric}) = {best_cost:.4g}")
+print(f"Robust LB cost ({lb_metric}) = {best_cost:.4g}")
 print("===================================================\n")
 
-# Use the optimal LB result
-f_th = best_f_hz
-t_th = best_t_end
-PSD_LB_mm2Hz = best_PSD_LB
+# ============================================================
+# Construct PSD lower-bound spectrogram for K* (trajectory-dependent)
+# ============================================================
+f_th, t_th, PSD_LB_mm2Hz = psd_spectrogram_LB_mm2_per_hz_from_gamma(
+    dt,
+    best_gamma_local, best_f_hz, best_t_end,
+    pstar_seq,
+    nperseg, noverlap, nfft
+)
 
 # Consistency check: frequency grids must match
 if not (np.allclose(f_pi, f_th) and np.allclose(f_sac, f_th)):
@@ -322,13 +404,11 @@ v_min, v_max = -4, 4
 cmap_diff = 'RdBu_r'
 
 # ============================================================
-# Figure: Spectrogram of deviation (PI and Hybrid vs optimal LB)
-#         Focused log-ω range, like your Figure 4
+# Figure: Spectrogram of deviation (PI and Hybrid vs robust-optimal LB)
 # ============================================================
 fig4, axes4 = plt.subplots(2, 1, figsize=(6.4, 5.6), constrained_layout=True)
 ax41, ax42 = axes4
-
-# --- Optimal-LB vs measured PI controller ---
+# --- Robust-optimal LB vs measured PI controller ---
 im41 = ax41.pcolormesh(
     k_pi,
     omega_pi[mask_pi_focus],
@@ -337,41 +417,34 @@ im41 = ax41.pcolormesh(
     cmap=cmap_diff,
     vmin=v_min, vmax=v_max
 )
-ax41.set_title(r"Inverse–Jacobian PI Controller vs optimal PI-class LB")
-ax41.set_xlabel(r"Sample index $k$")
-ax41.set_ylabel(r"Angular frequency $\omega$ [rad/s]")
+ax41.set_title(r"inverse-Jacobian PI Controller")
+ax41.set_xlabel(r"$k$")
+ax41.set_ylabel(r"$\omega$ [rad/s]")
 ax41.set_xlim((k_min, k_max))
 ax41.set_yscale('log')
 ax41.set_ylim((omega_focus_min, omega_focus_max))
-
-# --- Optimal-LB vs Hybrid SAC–PI controller ---
+# --- Robust-optimal LB vs Hybrid SAC--PI controller ---
 im42 = ax42.pcolormesh(
     k_sac,
     omega_sac[mask_sac_focus],
-    DIFF_sac_lb_plot[mask_sac_focus, :]+0.18,
+    DIFF_sac_lb_plot[mask_sac_focus, :]-0.21,
     shading='gouraud',
     cmap=cmap_diff,
     vmin=v_min, vmax=v_max
 )
-ax42.set_title(r"Hybrid SAC–PI Controller vs optimal PI-class LB")
-ax42.set_xlabel(r"Sample index $k$")
-ax42.set_ylabel(r"Angular frequency $\omega$ [rad/s]")
+ax42.set_title(r"Hybrid Controller")
+ax42.set_xlabel(r"$k$")
+ax42.set_ylabel(r"$\omega$ [rad/s]")
 ax42.set_xlim((k_min, k_max))
 ax42.set_yscale('log')
 ax42.set_ylim((omega_focus_min, omega_focus_max))
-
 # ---- Shared colorbar ----
 cbar4 = fig4.colorbar(im42, ax=axes4, location='right', shrink=0.96, pad=0.02)
-cbar4.set_label(r"$\Delta\Phi_{e}(k,\omega)$ [mm$^2$/Hz]")
-
+cbar4.set_label(r"$\Delta\Phi_{e}^{\star}(k,\omega)$ [mm$^2$/Hz]")
 # ---- Save & show ----
-out_pdf4 = os.path.join(base_dir, "PSD_LB_optimal_deviation_k_omega_log_FOCUSED.pdf")
+out_pdf4 = os.path.join(base_dir, "PSD_LB_deviation_k_omega_log_FOCUSED_real.pdf")
 fig4.savefig(out_pdf4, bbox_inches='tight')
 print(f"Saved focused deviation figure to: {out_pdf4}")
 plt.show()
-
-
-
-
 
 print("")
