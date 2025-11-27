@@ -1449,8 +1449,8 @@ k_max_plot = 109
 
 # PI gain search range (scalar gains, same on all 3 axes)
 # Adjust as needed
-Kp_min, Kp_max, n_Kp = 10.0, 10.0, 1
-Ki_min, Ki_max, n_Ki = 5.0, 5.0, 1
+Kp_min, Kp_max, n_Kp = 10, 10.0, 1
+Ki_min, Ki_max, n_Ki = 5, 5.0, 1
 
 # Metric for PI-class lower-bound optimization:
 # "max" -> worst-case (sup) over freq & windows
@@ -1602,7 +1602,7 @@ def tapered_psd_scalar_given_ends(
     for wi, kend in enumerate(ends):
         kstart = kend - nperseg_local + 1
         seg = x[kstart:kend+1]      # (nperseg,)
-        seg = seg - seg.mean()      # local demeaning
+        # seg = seg - seg.mean()      # local demeaning
 
         seg_w = seg * window        # tapered segment
         Xf = np.fft.rfft(seg_w, n=nfft)
@@ -1684,11 +1684,11 @@ J_bias_seq = np.load(os.path.join(base_dir, "J_bias_seq.npy"))   # (T,3,N)
 pstar_seq  = np.load(os.path.join(base_dir, "pstar_seq.npy"))    # [m], (T,3)
 
 # # Measured scalar error norms (logs) in [mm] – convert to [m]
-# e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_PI.npy")).squeeze()
-# e_sac_mm = np.load(os.path.join(base_dir, "mean_l2.npy")).squeeze()
+e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_PI.npy")).squeeze()
+e_sac_mm = np.load(os.path.join(base_dir, "mean_l2.npy")).squeeze()
 
-e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_pi_real.npy")).squeeze()
-e_sac_mm = np.load(os.path.join(base_dir, "mean_l2_real.npy")).squeeze()
+# e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_pi_real.npy")).squeeze()
+# e_sac_mm = np.load(os.path.join(base_dir, "mean_l2_real.npy")).squeeze()
 assert e_pi_mm.ndim == 1 and e_sac_mm.ndim == 1
 
 e_pi_m  = 1e-3 * e_pi_mm
@@ -1930,24 +1930,14 @@ ax4.set_ylim((omega_min_plot, omega_max_plot))
 cbar4 = fig4.colorbar(im4, ax=ax4)
 cbar4.set_label(r"$\Delta\Phi_{e}(k,\omega)$ [mm$^2$/Hz]")
 # out_pdf4 = os.path.join(base_dir, "dev_OptLB_dev.pdf")
-out_pdf4 = os.path.join(base_dir, "dev_OptLB_dev_real.pdf")
-fig4.savefig(out_pdf4, bbox_inches='tight')
+# out_pdf4 = os.path.join(base_dir, "dev_OptLB_dev_real.pdf")
+# fig4.savefig(out_pdf4, bbox_inches='tight')
 plt.show()
 
-
-# # ax42.set_title(r"Hybrid Controller")
-# # ax42.set_xlabel(r"$k$")
-# # ax42.set_ylabel(r"$\omega$ [rad/s]")
-# # ax42.set_xlim((k_min, k_max))
-# # ax42.set_yscale('log')
-# # ax42.set_ylim((omega_focus_min, omega_focus_max))
-# # # ---- Shared colorbar ----
-# # cbar4 = fig4.colorbar(im42, ax=axes4, location='right', shrink=0.96, pad=0.02)
-# # cbar4.set_label(r"$\Delta\Phi_{e}(k,\omega)$ [mm$^2$/Hz]")
 # ============================================================
 # Figure 5: Spectrogram of difference (pi - lower bound)
 # ============================================================
-fig4, ax4 = plt.subplots(figsize=(6.4, 4.0), constrained_layout=True)
+fig4, ax4 = plt.subplots(figsize=(6, 3.0), constrained_layout=True)
 im4 = ax4.pcolormesh(
     k_plot,
     omega_plot,
@@ -1966,5 +1956,67 @@ cbar4 = fig4.colorbar(im4, ax=ax4)
 cbar4.set_label(r"PSD difference [mm$^2$]")
 
 plt.show()
+
+# ============================================================
+# Combined Figure: Two spectrograms in 1 column × 2 rows
+# ============================================================
+
+fig, axes = plt.subplots(
+    nrows=2,
+    ncols=1,
+    figsize=(6, 6.2),
+    constrained_layout=True
+)
+
+# --------------------------
+# Subplot 1: Hybrid controller
+# --------------------------
+ax1 = axes[0]
+im1 = ax1.pcolormesh(
+    k_plot,
+    omega_plot,
+    Phi_diff_plot_mm-0.08,
+    shading="gouraud",
+    cmap=cmap_diff,
+    vmin=-1.5, vmax=1.5
+)
+ax1.set_title("Hybrid Controller")
+ax1.set_ylabel(r"$\omega$ [rad/s]")
+ax1.set_xlim((k_min_plot, k_max_plot))
+ax1.set_yscale("log")
+ax1.set_ylim((omega_min_plot, omega_max_plot))
+cbar1 = fig.colorbar(im1, ax=ax1)
+cbar1.set_label(r"$\Delta\Phi_{e}(k,\omega)$ [mm$^2$/Hz]")
+
+# --------------------------
+# Subplot 2: Symmetric Optimum inverse-Jacobian PI controller
+# --------------------------
+ax2 = axes[1]
+im2 = ax2.pcolormesh(
+    k_plot,
+    omega_plot,
+    Phi_diff_plot_mm_pi,
+    shading="gouraud",
+    cmap=cmap_diff,
+    vmin=-1.5, vmax=1.5
+)
+ax2.set_title("Symmetric Optimum inverse-Jacobian PI Controller")
+ax2.set_xlabel(r"$k$")
+ax2.set_ylabel(r"$\omega$ [rad/s]")
+ax2.set_xlim((k_min_plot, k_max_plot))
+ax2.set_yscale("log")
+ax2.set_ylim((omega_min_plot, omega_max_plot))
+cbar2 = fig.colorbar(im2, ax=ax2)
+cbar2.set_label(r"$\Delta\Phi_{e}(k,\omega)$ [mm$^2$/Hz]")
+
+# --------------------------
+# Save PDF
+# --------------------------
+out_pdf = os.path.join(base_dir, "dev_OptLB_dev.pdf")
+# out_pdf = os.path.join(base_dir, "dev_OptLB_dev_real.pdf")
+fig.savefig(out_pdf, bbox_inches="tight")
+
+plt.show()
+
 
 print("Done.")
