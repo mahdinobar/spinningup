@@ -1683,11 +1683,11 @@ J_true_seq = np.load(os.path.join(base_dir, "J_true_seq.npy"))   # (T,3,N)
 J_bias_seq = np.load(os.path.join(base_dir, "J_bias_seq.npy"))   # (T,3,N)
 pstar_seq  = np.load(os.path.join(base_dir, "pstar_seq.npy"))    # [m], (T,3)
 
-# Measured scalar error norms (logs) in [mm] – convert to [m]
-e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_PI.npy")).squeeze()
-e_sac_mm = np.load(os.path.join(base_dir, "mean_l2.npy")).squeeze()
+# # Measured scalar error norms (logs) in [mm] – convert to [m]
+# e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_PI.npy")).squeeze()
+# e_sac_mm = np.load(os.path.join(base_dir, "mean_l2.npy")).squeeze()
 
-e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_PI_real.npy")).squeeze()
+e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_pi_real.npy")).squeeze()
 e_sac_mm = np.load(os.path.join(base_dir, "mean_l2_real.npy")).squeeze()
 assert e_pi_mm.ndim == 1 and e_sac_mm.ndim == 1
 
