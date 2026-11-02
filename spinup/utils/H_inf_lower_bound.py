@@ -1684,11 +1684,11 @@ J_bias_seq = np.load(os.path.join(base_dir, "J_bias_seq.npy"))   # (T,3,N)
 pstar_seq  = np.load(os.path.join(base_dir, "pstar_seq.npy"))    # [m], (T,3)
 
 # # Measured scalar error norms (logs) in [mm] – convert to [m]
-# e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_PI.npy")).squeeze()
-# e_sac_mm = np.load(os.path.join(base_dir, "mean_l2.npy")).squeeze()
+e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_PI.npy")).squeeze()
+e_sac_mm = np.load(os.path.join(base_dir, "mean_l2.npy")).squeeze()
 
-e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_pi_real.npy")).squeeze()
-e_sac_mm = np.load(os.path.join(base_dir, "mean_l2_real.npy")).squeeze()
+# e_pi_mm  = np.load(os.path.join(base_dir, "mean_l2_pi_real.npy")).squeeze()
+# e_sac_mm = np.load(os.path.join(base_dir, "mean_l2_real.npy")).squeeze()
 assert e_pi_mm.ndim == 1 and e_sac_mm.ndim == 1
 
 e_pi_m  = 1e-3 * e_pi_mm
@@ -1930,8 +1930,8 @@ ax4.set_ylim((omega_min_plot, omega_max_plot))
 cbar4 = fig4.colorbar(im4, ax=ax4)
 cbar4.set_label(r"$\Delta\Phi_{e}(k,\omega)$ [mm$^2$/Hz]")
 # out_pdf4 = os.path.join(base_dir, "dev_OptLB_dev.pdf")
-out_pdf4 = os.path.join(base_dir, "dev_OptLB_dev_real.pdf")
-fig4.savefig(out_pdf4, bbox_inches='tight')
+# out_pdf4 = os.path.join(base_dir, "dev_OptLB_dev_real.pdf")
+# fig4.savefig(out_pdf4, bbox_inches='tight')
 plt.show()
 
 # ============================================================
